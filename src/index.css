@@ -1,28 +1,38 @@
 :root {
-  /* Brand */
-  --brand-orange: #FF6B35;
-  --caution-amber: #FFA726;
-  --safe-green: #4CAF50;
-  --critical-white: #FFFFFF;
+  color-scheme: dark;
 
-  /* Text */
-  --text-primary: #FFFFFF;
+  /* ── Backgrounds ────────────────────────────── */
+  --bg-page:        #0B1120;
+  --bg-card:        #1A2332;
+  --bg-panel:       #131D2E;
+  --bg-input:       #0B1120;
+  --bg-hover:       #2A3A4E;
+
+  /* ── Borders ────────────────────────────────── */
+  --border-subtle:  #2A3A4E;
+  --border-focus:   #FFFFFF;
+
+  /* ── Text ───────────────────────────────────── */
+  --text-primary:   #FFFFFF;
   --text-secondary: #E0E0E0;
-  --text-tertiary: #A0A0A0;
+  --text-tertiary:  #A0A0A0;
 
-  /* Backgrounds */
-  --bg-dark: #1A1A1A;
-  --bg-card: #242424;
-  --bg-hover: rgba(255, 255, 255, 0.05);
+  /* ── Accents (semantic) ─────────────────────── */
+  --accent-cyan:    #00E5FF;
+  --accent-rose:    #FF6B8A;
+  --accent-orange:  #FF6B35;
+  --safe-green:     #4CAF50;
+  --caution-amber:  #FFA726;
+  --critical-red:   #FF5252;
 
-  /* Borders */
-  --border-subtle: #333333;
-  --border-focus: #FFFFFF;
+  /* ── Interactive ────────────────────────────── */
+  --income-btn-bg:  #0097A7;
+  --expense-btn-bg: #C74B6A;
 
-  /* Overlays */
-  --overlay-backdrop: rgba(0, 0, 0, 0.6);
+  /* ── Overlays ───────────────────────────────── */
+  --overlay-bg:     rgba(0, 0, 0, 0.6);
 
-  /* Font */
+  /* ── Font ───────────────────────────────────── */
   --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
                  "Helvetica Neue", Arial, sans-serif;
 
@@ -30,6 +40,36 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── LIGHT THEME OVERRIDES ─────────────────────────────────────── */
+[data-theme="light"] {
+  color-scheme: light;
+
+  --bg-page:        #E2E6EC;
+  --bg-card:        #FFFFFF;
+  --bg-panel:       #F6F8FA;
+  --bg-input:       #FFFFFF;
+  --bg-hover:       #E2E6EC;
+
+  --border-subtle:  #D0D5DD;
+  --border-focus:   #1A1A2E;
+
+  --text-primary:   #1A1A2E;
+  --text-secondary: #4A5568;
+  --text-tertiary:  #718096;
+
+  --accent-cyan:    #0097A7;
+  --accent-rose:    #C74B6A;
+  --accent-orange:  #E55A25;
+  --safe-green:     #2E7D32;
+  --caution-amber:  #E65100;
+  --critical-red:   #C62828;
+
+  --income-btn-bg:  #0097A7;
+  --expense-btn-bg: #C74B6A;
+
+  --overlay-bg:     rgba(15, 23, 42, 0.50);
 }
 
 * {
@@ -42,10 +82,15 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  background-color: var(--bg-dark);
+  background-color: var(--bg-page);
   color: var(--text-primary);
   font-family: var(--font-family);
 }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-page); }
+::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 3px; }
 
 /* Responsive card grid */
 @media (max-width: 768px) {

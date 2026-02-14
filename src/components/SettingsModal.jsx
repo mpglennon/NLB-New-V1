@@ -6,15 +6,15 @@ const s = {
   overlay: {
     position: 'fixed',
     inset: 0,
-    background: 'rgba(0,0,0,0.6)',
+    background: 'var(--overlay-bg)',
     zIndex: 3000,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
   },
   modal: {
-    background: '#2A2A2A',
-    border: '1px solid #333333',
+    background: 'var(--bg-panel)',
+    border: '1px solid var(--border-subtle)',
     borderRadius: '12px',
     padding: '28px',
     width: '480px',
@@ -31,12 +31,12 @@ const s = {
   title: {
     fontSize: '20px',
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: 'var(--text-primary)',
   },
   closeBtn: {
     background: 'transparent',
     border: 'none',
-    color: '#A0A0A0',
+    color: 'var(--text-tertiary)',
     fontSize: '20px',
     cursor: 'pointer',
   },
@@ -46,11 +46,11 @@ const s = {
   sectionTitle: {
     fontSize: '12px',
     fontWeight: '700',
-    color: '#A0A0A0',
+    color: 'var(--text-tertiary)',
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
     marginBottom: '12px',
-    borderBottom: '1px solid #333333',
+    borderBottom: '1px solid var(--border-subtle)',
     paddingBottom: '8px',
   },
   row: {
@@ -61,22 +61,22 @@ const s = {
   },
   label: {
     fontSize: '14px',
-    color: '#FFFFFF',
+    color: 'var(--text-primary)',
     fontWeight: '500',
   },
   sublabel: {
     fontSize: '11px',
-    color: '#A0A0A0',
+    color: 'var(--text-tertiary)',
     marginTop: '2px',
   },
   input: {
     width: '100px',
     height: '32px',
-    background: '#1A1A1A',
-    border: '1px solid #333333',
+    background: 'var(--bg-input)',
+    border: '1px solid var(--border-subtle)',
     borderRadius: '6px',
     padding: '0 10px',
-    color: '#FFFFFF',
+    color: 'var(--text-primary)',
     fontSize: '14px',
     textAlign: 'right',
     outline: 'none',
@@ -84,11 +84,11 @@ const s = {
   },
   select: {
     height: '32px',
-    background: '#1A1A1A',
-    border: '1px solid #333333',
+    background: 'var(--bg-input)',
+    border: '1px solid var(--border-subtle)',
     borderRadius: '6px',
     padding: '0 10px',
-    color: '#FFFFFF',
+    color: 'var(--text-primary)',
     fontSize: '14px',
     outline: 'none',
   },
@@ -106,13 +106,13 @@ const s = {
     borderRadius: '6px',
     fontSize: '12px',
     fontWeight: '600',
-    color: '#FFFFFF',
-    background: '#333333',
+    color: 'var(--text-primary)',
+    background: 'var(--bg-hover)',
   },
   catRemove: {
     background: 'transparent',
     border: 'none',
-    color: '#A0A0A0',
+    color: 'var(--text-tertiary)',
     fontSize: '14px',
     cursor: 'pointer',
     padding: '0',
@@ -126,14 +126,14 @@ const s = {
     borderRadius: '6px',
     fontSize: '12px',
     fontWeight: '600',
-    color: '#A0A0A0',
-    background: '#1A1A1A',
-    border: '1px dashed #333333',
+    color: 'var(--text-tertiary)',
+    background: 'var(--bg-input)',
+    border: '1px dashed var(--border-subtle)',
   },
   restoreBtn: {
     background: 'transparent',
     border: 'none',
-    color: '#FF6B35',
+    color: 'var(--accent-orange)',
     fontSize: '12px',
     cursor: 'pointer',
     padding: '0',
@@ -146,11 +146,11 @@ const s = {
   addInput: {
     flex: 1,
     height: '30px',
-    background: '#1A1A1A',
-    border: '1px solid #333333',
+    background: 'var(--bg-input)',
+    border: '1px solid var(--border-subtle)',
     borderRadius: '6px',
     padding: '0 10px',
-    color: '#FFFFFF',
+    color: 'var(--text-primary)',
     fontSize: '12px',
     outline: 'none',
     boxSizing: 'border-box',
@@ -158,7 +158,7 @@ const s = {
   addBtn: {
     height: '30px',
     padding: '0 14px',
-    background: '#FF6B35',
+    background: 'var(--accent-orange)',
     color: '#FFFFFF',
     border: 'none',
     borderRadius: '6px',
@@ -226,6 +226,71 @@ export default function SettingsModal({ isOpen, onClose }) {
           <button style={s.closeBtn} onClick={onClose}>✕</button>
         </div>
 
+        {/* Appearance */}
+        <div style={s.section}>
+          <div style={s.sectionTitle}>Appearance</div>
+          <div style={s.row}>
+            <div style={s.label}>Theme</div>
+            <div style={{
+              display: 'flex',
+              borderRadius: '6px',
+              overflow: 'hidden',
+              border: '1px solid var(--border-subtle)',
+            }}>
+              {['dark', 'light'].map((t) => (
+                <button
+                  key={t}
+                  style={{
+                    padding: '6px 16px',
+                    background: settings.theme === t ? 'var(--accent-orange)' : 'transparent',
+                    color: settings.theme === t ? '#FFFFFF' : 'var(--text-tertiary)',
+                    border: 'none',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    textTransform: 'capitalize',
+                    transition: 'all 200ms ease',
+                  }}
+                  onClick={() => updateSettings({ theme: t })}
+                >
+                  {t === 'dark' ? 'Dark' : 'Light'}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Onboarding */}
+        {settings.hasCompletedOnboarding && (
+          <div style={s.section}>
+            <div style={s.sectionTitle}>Onboarding</div>
+            <div style={s.row}>
+              <div>
+                <div style={s.label}>Replay welcome tour</div>
+                <div style={s.sublabel}>Walk through the setup flow again</div>
+              </div>
+              <button
+                style={{
+                  background: 'transparent',
+                  border: '1px solid var(--accent-orange)',
+                  color: 'var(--accent-orange)',
+                  padding: '6px 14px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                }}
+                onClick={() => {
+                  updateSettings({ hasCompletedOnboarding: false });
+                  onClose();
+                }}
+              >
+                Replay
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Thresholds */}
         <div style={s.section}>
           <div style={s.sectionTitle}>Thresholds</div>
@@ -235,7 +300,7 @@ export default function SettingsModal({ isOpen, onClose }) {
               <div style={s.sublabel}>Amber warning when balance drops below this</div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ color: '#A0A0A0', fontSize: '14px' }}>$</span>
+              <span style={{ color: 'var(--text-tertiary)', fontSize: '14px' }}>$</span>
               <input
                 type="number"
                 style={s.input}
@@ -251,7 +316,7 @@ export default function SettingsModal({ isOpen, onClose }) {
               <div style={s.label}>Critical threshold</div>
               <div style={s.sublabel}>Red warning when balance drops to zero</div>
             </div>
-            <span style={{ color: '#A0A0A0', fontSize: '14px' }}>$0 (fixed)</span>
+            <span style={{ color: 'var(--text-tertiary)', fontSize: '14px' }}>$0 (fixed)</span>
           </div>
         </div>
 
@@ -341,7 +406,7 @@ export default function SettingsModal({ isOpen, onClose }) {
 
         {/* Danger Zone */}
         <div style={{ ...s.section, marginBottom: 0 }}>
-          <div style={{ ...s.sectionTitle, color: '#FF5252', borderBottomColor: '#FF5252' }}>
+          <div style={{ ...s.sectionTitle, color: 'var(--critical-red)', borderBottomColor: 'var(--critical-red)' }}>
             Danger Zone
           </div>
           {!showReset ? (
@@ -353,8 +418,8 @@ export default function SettingsModal({ isOpen, onClose }) {
               <button
                 style={{
                   background: 'transparent',
-                  border: '1px solid #FF5252',
-                  color: '#FF5252',
+                  border: '1px solid var(--critical-red)',
+                  color: 'var(--critical-red)',
                   padding: '6px 14px',
                   borderRadius: '6px',
                   fontSize: '12px',
@@ -368,18 +433,18 @@ export default function SettingsModal({ isOpen, onClose }) {
             </div>
           ) : (
             <div>
-              <div style={{ fontSize: '13px', color: '#FF5252', marginBottom: '8px', fontWeight: '600' }}>
+              <div style={{ fontSize: '13px', color: 'var(--critical-red)', marginBottom: '8px', fontWeight: '600' }}>
                 This will permanently delete all transactions, custom categories, and reset your balance to $0.
               </div>
-              <div style={{ fontSize: '12px', color: '#A0A0A0', marginBottom: '10px' }}>
-                Type <span style={{ color: '#FFFFFF', fontWeight: '700', letterSpacing: '0.05em' }}>DELETE</span> to confirm
+              <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginBottom: '10px' }}>
+                Type <span style={{ color: 'var(--text-primary)', fontWeight: '700', letterSpacing: '0.05em' }}>DELETE</span> to confirm
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <input
                   type="text"
                   style={{
                     ...s.addInput,
-                    borderColor: resetConfirm === 'DELETE' ? '#FF5252' : '#333333',
+                    borderColor: resetConfirm === 'DELETE' ? 'var(--critical-red)' : 'var(--border-subtle)',
                     textTransform: 'uppercase',
                     letterSpacing: '0.1em',
                     fontWeight: '700',
@@ -400,8 +465,8 @@ export default function SettingsModal({ isOpen, onClose }) {
                   style={{
                     height: '30px',
                     padding: '0 14px',
-                    background: resetConfirm === 'DELETE' ? '#FF5252' : '#333333',
-                    color: resetConfirm === 'DELETE' ? '#FFFFFF' : '#666666',
+                    background: resetConfirm === 'DELETE' ? 'var(--critical-red)' : 'var(--bg-hover)',
+                    color: resetConfirm === 'DELETE' ? '#FFFFFF' : 'var(--text-tertiary)',
                     border: 'none',
                     borderRadius: '6px',
                     fontSize: '12px',
@@ -423,8 +488,8 @@ export default function SettingsModal({ isOpen, onClose }) {
                     height: '30px',
                     padding: '0 12px',
                     background: 'transparent',
-                    color: '#A0A0A0',
-                    border: '1px solid #333333',
+                    color: 'var(--text-tertiary)',
+                    border: '1px solid var(--border-subtle)',
                     borderRadius: '6px',
                     fontSize: '12px',
                     fontWeight: '600',

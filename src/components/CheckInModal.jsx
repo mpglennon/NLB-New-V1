@@ -18,7 +18,7 @@ const s = {
   backdrop: {
     position: 'absolute',
     inset: 0,
-    background: 'rgba(0,0,0,0.6)',
+    background: 'var(--overlay-bg)',
     opacity: 0,
     transition: `opacity ${FADE_MS}ms ease`,
   },
@@ -27,8 +27,8 @@ const s = {
   },
   modal: {
     position: 'relative',
-    background: '#2A2A2A',
-    border: '1px solid #333333',
+    background: 'var(--bg-panel)',
+    border: '1px solid var(--border-subtle)',
     borderRadius: '16px',
     padding: '32px',
     width: '100%',
@@ -45,31 +45,31 @@ const s = {
   title: {
     fontSize: '24px',
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: 'var(--text-primary)',
     marginBottom: '4px',
   },
   subtitle: {
     fontSize: '14px',
-    color: '#A0A0A0',
+    color: 'var(--text-tertiary)',
     marginBottom: '24px',
   },
   label: {
     fontSize: '14px',
     fontWeight: '600',
-    color: '#E0E0E0',
+    color: 'var(--text-secondary)',
     display: 'block',
     marginBottom: '8px',
   },
   input: {
     width: '100%',
     height: '48px',
-    background: '#1A1A1A',
-    border: '2px solid #333333',
+    background: 'var(--bg-input)',
+    border: '2px solid var(--border-subtle)',
     borderRadius: '8px',
     padding: '0 16px',
     fontSize: '20px',
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: 'var(--text-primary)',
     outline: 'none',
     transition: 'border-color 200ms ease',
     boxSizing: 'border-box',
@@ -77,12 +77,12 @@ const s = {
   noteInput: {
     width: '100%',
     height: '40px',
-    background: '#1A1A1A',
-    border: '2px solid #333333',
+    background: 'var(--bg-input)',
+    border: '2px solid var(--border-subtle)',
     borderRadius: '8px',
     padding: '0 16px',
     fontSize: '14px',
-    color: '#FFFFFF',
+    color: 'var(--text-primary)',
     outline: 'none',
     transition: 'border-color 200ms ease',
     boxSizing: 'border-box',
@@ -98,8 +98,8 @@ const s = {
   btnPrimary: {
     flex: 1,
     height: '48px',
-    background: '#FF6B35',
-    color: '#FFFFFF',
+    background: 'var(--accent-orange)',
+    color: 'var(--text-primary)',
     border: 'none',
     borderRadius: '8px',
     fontSize: '16px',
@@ -113,8 +113,8 @@ const s = {
     flex: 1,
     height: '48px',
     background: 'transparent',
-    color: '#FFFFFF',
-    border: '2px solid #FFFFFF',
+    color: 'var(--text-primary)',
+    border: '2px solid var(--border-focus)',
     borderRadius: '8px',
     fontSize: '14px',
     fontWeight: '600',
@@ -124,7 +124,7 @@ const s = {
   delta: {
     textAlign: 'center',
     fontSize: '13px',
-    color: '#A0A0A0',
+    color: 'var(--text-tertiary)',
     marginTop: '16px',
   },
 };
@@ -170,7 +170,7 @@ export default function CheckInModal({ isOpen, onClose, currentBalance, onUpdate
     onClose();
   };
 
-  const deltaColor = delta > 0 ? '#4CAF50' : delta < 0 ? '#FF5252' : '#A0A0A0';
+  const deltaColor = delta > 0 ? 'var(--safe-green)' : delta < 0 ? 'var(--critical-red)' : 'var(--text-tertiary)';
   const deltaText =
     delta > 0
       ? `+$${delta.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
@@ -195,6 +195,7 @@ export default function CheckInModal({ isOpen, onClose, currentBalance, onUpdate
       >
         <h2 style={s.title}>Check In</h2>
         <p style={s.subtitle}>Match your bank balance in 10 seconds</p>
+        <p style={{ fontSize: '13px', fontStyle: 'italic', color: 'var(--text-tertiary)', marginTop: '-16px', marginBottom: '20px' }}>No judgment. Just accuracy.</p>
 
         <form onSubmit={handleSubmit}>
           <div style={s.fieldGroup}>
@@ -206,8 +207,8 @@ export default function CheckInModal({ isOpen, onClose, currentBalance, onUpdate
               value={balance}
               onChange={(e) => setBalance(e.target.value)}
               style={s.input}
-              onFocus={(e) => { e.target.style.borderColor = '#FF6B35'; }}
-              onBlur={(e) => { e.target.style.borderColor = '#333333'; }}
+              onFocus={(e) => { e.target.style.borderColor = 'var(--accent-orange)'; }}
+              onBlur={(e) => { e.target.style.borderColor = 'var(--border-subtle)'; }}
               placeholder="0.00"
             />
           </div>
@@ -218,8 +219,8 @@ export default function CheckInModal({ isOpen, onClose, currentBalance, onUpdate
               type="text"
               style={s.noteInput}
               placeholder="e.g., 'Paid rent early'"
-              onFocus={(e) => { e.target.style.borderColor = '#FF6B35'; }}
-              onBlur={(e) => { e.target.style.borderColor = '#333333'; }}
+              onFocus={(e) => { e.target.style.borderColor = 'var(--accent-orange)'; }}
+              onBlur={(e) => { e.target.style.borderColor = 'var(--border-subtle)'; }}
             />
           </div>
 

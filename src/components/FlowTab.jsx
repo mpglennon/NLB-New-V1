@@ -1,16 +1,16 @@
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import { getOccurrences } from '../utils/runway';
 
-// ── Colors ──────────────────────────────────────────────────────────
-const CYAN = '#00BCD4';
-const AMBER = '#FFA726';
-const ROSE = '#E57373';
-const GREEN = '#4CAF50';
-const RED = '#F44336';
-const WHITE = '#FFFFFF';
-const CARD_BG = '#242424';
-const BORDER = '#333333';
-const TEXT_DIM = '#A0A0A0';
+// ── Colors (CSS variable references) ────────────────────────────────
+const CYAN = 'var(--accent-cyan)';
+const AMBER = 'var(--caution-amber)';
+const ROSE = 'var(--accent-rose)';
+const GREEN = 'var(--safe-green)';
+const RED = 'var(--critical-red)';
+const WHITE = 'var(--text-primary)';
+const CARD_BG = 'var(--bg-card)';
+const BORDER = 'var(--border-subtle)';
+const TEXT_DIM = 'var(--text-tertiary)';
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
@@ -113,7 +113,8 @@ export default function FlowTab({
   if (incomeGroups.length === 0 && expenseGroups.length === 0) {
     return (
       <div style={s.emptyState}>
-        <p style={s.emptyText}>Add transactions to see your cash flow</p>
+        <p style={{ ...s.emptyText, fontSize: '18px', fontWeight: '600', color: 'var(--text-primary)' }}>Your cash flow story starts here.</p>
+        <p style={s.emptyText}>Add your first income or expense to see how your money moves forward.</p>
         <button
           style={s.emptyBtn}
           onClick={() => onCategoryClick && onCategoryClick('allTransactions')}
@@ -135,9 +136,9 @@ export default function FlowTab({
   const barGap = 6;
 
   // X positions: [labels] [bars] --- flows --- [center] --- flows --- [bars] [labels]
-  const leftBarX = 130;
+  const leftBarX = 180;
   const centerX = W / 2 - centerW / 2;
-  const rightBarX = W - 130 - barW;
+  const rightBarX = W - 180 - barW;
 
   // ── Stack bars proportionally ─────────────────────────────────────
   function stackBars(groups, totalRef) {
@@ -156,7 +157,7 @@ export default function FlowTab({
 
   // Right side: expenses + surplus all proportional to totalIncome
   const rightGroups = isSurplus
-    ? [...expenseGroups, { category: 'Savings', amount: surplus }]
+    ? [...expenseGroups, { category: 'Surplus', amount: surplus }]
     : expenseGroups;
 
   const incomeBars = stackBars(incomeGroups, totalIncome || 1);
@@ -210,18 +211,18 @@ export default function FlowTab({
   // Right flows: center right edge → right bars
   rightBars.forEach((bar, i) => {
     const attach = rightAttach[i];
-    const isSavings = bar.category === 'Savings';
+    const isSurplus = bar.category === 'Surplus';
     flows.push({
       key: `out-${bar.category}`,
       from: 'Your Account',
       to: bar.category,
       amount: bar.amount,
-      color: isSavings ? GREEN : ROSE,
+      color: isSurplus ? GREEN : ROSE,
       path: ribbon(
         centerX + centerW, attach.y, attach.y + attach.h,
         rightBarX, bar.y, bar.y + bar.h,
       ),
-      clickCategory: isSavings ? null : bar.category,
+      clickCategory: isSurplus ? null : bar.category,
     });
   });
 
@@ -346,7 +347,7 @@ export default function FlowTab({
               y={stackTop + centerH / 2 - 6}
               textAnchor="middle"
               dominantBaseline="central"
-              fill="#555555"
+              fill="var(--text-primary)"
               fontSize={11}
               fontWeight={700}
               letterSpacing="0.06em"
@@ -358,7 +359,7 @@ export default function FlowTab({
               y={stackTop + centerH / 2 + 8}
               textAnchor="middle"
               dominantBaseline="central"
-              fill="#555555"
+              fill="var(--text-primary)"
               fontSize={11}
               fontWeight={700}
               letterSpacing="0.06em"
@@ -369,23 +370,23 @@ export default function FlowTab({
 
           {/* ── Right: Expense + Savings bars + labels ─────────────── */}
           {rightBars.map((bar) => {
-            const isSavings = bar.category === 'Savings';
-            const barColor = isSavings ? GREEN : WHITE;
+            const isSurplus = bar.category === 'Surplus';
+            const barColor = isSurplus ? GREEN : WHITE;
             return (
               <g
                 key={bar.category}
-                style={{ cursor: isSavings ? 'default' : 'pointer' }}
-                onMouseEnter={(e) => handleBarHover(bar, isSavings ? 'savings' : 'expense', e)}
-                onMouseMove={(e) => handleBarHover(bar, isSavings ? 'savings' : 'expense', e)}
+                style={{ cursor: isSurplus ? 'default' : 'pointer' }}
+                onMouseEnter={(e) => handleBarHover(bar, isSurplus ? 'savings' : 'expense', e)}
+                onMouseMove={(e) => handleBarHover(bar, isSurplus ? 'savings' : 'expense', e)}
                 onMouseLeave={() => handleBarHover(null)}
-                onClick={() => !isSavings && handleBarClick(bar.category)}
+                onClick={() => !isSurplus && handleBarClick(bar.category)}
               >
                 <rect x={rightBarX} y={bar.y} width={barW} height={bar.h} rx={4} fill={barColor} />
                 <text
                   x={rightBarX + barW + 10}
                   y={bar.y + bar.h / 2}
                   dominantBaseline="central"
-                  fill={isSavings ? GREEN : WHITE}
+                  fill={isSurplus ? GREEN : WHITE}
                   fontSize={13}
                   fontWeight={600}
                 >
@@ -468,11 +469,11 @@ const s = {
   },
   svgContainer: {
     width: '100%',
-    overflow: 'hidden',
+    overflow: 'visible',
   },
   tooltip: {
     position: 'fixed',
-    background: '#1A1A1A',
+    background: 'var(--bg-page)',
     border: `1px solid ${BORDER}`,
     borderRadius: '6px',
     padding: '8px 12px',

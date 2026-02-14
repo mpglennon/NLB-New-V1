@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import {
   LineChart,
   Line,
@@ -17,36 +17,37 @@ import TransactionsTab from './components/TransactionsTab';
 import CashCalendar from './components/CashCalendar';
 import FlowTab from './components/FlowTab';
 import SettingsModal from './components/SettingsModal';
+import WelcomeModal from './components/WelcomeModal';
 
 const TABS = ['Snapshot', 'Flow', 'Cash Calendar', 'Transactions'];
 
 // --- Style Objects ---
 const styles = {
   app: {
-    backgroundColor: 'var(--bg-dark)',
+    backgroundColor: 'var(--bg-page)',
     color: 'var(--text-primary)',
     minHeight: '100vh',
     fontFamily: 'var(--font-family)',
   },
   headerWrapper: {
     borderBottom: '1px solid var(--border-subtle)',
-    backgroundColor: 'var(--bg-dark)',
+    backgroundColor: 'var(--bg-page)',
   },
   header: {
     maxWidth: '1400px',
     margin: '0 auto',
-    padding: '24px 120px',
+    padding: '24px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   logo: {
-    backgroundColor: 'var(--brand-orange)',
+    backgroundColor: 'var(--accent-orange)',
     color: 'white',
     fontSize: '26px',
     fontWeight: '800',
     padding: '6px 16px',
-    borderRadius: '20px',
+    borderRadius: '8px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -59,7 +60,7 @@ const styles = {
     letterSpacing: '0.1em',
   },
   checkInBtn: {
-    backgroundColor: 'var(--brand-orange)',
+    backgroundColor: 'var(--accent-orange)',
     color: '#FFFFFF',
     height: '48px',
     padding: '0 24px',
@@ -94,7 +95,7 @@ const styles = {
   },
   activeTab: {
     color: 'var(--text-primary)',
-    borderBottomColor: 'var(--brand-orange)',
+    borderBottomColor: 'var(--accent-orange)',
   },
   mainContent: {
     maxWidth: '1400px',
@@ -108,24 +109,24 @@ const styles = {
   },
   timeframeSelector: {
     display: 'flex',
-    borderRadius: '8px',
+    borderRadius: '6px',
     overflow: 'hidden',
-    border: '2px solid var(--text-tertiary)',
+    border: '1px solid var(--border-subtle)',
   },
   timeframeBtn: {
-    width: '60px',
-    height: '44px',
+    width: '44px',
+    height: '32px',
     background: 'transparent',
     border: 'none',
-    borderRight: '1px solid var(--text-tertiary)',
+    borderRight: '1px solid var(--border-subtle)',
     color: 'var(--text-tertiary)',
-    fontSize: '16px',
-    fontWeight: '700',
+    fontSize: '13px',
+    fontWeight: '600',
     cursor: 'pointer',
   },
   activeTimeframe: {
     background: 'var(--text-primary)',
-    color: 'var(--bg-dark)',
+    color: 'var(--bg-page)',
   },
   cardGrid: {
     display: 'grid',
@@ -177,18 +178,18 @@ const styles = {
 // Chart line color based on runway status
 function getChartLineColor(status) {
   switch (status) {
-    case 'safe': return '#4CAF50';
-    case 'caution': return '#FFA726';
-    case 'critical': return '#FFFFFF';
-    default: return '#4CAF50';
+    case 'safe': return 'var(--safe-green)';
+    case 'caution': return 'var(--caution-amber)';
+    case 'critical': return 'var(--text-primary)';
+    default: return 'var(--safe-green)';
   }
 }
 
 // Balance card border color
 function getBalanceBorderColor(balance) {
-  if (balance >= 2000) return '#4CAF50';
-  if (balance >= 1000) return '#FFA726';
-  return '#FFFFFF';
+  if (balance >= 2000) return 'var(--safe-green)';
+  if (balance >= 1000) return 'var(--caution-amber)';
+  return 'var(--text-primary)';
 }
 
 // Sum all occurrences of transactions of a given type over timeframe
@@ -207,12 +208,13 @@ function sumByType(transactions, type, timeframe) {
 
 function App() {
   const {
-    account, transactions, timeframe, setTimeframe, settings,
+    account, transactions, timeframe, setTimeframe, settings, updateSettings,
     updateBalance, addTransaction, updateTransaction, deleteTransaction,
   } = useStore();
 
   // ── Tab state ───────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState('Snapshot');
+  const [scrollToType, setScrollToType] = useState(null);
 
   // ── Drawer state ────────────────────────────────────────────────────
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -235,6 +237,14 @@ function App() {
   // ── Settings modal state ──────────────────────────────────────────
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  // ── Onboarding ────────────────────────────────────────────────────
+  const showWelcome = !settings.hasCompletedOnboarding;
+
+  // ── Apply theme ───────────────────────────────────────────────────
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', settings.theme || 'dark');
+  }, [settings.theme]);
+
   // ── Calculations ────────────────────────────────────────────────────
   const runway = useMemo(() =>
     calculateRunway(account, transactions, timeframe),
@@ -247,7 +257,7 @@ function App() {
   const changePct = account.currentBalance > 0
     ? Math.round((change / account.currentBalance) * 100)
     : 0;
-  const changeColor = change > 0 ? '#4CAF50' : change < 0 ? '#F44336' : '#FFFFFF';
+  const changeColor = change > 0 ? 'var(--safe-green)' : change < 0 ? 'var(--critical-red)' : 'var(--text-primary)';
   const dailyRate = Math.round(Math.abs(change) / timeframe);
   const changeMeta = change > 0
     ? `Saving $${dailyRate.toLocaleString()}/day`
@@ -349,11 +359,17 @@ function App() {
             aria-label="Home"
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-              <div style={styles.logo}>NLB</div>
+              <div
+                style={{ ...styles.logo, cursor: 'pointer', transition: 'filter 150ms ease' }}
+                onClick={(e) => { e.stopPropagation(); setCheckInOpen(true); }}
+                onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+                title="Quick Check In"
+              >NLB</div>
               <span style={{
                 fontSize: '26px',
                 fontWeight: '800',
-                background: 'linear-gradient(90deg, #00BCD4 0%, #E57373 45%, #4CAF50 100%)',
+                background: 'linear-gradient(90deg, #00E5FF 0%, #FF6B8A 45%, #4CAF50 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',
@@ -363,7 +379,7 @@ function App() {
             <div style={{
               fontSize: '10px',
               fontStyle: 'italic',
-              color: '#A0A0A0',
+              color: 'var(--text-tertiary)',
               letterSpacing: '0.12em',
               marginTop: '2px',
               paddingLeft: '2px',
@@ -376,8 +392,42 @@ function App() {
             <button
               style={{
                 background: 'transparent',
-                border: '2px solid #444444',
-                color: '#A0A0A0',
+                border: '2px solid var(--border-subtle)',
+                color: 'var(--text-tertiary)',
+                width: '40px',
+                height: '40px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 200ms ease',
+                padding: 0,
+              }}
+              onClick={() => updateSettings({ theme: settings.theme === 'dark' ? 'light' : 'dark' })}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent-orange)'; e.currentTarget.style.color = 'var(--accent-orange)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-subtle)'; e.currentTarget.style.color = 'var(--text-tertiary)'; }}
+              title={settings.theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {settings.theme === 'dark' ? (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="5"/>
+                  <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                  <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+              ) : (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                </svg>
+              )}
+            </button>
+            <button
+              style={{
+                background: 'transparent',
+                border: '2px solid var(--border-subtle)',
+                color: 'var(--text-tertiary)',
                 padding: '6px 14px',
                 borderRadius: '8px',
                 cursor: 'pointer',
@@ -387,8 +437,8 @@ function App() {
                 transition: 'all 200ms ease',
               }}
               onClick={() => setSettingsOpen(true)}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#FF6B35'; e.currentTarget.style.color = '#FF6B35'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#444444'; e.currentTarget.style.color = '#A0A0A0'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent-orange)'; e.currentTarget.style.color = 'var(--accent-orange)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-subtle)'; e.currentTarget.style.color = 'var(--text-tertiary)'; }}
               title="Settings"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -425,6 +475,37 @@ function App() {
         </nav>
       </div>
 
+      {/* PERSISTENT BALANCE BAR */}
+      <div style={{
+        maxWidth: '1400px',
+        margin: '0 auto',
+        padding: '10px 24px',
+        display: 'flex',
+        justifyContent: 'flex-end',
+        gap: '24px',
+        alignItems: 'center',
+        fontSize: '14px',
+        borderBottom: '1px solid var(--border-subtle)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ color: 'var(--text-tertiary)' }}>Balance:</span>
+          <span style={{ color: 'var(--text-primary)', fontWeight: '700' }}>
+            ${account.currentBalance.toLocaleString()}
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{ color: 'var(--text-tertiary)' }}>
+            {change >= 0 ? 'Surplus' : 'Deficit'}:
+          </span>
+          <span style={{ color: changeColor, fontWeight: '700' }}>
+            {change >= 0 ? '+' : '-'}${Math.abs(change).toLocaleString()}
+          </span>
+          <span style={{ color: 'var(--text-tertiary)', fontSize: '12px' }}>
+            / {tfLabel}
+          </span>
+        </div>
+      </div>
+
       {/* MAIN CONTENT */}
       <main style={styles.mainContent}>
         {/* TIMEFRAME SELECTOR — hidden on Cash Calendar tab */}
@@ -454,7 +535,12 @@ function App() {
             {/* KPI CARDS — 4 columns */}
             <div style={styles.cardGrid}>
               {/* INCOME */}
-              <div style={{ ...styles.card, border: '3px solid #00BCD4' }}>
+              <div
+                style={{ ...styles.card, border: '3px solid var(--accent-cyan)', cursor: 'pointer', transition: 'filter 150ms ease' }}
+                onClick={() => { setScrollToType('income'); setActiveTab('Transactions'); }}
+                onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+              >
                 <div style={styles.cardLabel}>INCOME</div>
                 <div style={{ ...styles.cardValue, fontSize: '40px' }}>
                   ${totalIncome.toLocaleString()}
@@ -463,7 +549,12 @@ function App() {
               </div>
 
               {/* EXPENSES */}
-              <div style={{ ...styles.card, border: '3px solid #E57373' }}>
+              <div
+                style={{ ...styles.card, border: '3px solid var(--accent-rose)', cursor: 'pointer', transition: 'filter 150ms ease' }}
+                onClick={() => { setScrollToType('expense'); setActiveTab('Transactions'); }}
+                onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+              >
                 <div style={styles.cardLabel}>EXPENSES</div>
                 <div style={{ ...styles.cardValue, fontSize: '40px' }}>
                   ${totalExpenses.toLocaleString()}
@@ -481,7 +572,12 @@ function App() {
               </div>
 
               {/* BALANCE */}
-              <div style={{ ...styles.card, border: `3px solid ${getBalanceBorderColor(account.currentBalance)}` }}>
+              <div
+                style={{ ...styles.card, border: `3px solid ${getBalanceBorderColor(account.currentBalance)}`, cursor: 'pointer', transition: 'filter 150ms ease' }}
+                onClick={() => setCheckInOpen(true)}
+                onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+              >
                 <div style={styles.cardLabel}>BALANCE</div>
                 <div style={{ ...styles.cardValue, fontSize: '40px' }}>
                   ${account.currentBalance.toLocaleString()}
@@ -495,8 +591,9 @@ function App() {
             {/* PROJECTION CHART */}
             <div style={styles.chartContainer}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '12px' }}>
-                <span style={{ fontSize: '16px', fontWeight: '700', color: '#FFFFFF' }}>Cash Flow Projection</span>
-                <span style={{ fontSize: '14px', color: '#A0A0A0' }}>{changeMeta}</span>
+                <span style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>Cash Flow Projection</span>
+                <span style={{ fontSize: '14px', color: 'var(--text-tertiary)' }}>{changeMeta}</span>
+                <span style={{ marginLeft: 'auto', fontSize: '13px', fontStyle: 'italic', color: 'var(--text-tertiary)' }}>Real ups, real downs, real life.</span>
               </div>
               <div style={{ height: 'calc(100% - 36px)' }}>
                 <ResponsiveContainer width="100%" height="100%">
@@ -506,20 +603,20 @@ function App() {
                   >
                     <CartesianGrid
                       strokeDasharray="3 3"
-                      stroke="rgba(255,255,255,0.1)"
+                      stroke={settings.theme === 'light' ? 'rgba(26,26,46,0.08)' : 'rgba(255,255,255,0.1)'}
                       vertical={false}
                     />
                     <XAxis
                       dataKey="date"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: '#FFFFFF', fontSize: 12 }}
+                      tick={{ fill: settings.theme === 'light' ? '#4A5568' : '#FFFFFF', fontSize: 12 }}
                       minTickGap={30}
                     />
                     <YAxis
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: '#FFFFFF', fontSize: 12 }}
+                      tick={{ fill: settings.theme === 'light' ? '#4A5568' : '#FFFFFF', fontSize: 12 }}
                       tickFormatter={(val) => val >= 1000 ? `$${(val / 1000).toFixed(0)}k` : `$${val.toLocaleString()}`}
                     />
                     <Tooltip
@@ -528,27 +625,27 @@ function App() {
                         const d = payload[0].payload;
                         return (
                           <div style={{
-                            background: '#1A1A1A', border: '1px solid #333333',
+                            background: 'var(--bg-panel)', border: '1px solid var(--border-subtle)',
                             borderRadius: '8px', padding: '10px 14px', minWidth: '160px',
                           }}>
-                            <div style={{ color: '#FFFFFF', fontWeight: '700', fontSize: '13px', marginBottom: '8px' }}>
+                            <div style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '13px', marginBottom: '8px' }}>
                               {d.date}
                             </div>
                             {d.dayIncome > 0 && (
                               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                <span style={{ color: '#A0A0A0', fontSize: '12px' }}>Income</span>
-                                <span style={{ color: '#00BCD4', fontSize: '12px', fontWeight: '600' }}>+${d.dayIncome.toLocaleString()}</span>
+                                <span style={{ color: 'var(--text-tertiary)', fontSize: '12px' }}>Income</span>
+                                <span style={{ color: 'var(--accent-cyan)', fontSize: '12px', fontWeight: '600' }}>+${d.dayIncome.toLocaleString()}</span>
                               </div>
                             )}
                             {d.dayExpense > 0 && (
                               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                <span style={{ color: '#A0A0A0', fontSize: '12px' }}>Expenses</span>
-                                <span style={{ color: '#E57373', fontSize: '12px', fontWeight: '600' }}>-${d.dayExpense.toLocaleString()}</span>
+                                <span style={{ color: 'var(--text-tertiary)', fontSize: '12px' }}>Expenses</span>
+                                <span style={{ color: 'var(--accent-rose)', fontSize: '12px', fontWeight: '600' }}>-${d.dayExpense.toLocaleString()}</span>
                               </div>
                             )}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #333333', paddingTop: '4px', marginTop: '2px' }}>
-                              <span style={{ color: '#A0A0A0', fontSize: '12px' }}>Balance</span>
-                              <span style={{ color: '#FFFFFF', fontSize: '13px', fontWeight: '700' }}>${d.balance.toLocaleString()}</span>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-subtle)', paddingTop: '4px', marginTop: '2px' }}>
+                              <span style={{ color: 'var(--text-tertiary)', fontSize: '12px' }}>Balance</span>
+                              <span style={{ color: 'var(--text-primary)', fontSize: '13px', fontWeight: '700' }}>${d.balance.toLocaleString()}</span>
                             </div>
                           </div>
                         );
@@ -573,7 +670,7 @@ function App() {
                             {/* Invisible larger hit area */}
                             <circle cx={cx} cy={cy} r={20} fill="transparent" />
                             {/* Visible dot */}
-                            <circle cx={cx} cy={cy} r={6} fill="#FF6B35" stroke="#FF6B35" strokeWidth={2} />
+                            <circle cx={cx} cy={cy} r={6} fill="var(--accent-orange)" stroke="var(--accent-orange)" strokeWidth={2} />
                           </g>
                         );
                       }}
@@ -615,6 +712,8 @@ function App() {
             addTransaction={addTransaction}
             updateTransaction={updateTransaction}
             deleteTransaction={deleteTransaction}
+            scrollToType={scrollToType}
+            onScrollHandled={() => setScrollToType(null)}
           />
         )}
       </main>
@@ -644,6 +743,9 @@ function App() {
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}
       />
+
+      {/* WELCOME / ONBOARDING MODAL */}
+      <WelcomeModal isOpen={showWelcome} onSkip={() => {}} />
     </div>
   );
 }

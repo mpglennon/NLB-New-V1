@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import useStore from '../store/useStore';
 
 const FREQUENCIES = ['one-time', 'weekly', 'bi-weekly', 'monthly', 'quarterly', 'annually'];
@@ -23,7 +23,7 @@ const s = {
   columnTitle: {
     fontSize: '20px',
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: 'var(--text-primary)',
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
   },
@@ -37,15 +37,15 @@ const s = {
     border: 'none',
   },
   addIncome: {
-    background: '#00BCD4',
-    color: '#FFFFFF',
+    background: 'var(--income-btn-bg)',
+    color: 'var(--text-primary)',
   },
   addExpense: {
-    background: '#E57373',
-    color: '#FFFFFF',
+    background: 'var(--expense-btn-bg)',
+    color: 'var(--text-primary)',
   },
   divider: {
-    borderRight: '1px solid #333333',
+    borderRight: '1px solid var(--border-subtle)',
     paddingRight: '24px',
   },
   list: {
@@ -54,7 +54,7 @@ const s = {
   },
   item: {
     background: 'var(--bg-card)',
-    border: '1px solid #333333',
+    border: '1px solid var(--border-subtle)',
     borderRadius: '6px',
     padding: '10px 12px',
     marginBottom: '8px',
@@ -69,7 +69,7 @@ const s = {
   itemCategory: {
     fontSize: '16px',
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: 'var(--text-primary)',
   },
   itemAmount: {
     fontSize: '18px',
@@ -77,7 +77,7 @@ const s = {
   },
   itemMeta: {
     fontSize: '13px',
-    color: '#A0A0A0',
+    color: 'var(--text-tertiary)',
     marginTop: '6px',
     display: 'flex',
     gap: '8px',
@@ -86,7 +86,7 @@ const s = {
   pausedBadge: {
     fontSize: '11px',
     fontWeight: '700',
-    color: '#FFA726',
+    color: 'var(--caution-amber)',
     background: 'rgba(255,167,38,0.15)',
     padding: '2px 8px',
     borderRadius: '4px',
@@ -94,86 +94,86 @@ const s = {
   // Inline form — compact
   form: {
     background: 'var(--bg-card)',
-    border: '2px solid #FF6B35',
+    border: '2px solid var(--accent-orange)',
     borderRadius: '6px',
-    padding: '10px 12px',
+    padding: '14px 16px',
     marginBottom: '8px',
   },
   formField: {
-    marginBottom: '6px',
+    marginBottom: '8px',
   },
   formLabel: {
-    fontSize: '10px',
+    fontSize: '11px',
     fontWeight: '600',
-    color: '#A0A0A0',
+    color: 'var(--text-tertiary)',
     textTransform: 'uppercase',
     display: 'block',
-    marginBottom: '2px',
+    marginBottom: '3px',
   },
   formInput: {
     width: '100%',
-    height: '30px',
-    background: '#1A1A1A',
-    border: '1px solid #333333',
+    height: '36px',
+    background: 'var(--bg-input)',
+    border: '1px solid var(--border-subtle)',
     borderRadius: '4px',
-    padding: '0 8px',
-    color: '#FFFFFF',
-    fontSize: '13px',
+    padding: '0 10px',
+    color: 'var(--text-primary)',
+    fontSize: '14px',
     outline: 'none',
     boxSizing: 'border-box',
   },
   formSelect: {
     width: '100%',
-    height: '30px',
-    background: '#1A1A1A',
-    border: '1px solid #333333',
+    height: '36px',
+    background: 'var(--bg-input)',
+    border: '1px solid var(--border-subtle)',
     borderRadius: '4px',
-    padding: '0 6px',
-    color: '#FFFFFF',
-    fontSize: '13px',
+    padding: '0 8px',
+    color: 'var(--text-primary)',
+    fontSize: '14px',
     outline: 'none',
     boxSizing: 'border-box',
   },
   formActions: {
     display: 'flex',
     gap: '6px',
-    marginTop: '6px',
+    marginTop: '8px',
   },
   formSave: {
     flex: 1,
-    height: '30px',
-    background: '#FF6B35',
-    color: '#FFFFFF',
+    height: '36px',
+    background: 'var(--accent-orange)',
+    color: 'var(--text-primary)',
     border: 'none',
     borderRadius: '4px',
-    fontSize: '13px',
+    fontSize: '14px',
     fontWeight: '700',
     cursor: 'pointer',
   },
   formCancel: {
     flex: 1,
-    height: '30px',
+    height: '36px',
     background: 'transparent',
-    color: '#FFFFFF',
-    border: '1px solid #FFFFFF',
+    color: 'var(--text-primary)',
+    border: '1px solid var(--border-focus)',
     borderRadius: '4px',
-    fontSize: '13px',
+    fontSize: '14px',
     fontWeight: '600',
     cursor: 'pointer',
   },
   formDelete: {
-    height: '30px',
+    height: '36px',
     background: 'transparent',
-    color: '#FF5252',
-    border: '1px solid #FF5252',
+    color: 'var(--critical-red)',
+    border: '1px solid var(--critical-red)',
     borderRadius: '4px',
     padding: '0 12px',
-    fontSize: '13px',
+    fontSize: '14px',
     fontWeight: '600',
     cursor: 'pointer',
   },
   empty: {
-    color: '#A0A0A0',
+    color: 'var(--text-tertiary)',
     fontSize: '14px',
     padding: '32px 0',
     textAlign: 'center',
@@ -187,7 +187,7 @@ const s = {
     background: 'transparent',
     border: 'none',
     borderBottom: '3px solid transparent',
-    color: '#A0A0A0',
+    color: 'var(--text-tertiary)',
     padding: '10px 20px',
     fontSize: '15px',
     fontWeight: '600',
@@ -195,8 +195,8 @@ const s = {
     transition: 'all 200ms ease',
   },
   filterActive: {
-    color: '#FFFFFF',
-    borderBottomColor: '#FF6B35',
+    color: 'var(--text-primary)',
+    borderBottomColor: 'var(--accent-orange)',
   },
 };
 
@@ -216,7 +216,28 @@ export default function TransactionsTab({
   addTransaction,
   updateTransaction,
   deleteTransaction,
+  scrollToType,
+  onScrollHandled,
 }) {
+  const incomeRef = useRef(null);
+  const expenseRef = useRef(null);
+
+  useEffect(() => {
+    if (!scrollToType) return;
+    const ref = scrollToType === 'income' ? incomeRef : expenseRef;
+    if (ref.current) {
+      ref.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      ref.current.style.outline = '2px solid var(--accent-orange)';
+      ref.current.style.outlineOffset = '4px';
+      ref.current.style.borderRadius = '8px';
+      setTimeout(() => {
+        if (ref.current) {
+          ref.current.style.outline = 'none';
+        }
+      }, 1500);
+    }
+    if (onScrollHandled) onScrollHandled();
+  }, [scrollToType, onScrollHandled]);
   const getCategories = useStore((s) => s.getCategories);
   const addCustomCategory = useStore((s) => s.addCustomCategory);
   const [editingId, setEditingId] = useState(null);
@@ -224,14 +245,24 @@ export default function TransactionsTab({
   const [form, setForm] = useState(defaultForm);
   const [filter, setFilter] = useState('All');
 
+  const [sortBy, setSortBy] = useState('date'); // 'date' | 'amount'
+
   const filtered = transactions.filter((t) => {
     if (filter === 'All') return true;
     if (filter === 'Recurring') return t.frequency !== 'one-time';
     return t.frequency === 'one-time';
   });
 
-  const income = filtered.filter((t) => t.type === 'income');
-  const expenses = filtered.filter((t) => t.type === 'expense');
+  const sortFn = sortBy === 'amount'
+    ? (a, b) => b.amount - a.amount
+    : (a, b) => (a.startDate || '').localeCompare(b.startDate || '');
+
+  const income = filtered.filter((t) => t.type === 'income').sort(sortFn);
+  const expenses = filtered.filter((t) => t.type === 'expense').sort(sortFn);
+
+  const incomeTotal = income.reduce((sum, t) => sum + t.amount, 0);
+  const expenseTotal = expenses.reduce((sum, t) => sum + t.amount, 0);
+  const net = incomeTotal - expenseTotal;
 
   const startAdd = (type) => {
     setEditingId(null);
@@ -370,9 +401,10 @@ export default function TransactionsTab({
           <label style={s.formLabel}>Start Date</label>
           <input
             type="date"
-            style={s.formInput}
+            style={{ ...s.formInput, cursor: 'pointer' }}
             value={form.startDate}
             onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+            onClick={(e) => { try { e.target.showPicker(); } catch {} }}
           />
         </div>
         <div style={s.formField}>
@@ -413,12 +445,12 @@ export default function TransactionsTab({
           ...(txn.isActive ? {} : { opacity: 0.5 }),
         }}
         onClick={() => startEdit(txn)}
-        onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#FFFFFF'; e.currentTarget.style.transform = 'translateX(4px)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#333333'; e.currentTarget.style.transform = 'translateX(0)'; }}
+        onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--border-focus)'; e.currentTarget.style.transform = 'translateX(4px)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-subtle)'; e.currentTarget.style.transform = 'translateX(0)'; }}
       >
         <div style={s.itemRow}>
           <span style={s.itemCategory}>{txn.category}</span>
-          <span style={{ ...s.itemAmount, color: isIncome ? '#00BCD4' : '#E57373' }}>
+          <span style={{ ...s.itemAmount, color: isIncome ? 'var(--accent-cyan)' : 'var(--accent-rose)' }}>
             {isIncome ? '+' : '-'}${txn.amount.toLocaleString()}
           </span>
         </div>
@@ -440,27 +472,50 @@ export default function TransactionsTab({
 
   return (
     <div>
-      {/* Filter toggles */}
-      <div style={s.filterBar}>
-        {FILTERS.map((f) => (
-          <button
-            key={f}
-            style={{
-              ...s.filterBtn,
-              ...(filter === f ? s.filterActive : {}),
-            }}
-            onClick={() => setFilter(f)}
-          >
-            {f}
-          </button>
-        ))}
+      {/* Filter toggles + Sort */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <div style={{ display: 'flex', gap: '4px' }}>
+          {FILTERS.map((f) => (
+            <button
+              key={f}
+              style={{
+                ...s.filterBtn,
+                ...(filter === f ? s.filterActive : {}),
+              }}
+              onClick={() => setFilter(f)}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--text-tertiary)' }}>
+          <span>Sort:</span>
+          {['date', 'amount'].map((opt) => (
+            <button
+              key={opt}
+              style={{
+                background: sortBy === opt ? 'var(--accent-orange)' : 'transparent',
+                color: sortBy === opt ? 'var(--text-primary)' : 'var(--text-tertiary)',
+                border: sortBy === opt ? 'none' : '1px solid var(--border-subtle)',
+                borderRadius: '4px',
+                padding: '4px 12px',
+                fontSize: '13px',
+                fontWeight: '600',
+                cursor: 'pointer',
+              }}
+              onClick={() => setSortBy(opt)}
+            >
+              {opt.charAt(0).toUpperCase() + opt.slice(1)}
+            </button>
+          ))}
+        </div>
       </div>
     <div style={{
       ...s.wrapper,
       ...(isMobile ? { gridTemplateColumns: '1fr', gap: '32px' } : {}),
     }}>
       {/* INCOME COLUMN */}
-      <div style={{ ...s.column, ...(isMobile ? {} : s.divider) }}>
+      <div ref={incomeRef} style={{ ...s.column, ...(isMobile ? {} : s.divider) }}>
         <div style={s.columnHeader}>
           <h3 style={s.columnTitle}>Income</h3>
           <button
@@ -472,10 +527,18 @@ export default function TransactionsTab({
             + Add Income
           </button>
         </div>
+        {income.length > 0 && (
+          <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--accent-cyan)', marginBottom: '12px', padding: '0 2px' }}>
+            Total: ${incomeTotal.toLocaleString()}
+          </div>
+        )}
         <div style={s.list}>
           {addingType === 'income' && renderForm('income')}
           {income.length === 0 && !addingType ? (
-            <div style={s.empty}>No income entries yet</div>
+            <div style={s.empty}>
+              <div style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>No income yet. What's coming in?</div>
+              <div>Paycheck, side gig, freelance — start with the big one.</div>
+            </div>
           ) : (
             income.map(renderItem)
           )}
@@ -483,7 +546,7 @@ export default function TransactionsTab({
       </div>
 
       {/* EXPENSES COLUMN */}
-      <div style={s.column}>
+      <div ref={expenseRef} style={s.column}>
         <div style={s.columnHeader}>
           <h3 style={s.columnTitle}>Expenses</h3>
           <button
@@ -495,10 +558,23 @@ export default function TransactionsTab({
             + Add Expense
           </button>
         </div>
+        {expenses.length > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', padding: '0 2px' }}>
+            <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--accent-rose)' }}>
+              Total: ${expenseTotal.toLocaleString()}
+            </span>
+            <span style={{ fontSize: '13px', fontWeight: '700', color: net >= 0 ? 'var(--safe-green)' : 'var(--critical-red)' }}>
+              Net: {net >= 0 ? '+' : '-'}${Math.abs(net).toLocaleString()}
+            </span>
+          </div>
+        )}
         <div style={s.list}>
           {addingType === 'expense' && renderForm('expense')}
           {expenses.length === 0 && !addingType ? (
-            <div style={s.empty}>No expense entries yet</div>
+            <div style={s.empty}>
+              <div style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>No expenses yet. Focus on the big levers.</div>
+              <div>Rent, car payment, insurance — the lattes can wait.</div>
+            </div>
           ) : (
             expenses.map(renderItem)
           )}

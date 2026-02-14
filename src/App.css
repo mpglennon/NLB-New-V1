@@ -1,14 +1,14 @@
 :root {
-  --bg-deep-slate: #0f172a;
-  --bg-slate-panel: #1e293b;
-  --bg-slate-hover: #334155;
+  --bg-deep-slate: #0B1120;
+  --bg-slate-panel: #1A2332;
+  --bg-slate-hover: #2A3A4E;
   --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
   --accent-emerald: #10b981;
   --accent-emerald-hover: #059669;
   --accent-red: #ef4444;
   --accent-orange: #FF5733; /* Safety Orange - Brand & Ritual Only */
-  --border-slate: #334155;
+  --border-slate: #2A3A4E;
 }
 
 body {

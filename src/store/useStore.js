@@ -12,12 +12,14 @@ const useStore = create(
 
       // ── Settings ────────────────────────────────────
       settings: {
+        theme: 'dark',
         cautionThreshold: 1000,
         weekStartsOn: 1, // 0 = Sunday, 1 = Monday
         hiddenIncomeCategories: [],
         hiddenExpenseCategories: [],
         customIncomeCategories: [],
         customExpenseCategories: [],
+        hasCompletedOnboarding: false,
       },
 
       // ── Actions ─────────────────────────────────────
@@ -101,18 +103,59 @@ const useStore = create(
           };
         }),
 
+      completeOnboarding: (balance, incomeEntries, expenseEntries) =>
+        set((state) => {
+          const now = new Date().toISOString();
+          const newTxns = [];
+          const incomes = Array.isArray(incomeEntries) ? incomeEntries : incomeEntries ? [incomeEntries] : [];
+          const expenses = Array.isArray(expenseEntries) ? expenseEntries : expenseEntries ? [expenseEntries] : [];
+          for (const entry of incomes) {
+            newTxns.push({
+              ...entry,
+              id: crypto.randomUUID(),
+              type: 'income',
+              isActive: true,
+              createdAt: now,
+              updatedAt: now,
+              endDate: entry.frequency === 'one-time' ? entry.startDate : null,
+            });
+          }
+          for (const entry of expenses) {
+            newTxns.push({
+              ...entry,
+              id: crypto.randomUUID(),
+              type: 'expense',
+              isActive: true,
+              createdAt: now,
+              updatedAt: now,
+              endDate: entry.frequency === 'one-time' ? entry.startDate : null,
+            });
+          }
+          return {
+            account: {
+              ...state.account,
+              currentBalance: balance ?? state.account.currentBalance,
+              lastUpdated: now,
+            },
+            transactions: newTxns,
+            settings: { ...state.settings, hasCompletedOnboarding: true },
+          };
+        }),
+
       resetAll: () =>
         set({
           account: { ...defaultAccount, lastUpdated: new Date().toISOString() },
           transactions: [],
           timeframe: 90,
           settings: {
+            theme: 'dark',
             cautionThreshold: 1000,
             weekStartsOn: 1,
             hiddenIncomeCategories: [],
             hiddenExpenseCategories: [],
             customIncomeCategories: [],
             customExpenseCategories: [],
+            hasCompletedOnboarding: false,
           },
         }),
 

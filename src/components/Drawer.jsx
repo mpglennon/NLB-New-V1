@@ -22,7 +22,7 @@ const s = {
   backdrop: {
     position: 'absolute',
     inset: 0,
-    background: 'rgba(0,0,0,0.35)',
+    background: 'var(--overlay-bg)',
     opacity: 0,
     transition: `opacity ${BACKDROP_MS}ms ease`,
   },
@@ -36,7 +36,7 @@ const s = {
     width: '380px',
     maxWidth: '90vw',
     height: '100%',
-    background: '#2A2A2A',
+    background: 'var(--bg-panel)',
     boxShadow: '-4px 0 24px rgba(0,0,0,0.5)',
     transform: 'translateX(100%)',
     transition: `transform ${SLIDE_MS}ms ease-out`,
@@ -52,13 +52,13 @@ const s = {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '14px 16px 10px',
-    borderBottom: '1px solid #333333',
+    borderBottom: '1px solid var(--border-subtle)',
     flexShrink: 0,
   },
   title: {
     fontSize: '15px',
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: 'var(--text-primary)',
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
   },
@@ -67,7 +67,7 @@ const s = {
     height: '32px',
     background: 'transparent',
     border: 'none',
-    color: '#A0A0A0',
+    color: 'var(--text-tertiary)',
     fontSize: '18px',
     cursor: 'pointer',
     borderRadius: '50%',
@@ -87,18 +87,18 @@ const s = {
   columnHeader: {
     fontSize: '12px',
     fontWeight: '700',
-    color: '#A0A0A0',
+    color: 'var(--text-tertiary)',
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
     padding: '12px 0 8px',
-    borderBottom: '1px solid #333333',
+    borderBottom: '1px solid var(--border-subtle)',
     marginBottom: '8px',
   },
   columnScroll: {},
   divider: {},
   txnItem: {
-    background: '#242424',
-    border: '1px solid #333333',
+    background: 'var(--bg-card)',
+    border: '1px solid var(--border-subtle)',
     borderRadius: '6px',
     padding: '8px 12px',
     marginBottom: '6px',
@@ -113,7 +113,7 @@ const s = {
   txnCategory: {
     fontSize: '13px',
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: 'var(--text-primary)',
   },
   txnAmount: {
     fontSize: '14px',
@@ -121,93 +121,93 @@ const s = {
   },
   txnMeta: {
     fontSize: '11px',
-    color: '#A0A0A0',
+    color: 'var(--text-tertiary)',
     marginTop: '2px',
   },
   empty: {
-    color: '#A0A0A0',
+    color: 'var(--text-tertiary)',
     fontSize: '14px',
     padding: '24px 0',
     textAlign: 'center',
   },
-  // Inline edit form — compact
+  // Inline edit form
   editForm: {
-    background: '#242424',
-    border: '2px solid #FF6B35',
+    background: 'var(--bg-card)',
+    border: '2px solid var(--accent-orange)',
     borderRadius: '6px',
-    padding: '10px 12px',
+    padding: '14px 16px',
     marginBottom: '6px',
   },
   editField: {
-    marginBottom: '6px',
+    marginBottom: '8px',
   },
   editLabel: {
-    fontSize: '10px',
+    fontSize: '11px',
     fontWeight: '600',
-    color: '#A0A0A0',
+    color: 'var(--text-tertiary)',
     textTransform: 'uppercase',
     display: 'block',
-    marginBottom: '2px',
+    marginBottom: '3px',
   },
   editInput: {
     width: '100%',
-    height: '28px',
-    background: '#1A1A1A',
-    border: '1px solid #333333',
+    height: '34px',
+    background: 'var(--bg-input)',
+    border: '1px solid var(--border-subtle)',
     borderRadius: '4px',
-    padding: '0 8px',
-    color: '#FFFFFF',
-    fontSize: '12px',
+    padding: '0 10px',
+    color: 'var(--text-primary)',
+    fontSize: '13px',
     outline: 'none',
     boxSizing: 'border-box',
   },
   editSelect: {
     width: '100%',
-    height: '28px',
-    background: '#1A1A1A',
-    border: '1px solid #333333',
+    height: '34px',
+    background: 'var(--bg-input)',
+    border: '1px solid var(--border-subtle)',
     borderRadius: '4px',
-    padding: '0 6px',
-    color: '#FFFFFF',
-    fontSize: '12px',
+    padding: '0 8px',
+    color: 'var(--text-primary)',
+    fontSize: '13px',
     outline: 'none',
     boxSizing: 'border-box',
   },
   editActions: {
     display: 'flex',
     gap: '6px',
-    marginTop: '6px',
+    marginTop: '8px',
   },
   editSave: {
     flex: 1,
-    height: '28px',
-    background: '#FF6B35',
-    color: '#FFFFFF',
+    height: '34px',
+    background: 'var(--accent-orange)',
+    color: 'var(--text-primary)',
     border: 'none',
     borderRadius: '4px',
-    fontSize: '12px',
+    fontSize: '13px',
     fontWeight: '700',
     cursor: 'pointer',
   },
   editCancel: {
     flex: 1,
-    height: '28px',
+    height: '34px',
     background: 'transparent',
-    color: '#FFFFFF',
-    border: '1px solid #FFFFFF',
+    color: 'var(--text-primary)',
+    border: '1px solid var(--border-focus)',
     borderRadius: '4px',
-    fontSize: '12px',
+    fontSize: '13px',
     fontWeight: '600',
     cursor: 'pointer',
   },
   editDelete: {
-    height: '28px',
+    height: '34px',
     background: 'transparent',
-    color: '#FF5252',
-    border: '1px solid #FF5252',
+    color: 'var(--critical-red)',
+    border: '1px solid var(--critical-red)',
     borderRadius: '4px',
-    padding: '0 10px',
-    fontSize: '12px',
+    padding: '0 12px',
+    fontSize: '13px',
     fontWeight: '600',
     cursor: 'pointer',
   },
@@ -369,8 +369,8 @@ export default function Drawer({
             style={s.closeBtn}
             onClick={onClose}
             aria-label="Close drawer"
-            onMouseEnter={(e) => { e.currentTarget.style.color = '#FFFFFF'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = '#A0A0A0'; e.currentTarget.style.background = 'transparent'; }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-tertiary)'; e.currentTarget.style.background = 'transparent'; }}
           >
             ✕
           </button>
@@ -539,9 +539,10 @@ function TransactionItem({ item, isEditing, onStartEdit, onCancelEdit, onSave, o
           <label style={s.editLabel}>Start Date</label>
           <input
             type="date"
-            style={s.editInput}
+            style={{ ...s.editInput, cursor: 'pointer' }}
             value={form.startDate || ''}
             onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+            onClick={(e) => { try { e.target.showPicker(); } catch {} }}
           />
         </div>
         <div style={s.editField}>
@@ -567,12 +568,12 @@ function TransactionItem({ item, isEditing, onStartEdit, onCancelEdit, onSave, o
     <div
       style={s.txnItem}
       onClick={onStartEdit}
-      onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#FFFFFF'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#333333'; }}
+      onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--border-focus)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}
     >
       <div style={s.txnRow}>
         <span style={s.txnCategory}>{item.category}</span>
-        <span style={{ ...s.txnAmount, color: isIncome ? '#00BCD4' : '#E57373' }}>
+        <span style={{ ...s.txnAmount, color: isIncome ? 'var(--accent-cyan)' : 'var(--accent-rose)' }}>
           {isIncome ? '+' : '-'}${item.amount.toLocaleString()}
         </span>
       </div>

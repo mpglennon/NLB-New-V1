@@ -20,10 +20,10 @@ const DAY_NAMES_SUN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const FREQUENCIES = ['one-time', 'weekly', 'bi-weekly', 'monthly', 'quarterly', 'annually'];
 
 // Badge colors
-const INCOME_BG = '#2E7D32';
-const EXPENSE_BG = '#8B3A3A';
-const INCOME_HOVER = '#388E3C';
-const EXPENSE_HOVER = '#A64D4D';
+const INCOME_BG = 'var(--income-btn-bg)';
+const EXPENSE_BG = 'var(--expense-btn-bg)';
+const INCOME_HOVER = '#00ACC1';
+const EXPENSE_HOVER = '#D4587A';
 
 const s = {
   header: {
@@ -35,12 +35,12 @@ const s = {
   monthTitle: {
     fontSize: '20px',
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: 'var(--text-primary)',
   },
   navBtn: {
     background: 'transparent',
-    border: '2px solid #333333',
-    color: '#A0A0A0',
+    border: '2px solid var(--border-subtle)',
+    color: 'var(--text-tertiary)',
     width: '44px',
     height: '44px',
     borderRadius: '8px',
@@ -61,7 +61,7 @@ const s = {
     textAlign: 'center',
     fontSize: '12px',
     fontWeight: '700',
-    color: '#A0A0A0',
+    color: 'var(--text-tertiary)',
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
     padding: '8px 0',
@@ -73,7 +73,7 @@ const s = {
   },
   cell: {
     background: 'var(--bg-card)',
-    border: '2px solid #333333',
+    border: '2px solid var(--border-subtle)',
     borderRadius: '8px',
     padding: '8px',
     minHeight: '110px',
@@ -85,7 +85,7 @@ const s = {
   cellDate: {
     fontSize: '14px',
     fontWeight: '600',
-    color: '#E0E0E0',
+    color: 'var(--text-secondary)',
     marginBottom: '4px',
   },
   badge: {
@@ -103,7 +103,7 @@ const s = {
     whiteSpace: 'nowrap',
     cursor: 'grab',
     userSelect: 'none',
-    color: '#FFFFFF',
+    color: 'var(--text-primary)',
     transition: 'background 150ms ease',
   },
   gripDots: {
@@ -126,11 +126,11 @@ const s = {
   editCard: {
     position: 'fixed',
     zIndex: 2001,
-    background: '#2A2A2A',
-    border: '2px solid #FF6B35',
+    background: 'var(--bg-panel)',
+    border: '2px solid var(--accent-orange)',
     borderRadius: '10px',
-    padding: '14px',
-    width: '260px',
+    padding: '18px',
+    width: '300px',
     boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
   },
   editHeader: {
@@ -142,88 +142,88 @@ const s = {
   editTitle: {
     fontSize: '12px',
     fontWeight: '700',
-    color: '#A0A0A0',
+    color: 'var(--text-tertiary)',
     textTransform: 'uppercase',
     letterSpacing: '0.06em',
   },
   editClose: {
     background: 'transparent',
     border: 'none',
-    color: '#A0A0A0',
+    color: 'var(--text-tertiary)',
     fontSize: '16px',
     cursor: 'pointer',
     padding: '0 4px',
   },
   editField: {
-    marginBottom: '6px',
+    marginBottom: '8px',
   },
   editLabel: {
-    fontSize: '10px',
+    fontSize: '11px',
     fontWeight: '600',
-    color: '#A0A0A0',
+    color: 'var(--text-tertiary)',
     textTransform: 'uppercase',
     display: 'block',
-    marginBottom: '2px',
+    marginBottom: '3px',
   },
   editInput: {
     width: '100%',
-    height: '28px',
-    background: '#1A1A1A',
-    border: '1px solid #333333',
+    height: '34px',
+    background: 'var(--bg-input)',
+    border: '1px solid var(--border-subtle)',
     borderRadius: '4px',
-    padding: '0 8px',
-    color: '#FFFFFF',
-    fontSize: '12px',
+    padding: '0 10px',
+    color: 'var(--text-primary)',
+    fontSize: '13px',
     outline: 'none',
     boxSizing: 'border-box',
   },
   editSelect: {
     width: '100%',
-    height: '28px',
-    background: '#1A1A1A',
-    border: '1px solid #333333',
+    height: '34px',
+    background: 'var(--bg-input)',
+    border: '1px solid var(--border-subtle)',
     borderRadius: '4px',
-    padding: '0 6px',
-    color: '#FFFFFF',
-    fontSize: '12px',
+    padding: '0 8px',
+    color: 'var(--text-primary)',
+    fontSize: '13px',
     outline: 'none',
     boxSizing: 'border-box',
   },
   editActions: {
     display: 'flex',
     gap: '6px',
-    marginTop: '8px',
+    marginTop: '10px',
   },
   editSave: {
     flex: 1,
-    height: '28px',
-    background: '#FF6B35',
-    color: '#FFFFFF',
+    height: '34px',
+    background: 'var(--accent-orange)',
+    color: 'var(--text-primary)',
     border: 'none',
     borderRadius: '4px',
-    fontSize: '12px',
+    fontSize: '13px',
     fontWeight: '700',
     cursor: 'pointer',
   },
   editCancel: {
     flex: 1,
-    height: '28px',
+    height: '34px',
     background: 'transparent',
-    color: '#FFFFFF',
-    border: '1px solid #FFFFFF',
+    color: 'var(--text-primary)',
+    border: '1px solid var(--border-focus)',
     borderRadius: '4px',
-    fontSize: '12px',
+    fontSize: '13px',
     fontWeight: '600',
     cursor: 'pointer',
   },
   editDelete: {
-    height: '28px',
+    height: '34px',
     background: 'transparent',
-    color: '#FF5252',
-    border: '1px solid #FF5252',
+    color: 'var(--critical-red)',
+    border: '1px solid var(--critical-red)',
     borderRadius: '4px',
-    padding: '0 10px',
-    fontSize: '12px',
+    padding: '0 12px',
+    fontSize: '13px',
     fontWeight: '600',
     cursor: 'pointer',
   },
@@ -231,15 +231,15 @@ const s = {
   modalOverlay: {
     position: 'fixed',
     inset: 0,
-    background: 'rgba(0,0,0,0.5)',
+    background: 'var(--overlay-bg)',
     zIndex: 2000,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
   },
   modal: {
-    background: '#2A2A2A',
-    border: '2px solid #FF6B35',
+    background: 'var(--bg-panel)',
+    border: '2px solid var(--accent-orange)',
     borderRadius: '12px',
     padding: '24px',
     minWidth: '300px',
@@ -248,12 +248,12 @@ const s = {
   modalTitle: {
     fontSize: '16px',
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: 'var(--text-primary)',
     marginBottom: '8px',
   },
   modalSubtitle: {
     fontSize: '13px',
-    color: '#A0A0A0',
+    color: 'var(--text-tertiary)',
     marginBottom: '16px',
   },
   modalBtn: {
@@ -274,15 +274,15 @@ const s = {
     fontWeight: '600',
     cursor: 'pointer',
     background: 'transparent',
-    color: '#A0A0A0',
-    border: '1px solid #333333',
+    color: 'var(--text-tertiary)',
+    border: '1px solid var(--border-subtle)',
   },
 };
 
 function getCellBorderColor(balance, threshold) {
-  if (balance <= 0) return '#C62828';
-  if (balance < threshold) return '#FFA726';
-  return '#333333';
+  if (balance <= 0) return 'var(--critical-red)';
+  if (balance < threshold) return 'var(--caution-amber)';
+  return 'var(--border-subtle)';
 }
 
 export default function CashCalendar({
@@ -535,8 +535,8 @@ export default function CashCalendar({
         <button
           style={s.navBtn}
           onClick={prevMonth}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#FFFFFF'; e.currentTarget.style.color = '#FFFFFF'; e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#333333'; e.currentTarget.style.color = '#A0A0A0'; e.currentTarget.style.background = 'transparent'; }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--border-focus)'; e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-subtle)'; e.currentTarget.style.color = 'var(--text-tertiary)'; e.currentTarget.style.background = 'transparent'; }}
         >
           ‹
         </button>
@@ -544,8 +544,8 @@ export default function CashCalendar({
         <button
           style={s.navBtn}
           onClick={nextMonth}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#FFFFFF'; e.currentTarget.style.color = '#FFFFFF'; e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#333333'; e.currentTarget.style.color = '#A0A0A0'; e.currentTarget.style.background = 'transparent'; }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--border-focus)'; e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-subtle)'; e.currentTarget.style.color = 'var(--text-tertiary)'; e.currentTarget.style.background = 'transparent'; }}
         >
           ›
         </button>
@@ -571,10 +571,10 @@ export default function CashCalendar({
           const isDragOver = dragOverDate === dateKey;
 
           const borderColor = isToday
-            ? '#FFFFFF'
+            ? 'var(--border-focus)'
             : isFuture && balance !== undefined
               ? getCellBorderColor(balance, cautionThreshold)
-              : '#333333';
+              : 'var(--border-subtle)';
 
           const borderWidth = isToday
             ? '3px'
@@ -588,7 +588,7 @@ export default function CashCalendar({
               style={{
                 ...s.cell,
                 border: isDragOver
-                  ? '3px solid #FF6B35'
+                  ? '3px solid var(--accent-orange)'
                   : `${borderWidth} solid ${borderColor}`,
                 opacity: inMonth ? 1 : 0.35,
                 background: isDragOver ? 'rgba(255,107,53,0.08)' : 'var(--bg-card)',
@@ -614,7 +614,7 @@ export default function CashCalendar({
             >
               <div style={{
                 ...s.cellDate,
-                color: isToday ? '#FFFFFF' : inMonth ? '#E0E0E0' : '#555555',
+                color: isToday ? 'var(--text-primary)' : inMonth ? 'var(--text-secondary)' : 'var(--text-tertiary)',
                 fontWeight: isToday ? '800' : '600',
               }}>
                 {format(day, 'd')}
@@ -650,7 +650,7 @@ export default function CashCalendar({
                 );
               })}
               {txns.length > 3 && (
-                <div style={{ fontSize: '10px', color: '#A0A0A0', marginTop: '2px' }}>
+                <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', marginTop: '2px' }}>
                   +{txns.length - 3} more
                 </div>
               )}
@@ -659,7 +659,7 @@ export default function CashCalendar({
               {isFuture && balance !== undefined && (
                 <div style={{
                   ...s.balanceLabel,
-                  color: balance <= 0 ? '#C62828' : balance < cautionThreshold ? '#FFA726' : '#A0A0A0',
+                  color: balance <= 0 ? 'var(--critical-red)' : balance < cautionThreshold ? 'var(--caution-amber)' : 'var(--text-tertiary)',
                 }}>
                   ${balance >= 1000 ? `${(balance / 1000).toFixed(1)}k` : balance.toLocaleString()}
                 </div>
@@ -739,9 +739,10 @@ export default function CashCalendar({
               <label style={s.editLabel}>Start Date</label>
               <input
                 type="date"
-                style={s.editInput}
+                style={{ ...s.editInput, cursor: 'pointer' }}
                 value={editForm.startDate || ''}
                 onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })}
+                onClick={(e) => { try { e.target.showPicker(); } catch {} }}
               />
             </div>
             <div style={s.editField}>
@@ -769,14 +770,14 @@ export default function CashCalendar({
           <div style={s.modal} onClick={(e) => e.stopPropagation()}>
             <div style={s.modalTitle}>Move Recurring Transaction</div>
             <div style={s.modalSubtitle}>
-              <span style={{ color: '#FFFFFF', fontWeight: '600' }}>{dropModal.txn.category}</span>
+              <span style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{dropModal.txn.category}</span>
               {' '}&mdash;{' '}
               {dropModal.txn.type === 'income' ? '+' : '-'}${dropModal.txn.amount.toLocaleString()}/{dropModal.txn.frequency}
               <br />
               Moving from {format(parseISO(dropModal.fromDate), 'MMM d')} to {format(parseISO(dropModal.toDate), 'MMM d')}
             </div>
             <button
-              style={{ ...s.modalBtn, background: '#FF6B35', color: '#FFFFFF' }}
+              style={{ ...s.modalBtn, background: 'var(--accent-orange)', color: '#FFFFFF' }}
               onClick={handleMoveOne}
               onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85'; }}
               onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
@@ -784,9 +785,9 @@ export default function CashCalendar({
               Move Just This One
             </button>
             <button
-              style={{ ...s.modalBtn, background: 'transparent', color: '#FFFFFF', border: '2px solid #FFFFFF' }}
+              style={{ ...s.modalBtn, background: 'transparent', color: 'var(--text-primary)', border: '2px solid var(--border-focus)' }}
               onClick={handleMoveAll}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
             >
               Move All Future Occurrences
