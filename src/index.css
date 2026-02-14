@@ -1,0 +1,55 @@
+:root {
+  /* Brand */
+  --brand-orange: #FF6B35;
+  --caution-amber: #FFA726;
+  --safe-green: #4CAF50;
+  --critical-white: #FFFFFF;
+
+  /* Text */
+  --text-primary: #FFFFFF;
+  --text-secondary: #E0E0E0;
+  --text-tertiary: #A0A0A0;
+
+  /* Backgrounds */
+  --bg-dark: #1A1A1A;
+  --bg-card: #242424;
+  --bg-hover: rgba(255, 255, 255, 0.05);
+
+  /* Borders */
+  --border-subtle: #333333;
+  --border-focus: #FFFFFF;
+
+  /* Overlays */
+  --overlay-backdrop: rgba(0, 0, 0, 0.6);
+
+  /* Font */
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                 "Helvetica Neue", Arial, sans-serif;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: var(--bg-dark);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+}
+
+/* Responsive card grid */
+@media (max-width: 768px) {
+  .kpi-card-grid {
+    grid-template-columns: 1fr !important;
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm list:*)",
+      "Bash(npm install:*)",
+      "Bash(npx vite build:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx vite:*)",
+      "Bash(lsof:*)",
+      "Bash(gh auth status:*)"
+    ]
+  }
+}

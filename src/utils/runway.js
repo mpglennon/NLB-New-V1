@@ -1,0 +1,198 @@
+import {
+  addDays,
+  addWeeks,
+  addMonths,
+  differenceInCalendarDays,
+  startOfToday,
+  parseISO,
+  format,
+} from 'date-fns';
+
+/**
+ * Get all occurrence dates for a transaction within a timeframe window.
+ * @param {import('../types/index.js').Transaction} transaction
+ * @param {number} timeframe - Days to look ahead from today
+ * @returns {Date[]}
+ */
+export function getOccurrences(transaction, timeframe) {
+  const today = startOfToday();
+  const windowEnd = addDays(today, timeframe);
+  const txnStart = parseISO(transaction.startDate);
+
+  // Build exclusion set from excludeDates array
+  const excluded = new Set(
+    (transaction.excludeDates || []).map((d) => d)
+  );
+
+  // One-time: single date, no looping needed
+  if (transaction.frequency === 'one-time') {
+    const key = format(txnStart, 'yyyy-MM-dd');
+    return excluded.has(key) ? [] : [txnStart];
+  }
+
+  // Recurring: generate dates from startDate until endDate or window end
+  const txnEnd = transaction.endDate
+    ? parseISO(transaction.endDate)
+    : windowEnd;
+  const effectiveEnd = txnEnd < windowEnd ? txnEnd : windowEnd;
+
+  const dates = [];
+  let current = txnStart;
+
+  while (current <= effectiveEnd) {
+    const key = format(current, 'yyyy-MM-dd');
+    if (!excluded.has(key)) {
+      dates.push(current);
+    }
+
+    switch (transaction.frequency) {
+      case 'weekly':
+        current = addWeeks(current, 1);
+        break;
+      case 'bi-weekly':
+        current = addWeeks(current, 2);
+        break;
+      case 'monthly':
+        current = addMonths(current, 1);
+        break;
+      case 'quarterly':
+        current = addMonths(current, 3);
+        break;
+      case 'annually':
+        current = addMonths(current, 12);
+        break;
+      default:
+        return dates;
+    }
+  }
+
+  return dates;
+}
+
+/**
+ * Generate array of daily net cash flows over a timeframe.
+ * Index 0 = today, index 1 = tomorrow, etc.
+ * Positive values = net income that day, negative = net expense.
+ * @param {import('../types/index.js').Transaction[]} transactions
+ * @param {number} timeframe
+ * @returns {number[]}
+ */
+export function generateDailyCashFlow(transactions, timeframe) {
+  const days = new Array(timeframe).fill(0);
+  const today = startOfToday();
+
+  for (const txn of transactions) {
+    if (!txn.isActive) continue;
+
+    const occurrences = getOccurrences(txn, timeframe);
+    for (const date of occurrences) {
+      const dayIndex = differenceInCalendarDays(date, today);
+      if (dayIndex >= 0 && dayIndex < timeframe) {
+        days[dayIndex] += txn.type === 'income' ? txn.amount : -txn.amount;
+      }
+    }
+  }
+
+  return days;
+}
+
+/**
+ * Calculate average daily burn rate (absolute net cash flow per day).
+ * @param {import('../types/index.js').Transaction[]} transactions
+ * @param {number} [timeframe=30]
+ * @returns {number}
+ */
+export function calculateDailyBurnRate(transactions, timeframe = 30) {
+  const dailyCashFlow = generateDailyCashFlow(transactions, timeframe);
+  const totalIncome = dailyCashFlow
+    .filter((d) => d > 0)
+    .reduce((sum, d) => sum + d, 0);
+  const totalExpenses = Math.abs(
+    dailyCashFlow.filter((d) => d < 0).reduce((sum, d) => sum + d, 0)
+  );
+  const netCashFlow = totalIncome - totalExpenses;
+
+  return Math.round((Math.abs(netCashFlow) / timeframe) * 100) / 100;
+}
+
+/**
+ * Determine runway status from days remaining.
+ * @param {number} runwayDays
+ * @returns {'safe' | 'caution' | 'critical'}
+ */
+export function getRunwayStatus(runwayDays) {
+  if (runwayDays >= 60) return 'safe';
+  if (runwayDays >= 30) return 'caution';
+  return 'critical';
+}
+
+/**
+ * Main runway calculation — produces the full RunwayResult.
+ * Always simulates 365 days for projected balance checkpoints.
+ * @param {import('../types/index.js').Account} account
+ * @param {import('../types/index.js').Transaction[]} transactions
+ * @param {number} timeframe - User-selected timeframe (used for burn rate)
+ * @returns {import('../types/index.js').RunwayResult}
+ */
+export function calculateRunway(account, transactions, timeframe) {
+  const activeTransactions = transactions.filter((t) => t.isActive);
+  const today = startOfToday();
+  const maxDays = 365;
+  const checkpoints = [30, 60, 90, 365];
+
+  // Edge case: already broke
+  if (account.currentBalance <= 0) {
+    const cf = generateDailyCashFlow(activeTransactions, maxDays);
+    let bal = account.currentBalance;
+    const pb = {};
+    for (let i = 0; i < maxDays; i++) {
+      bal += cf[i];
+      if (checkpoints.includes(i + 1)) {
+        pb[`${i + 1}d`] = Math.round(bal * 100) / 100;
+      }
+    }
+    return {
+      runwayDays: 0,
+      dailyBurnRate: calculateDailyBurnRate(activeTransactions, timeframe),
+      projectedBalance: pb,
+      status: 'critical',
+      depletionDate: format(today, 'yyyy-MM-dd'),
+    };
+  }
+
+  // Generate 365 days of cash flow for full projections
+  const dailyCashFlow = generateDailyCashFlow(activeTransactions, maxDays);
+
+  let balance = account.currentBalance;
+  let runwayDays = null;
+  let depletionDate = null;
+  const projectedBalance = {};
+
+  for (let i = 0; i < maxDays; i++) {
+    balance += dailyCashFlow[i];
+
+    // Record balance at projection checkpoints
+    if (checkpoints.includes(i + 1)) {
+      projectedBalance[`${i + 1}d`] = Math.round(balance * 100) / 100;
+    }
+
+    // First day balance goes negative = depletion
+    if (balance < 0 && runwayDays === null) {
+      runwayDays = i;
+      depletionDate = format(addDays(today, i), 'yyyy-MM-dd');
+    }
+  }
+
+  // Never depleted within 365 days
+  if (runwayDays === null) {
+    runwayDays = Infinity;
+  }
+
+  return {
+    runwayDays,
+    dailyBurnRate: calculateDailyBurnRate(activeTransactions, timeframe),
+    projectedBalance,
+    status: getRunwayStatus(runwayDays),
+    depletionDate,
+  };
+}

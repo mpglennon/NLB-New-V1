@@ -1,0 +1,390 @@
+:root {
+  --bg-deep-slate: #0f172a;
+  --bg-slate-panel: #1e293b;
+  --bg-slate-hover: #334155;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --accent-emerald: #10b981;
+  --accent-emerald-hover: #059669;
+  --accent-red: #ef4444;
+  --accent-orange: #FF5733; /* Safety Orange - Brand & Ritual Only */
+  --border-slate: #334155;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-deep-slate);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#root {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+}
+
+.layout {
+  display: flex;
+  flex: 1;
+  height: 100%;
+  flex-direction: column;
+}
+
+/* Top Navigation Bar */
+.top-nav {
+  height: 70px;
+  background-color: var(--bg-slate-panel);
+  border-bottom: 1px solid var(--border-slate);
+  display: flex;
+  align-items: center;
+  padding: 0 2rem;
+  justify-content: space-between;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: #ffffff;
+}
+
+.brand-logo {
+  background-color: var(--accent-orange);
+  color: white;
+  font-weight: 800;
+  font-size: 0.875rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.35rem; /* Rounded Square */
+  letter-spacing: 0.05em;
+}
+
+.nav-tabs {
+  display: flex;
+  gap: 2rem;
+  height: 100%;
+}
+
+.nav-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  cursor: pointer;
+  height: 100%;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+  padding: 0 0.5rem;
+}
+
+.nav-tab:hover {
+  color: var(--text-primary);
+}
+
+.nav-tab.active {
+  color: var(--accent-emerald);
+  border-bottom-color: var(--accent-emerald);
+}
+
+/* Ritual Button */
+.btn-ritual {
+  background-color: var(--accent-orange);
+  color: white;
+  padding: 0.5rem 1.25rem;
+  border-radius: 0.5rem;
+  border: none;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(255, 87, 51, 0.2);
+}
+
+.btn-ritual:hover {
+  opacity: 0.9;
+}
+
+/* Main Content Area */
+.main-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: 1600px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* KPI Cards */
+.kpi-container {
+  display: flex;
+  gap: 3rem;
+  margin-bottom: 2rem;
+}
+
+.kpi-value {
+  font-size: 3.5rem;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.05em;
+}
+
+.kpi-label {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+/* Dashboard Grid */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 1.5rem;
+}
+
+.card {
+  background-color: var(--bg-slate-panel);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  border: 1px solid var(--border-slate);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Full height cards for calendar/transactions views */
+.view-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Form Inputs - High Accessibility */
+.input-group {
+  margin-bottom: 1.5rem;
+}
+
+.input-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.input-field, .select-field {
+  width: 100%;
+  height: 48px; /* Accessibility requirement */
+  background: var(--bg-deep-slate);
+  border: 1px solid var(--border-slate);
+  padding: 0 1rem;
+  border-radius: 0.5rem;
+  color: var(--text-primary);
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+.input-field:focus, .select-field:focus {
+  outline: none;
+  border-color: var(--accent-emerald);
+}
+
+.btn-primary {
+  height: 48px; /* Accessibility requirement */
+  background-color: var(--accent-emerald);
+  color: white;
+  padding: 0 2rem;
+  border-radius: 0.5rem;
+  border: none;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.btn-primary:hover {
+  background-color: var(--accent-emerald-hover);
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  background-color: var(--bg-slate-panel);
+  border: 1px solid var(--border-slate);
+  border-radius: 1rem;
+  padding: 2rem;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Toggle Switch */
+.toggle-group {
+  display: flex;
+  background: var(--bg-deep-slate);
+  border-radius: 0.5rem;
+  padding: 0.25rem;
+  border: 1px solid var(--border-slate);
+  height: 48px; /* Accessibility requirement */
+  box-sizing: border-box;
+}
+
+.toggle-btn {
+  flex: 1;
+  border-radius: 0.25rem;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  height: 100%;
+}
+
+.toggle-btn.active.income {
+  background-color: var(--accent-emerald);
+  color: white;
+}
+
+.toggle-btn.active.expense {
+  background-color: var(--accent-red);
+  color: white;
+}
+
+/* Calendar View */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background-color: var(--border-slate);
+  border: 1px solid var(--border-slate);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.calendar-day-header {
+  background-color: var(--bg-slate-panel);
+  padding: 1rem;
+  text-align: center;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.calendar-cell {
+  background-color: var(--bg-deep-slate);
+  min-height: 120px;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.calendar-date {
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+}
+
+.calendar-event {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.calendar-event.income {
+  background-color: rgba(16, 185, 129, 0.2);
+  color: var(--accent-emerald);
+  border-left: 2px solid var(--accent-emerald);
+}
+
+.calendar-event.expense {
+  background-color: rgba(239, 68, 68, 0.2);
+  color: var(--accent-red);
+  border-left: 2px solid var(--accent-red);
+}
+
+/* Transaction Table */
+.tx-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tx-table th {
+  text-align: left;
+  padding: 1rem;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-slate);
+  font-weight: 600;
+}
+
+.tx-table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-slate);
+  color: var(--text-primary);
+}
+
+.tx-row:hover td {
+  background-color: var(--bg-slate-hover);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-deep-slate);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-slate);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
