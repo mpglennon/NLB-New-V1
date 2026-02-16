@@ -1,11 +1,12 @@
-import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
+  ReferenceLine,
   ResponsiveContainer,
 } from 'recharts';
 import { format, addDays, startOfToday } from 'date-fns';
@@ -36,7 +37,7 @@ const styles = {
   header: {
     maxWidth: '1400px',
     margin: '0 auto',
-    padding: '24px',
+    padding: '16px 24px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -53,24 +54,19 @@ const styles = {
     justifyContent: 'center',
     letterSpacing: '0.04em',
   },
-  headerTitle: {
-    fontSize: '24px',
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: '0.1em',
-  },
   checkInBtn: {
     backgroundColor: 'var(--accent-orange)',
     color: '#FFFFFF',
-    height: '48px',
-    padding: '0 24px',
+    height: '40px',
+    padding: '0 20px',
     border: 'none',
     borderRadius: '8px',
-    fontSize: '16px',
+    fontSize: '14px',
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
     cursor: 'pointer',
+    transition: 'filter 150ms ease',
   },
   navWrapper: {
     padding: '0 24px',
@@ -95,7 +91,7 @@ const styles = {
   },
   activeTab: {
     color: 'var(--text-primary)',
-    borderBottomColor: 'var(--accent-orange)',
+    borderBottomColor: 'var(--text-primary)',
   },
   mainContent: {
     maxWidth: '1400px',
@@ -105,7 +101,7 @@ const styles = {
   topControls: {
     display: 'flex',
     justifyContent: 'flex-end',
-    marginBottom: '24px',
+    marginBottom: '16px',
   },
   timeframeSelector: {
     display: 'flex',
@@ -131,21 +127,23 @@ const styles = {
   cardGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(4, 1fr)',
-    gap: '24px',
-    marginBottom: '24px',
+    gap: '16px',
+    marginBottom: '16px',
   },
   card: {
     background: 'var(--bg-card)',
     border: '1px solid var(--border-subtle)',
     borderRadius: '12px',
-    padding: '24px',
+    padding: '20px 24px',
     cursor: 'default',
+    boxShadow: 'var(--shadow-card)',
+    transition: 'transform 200ms ease, box-shadow 200ms ease',
   },
   cardLabel: {
-    fontSize: '14px',
-    color: 'var(--text-tertiary)',
+    fontSize: '11px',
+    fontWeight: '600',
     textTransform: 'uppercase',
-    letterSpacing: '0.05em',
+    letterSpacing: '0.08em',
     marginBottom: '8px',
   },
   cardValue: {
@@ -174,6 +172,8 @@ const styles = {
     fontWeight: '500',
   },
 };
+
+const FREQUENCIES = ['one-time', 'weekly', 'bi-weekly', 'monthly', 'quarterly', 'annually'];
 
 // Chart line color based on runway status
 function getChartLineColor(status) {
@@ -210,6 +210,7 @@ function App() {
   const {
     account, transactions, timeframe, setTimeframe, settings, updateSettings,
     updateBalance, addTransaction, updateTransaction, deleteTransaction,
+    getCategories, addCustomCategory,
   } = useStore();
 
   // ── Tab state ───────────────────────────────────────────────────────
@@ -230,6 +231,12 @@ function App() {
   const closeDrawer = useCallback(() => {
     setDrawerOpen(false);
   }, []);
+
+  // ── Chart popover state ────────────────────────────────────────────
+  const [pinnedDay, setPinnedDay] = useState(null); // { data, x, y }
+  const [editingTxnId, setEditingTxnId] = useState(null);
+  const popoverRef = useRef(null);
+  const chartContainerRef = useRef(null);
 
   // ── Check In modal state ────────────────────────────────────────────
   const [checkInOpen, setCheckInOpen] = useState(false);
@@ -303,19 +310,51 @@ function App() {
 
   const lineColor = getChartLineColor(runway.status);
 
-  // ── Chart dot click handler ────────────────────────────────────────
-  const handleDotClick = useCallback((payload) => {
-    if (payload && payload.isoDate) {
-      openDrawer('date', payload.isoDate);
-    }
-  }, [openDrawer]);
+  // ── Chart dot click → popover ──────────────────────────────────────
+  const handleDotClick = useCallback((payload, event) => {
+    if (!payload || !payload.dayTxns || payload.dayTxns.length === 0) return;
+    const chartRect = chartContainerRef.current?.getBoundingClientRect();
+    if (!chartRect) return;
+    // Position relative to chart container
+    const x = event.clientX - chartRect.left;
+    const y = event.clientY - chartRect.top;
+    setPinnedDay({ data: payload, x, y });
+    setEditingTxnId(null);
+  }, []);
+
+  // Close popover on click outside
+  useEffect(() => {
+    if (!pinnedDay) return;
+    const handler = (e) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target)) {
+        setPinnedDay(null);
+        setEditingTxnId(null);
+      }
+    };
+    // Delay listener so the click that opened it doesn't immediately close it
+    const timer = setTimeout(() => document.addEventListener('mousedown', handler), 0);
+    return () => { clearTimeout(timer); document.removeEventListener('mousedown', handler); };
+  }, [pinnedDay]);
+
+  // ESC closes edit first, then popover
+  useEffect(() => {
+    if (!pinnedDay) return;
+    const handler = (e) => {
+      if (e.key === 'Escape') {
+        if (editingTxnId) { setEditingTxnId(null); }
+        else { setPinnedDay(null); }
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [pinnedDay, editingTxnId]);
 
   // ── Keyboard shortcuts (C = Check In, T = Transactions drawer, 1-4 = tabs) ──
   React.useEffect(() => {
     const handler = (e) => {
       // Don't fire when typing in inputs
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
-      if (drawerOpen || checkInOpen) return; // let component-level handlers work
+      if (drawerOpen || checkInOpen || pinnedDay) return; // let component-level handlers work
 
       switch (e.key) {
         case 'c':
@@ -344,7 +383,7 @@ function App() {
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [drawerOpen, checkInOpen, openDrawer]);
+  }, [drawerOpen, checkInOpen, pinnedDay, openDrawer]);
 
   return (
     <div style={styles.app}>
@@ -385,10 +424,7 @@ function App() {
               paddingLeft: '2px',
             }}>Never Look Back</div>
           </div>
-          <h1 style={styles.headerTitle}>
-            {activeTab === 'Snapshot' ? 'CASH SNAPSHOT' : activeTab.toUpperCase()}
-          </h1>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
             <button
               style={{
                 background: 'transparent',
@@ -536,13 +572,13 @@ function App() {
             <div style={styles.cardGrid}>
               {/* INCOME */}
               <div
-                style={{ ...styles.card, border: '3px solid var(--accent-cyan)', cursor: 'pointer', transition: 'filter 150ms ease' }}
+                style={{ ...styles.card, borderLeft: '3px solid var(--accent-cyan)', cursor: 'pointer' }}
                 onClick={() => { setScrollToType('income'); setActiveTab('Transactions'); }}
-                onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--shadow-hover)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-card)'; }}
               >
-                <div style={styles.cardLabel}>INCOME</div>
-                <div style={{ ...styles.cardValue, fontSize: '40px' }}>
+                <div style={{ ...styles.cardLabel, color: 'var(--accent-cyan)' }}>Income</div>
+                <div style={{ ...styles.cardValue, fontSize: '36px' }}>
                   ${totalIncome.toLocaleString()}
                 </div>
                 <div style={styles.cardMeta}>Next {tfLabel}</div>
@@ -550,22 +586,22 @@ function App() {
 
               {/* EXPENSES */}
               <div
-                style={{ ...styles.card, border: '3px solid var(--accent-rose)', cursor: 'pointer', transition: 'filter 150ms ease' }}
+                style={{ ...styles.card, borderLeft: '3px solid var(--accent-rose)', cursor: 'pointer' }}
                 onClick={() => { setScrollToType('expense'); setActiveTab('Transactions'); }}
-                onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--shadow-hover)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-card)'; }}
               >
-                <div style={styles.cardLabel}>EXPENSES</div>
-                <div style={{ ...styles.cardValue, fontSize: '40px' }}>
+                <div style={{ ...styles.cardLabel, color: 'var(--accent-rose)' }}>Expenses</div>
+                <div style={{ ...styles.cardValue, fontSize: '36px' }}>
                   ${totalExpenses.toLocaleString()}
                 </div>
                 <div style={styles.cardMeta}>Next {tfLabel}</div>
               </div>
 
               {/* CHANGE */}
-              <div style={{ ...styles.card, border: `3px solid ${changeColor}` }}>
-                <div style={styles.cardLabel}>CHANGE</div>
-                <div style={{ ...styles.cardValue, fontSize: '40px', color: changeColor }}>
+              <div style={{ ...styles.card, borderLeft: `3px solid ${changeColor}` }}>
+                <div style={{ ...styles.cardLabel, color: changeColor }}>Change</div>
+                <div style={{ ...styles.cardValue, fontSize: '36px', color: changeColor }}>
                   {change > 0 ? '\u2191' : change < 0 ? '\u2193' : '\u2192'} ${Math.abs(change).toLocaleString()}
                 </div>
                 <div style={styles.cardMeta}>{changeMeta}</div>
@@ -573,13 +609,13 @@ function App() {
 
               {/* BALANCE */}
               <div
-                style={{ ...styles.card, border: `3px solid ${getBalanceBorderColor(account.currentBalance)}`, cursor: 'pointer', transition: 'filter 150ms ease' }}
+                style={{ ...styles.card, borderLeft: `3px solid ${getBalanceBorderColor(account.currentBalance)}`, cursor: 'pointer' }}
                 onClick={() => setCheckInOpen(true)}
-                onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.15)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.filter = 'brightness(1)'; }}
+                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--shadow-hover)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-card)'; }}
               >
-                <div style={styles.cardLabel}>BALANCE</div>
-                <div style={{ ...styles.cardValue, fontSize: '40px' }}>
+                <div style={{ ...styles.cardLabel, color: 'var(--text-tertiary)' }}>Balance</div>
+                <div style={{ ...styles.cardValue, fontSize: '36px' }}>
                   ${account.currentBalance.toLocaleString()}
                 </div>
                 <div style={styles.cardMeta}>
@@ -589,95 +625,145 @@ function App() {
             </div>
 
             {/* PROJECTION CHART */}
-            <div style={styles.chartContainer}>
+            <div style={{ ...styles.chartContainer, position: 'relative' }} ref={chartContainerRef}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '12px' }}>
-                <span style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>Cash Flow Projection</span>
-                <span style={{ fontSize: '14px', color: 'var(--text-tertiary)' }}>{changeMeta}</span>
-                <span style={{ marginLeft: 'auto', fontSize: '13px', fontStyle: 'italic', color: 'var(--text-tertiary)' }}>Real ups, real downs, real life.</span>
+                <span style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)' }}>Cash Flow Projection</span>
+                <span style={{ fontSize: '13px', color: 'var(--text-tertiary)' }}>{changeMeta}</span>
               </div>
               <div style={{ height: 'calc(100% - 36px)' }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
+                  <AreaChart
                     data={chartData}
                     margin={{ top: 5, right: 20, bottom: 5, left: 0 }}
                   >
+                    <defs>
+                      <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={lineColor} stopOpacity={0.25} />
+                        <stop offset="100%" stopColor={lineColor} stopOpacity={0.0} />
+                      </linearGradient>
+                    </defs>
                     <CartesianGrid
                       strokeDasharray="3 3"
-                      stroke={settings.theme === 'light' ? 'rgba(26,26,46,0.08)' : 'rgba(255,255,255,0.1)'}
+                      stroke={settings.theme === 'light' ? 'rgba(26,26,46,0.06)' : 'rgba(255,255,255,0.06)'}
                       vertical={false}
                     />
                     <XAxis
                       dataKey="date"
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: settings.theme === 'light' ? '#4A5568' : '#FFFFFF', fontSize: 12 }}
+                      tick={{ fill: 'var(--text-tertiary)', fontSize: 11 }}
                       minTickGap={30}
                     />
                     <YAxis
                       axisLine={false}
                       tickLine={false}
-                      tick={{ fill: settings.theme === 'light' ? '#4A5568' : '#FFFFFF', fontSize: 12 }}
-                      tickFormatter={(val) => val >= 1000 ? `$${(val / 1000).toFixed(0)}k` : `$${val.toLocaleString()}`}
+                      tick={{ fill: 'var(--text-tertiary)', fontSize: 11 }}
+                      tickFormatter={(val) => {
+                        const abs = Math.abs(val);
+                        const prefix = val < 0 ? '-' : '';
+                        return abs >= 1000 ? `${prefix}$${(abs / 1000).toFixed(0)}k` : `${prefix}$${abs.toLocaleString()}`;
+                      }}
+                      domain={[
+                        (dataMin) => Math.min(dataMin, 0),
+                        'auto',
+                      ]}
                     />
                     <Tooltip
                       content={({ active, payload }) => {
+                        if (pinnedDay) return null;
                         if (!active || !payload || !payload.length) return null;
                         const d = payload[0].payload;
+                        const txns = d.dayTxns || [];
                         return (
                           <div style={{
                             background: 'var(--bg-panel)', border: '1px solid var(--border-subtle)',
-                            borderRadius: '8px', padding: '10px 14px', minWidth: '160px',
+                            borderRadius: '8px', padding: '12px 16px', minWidth: '200px',
+                            boxShadow: 'var(--shadow-hover)',
                           }}>
-                            <div style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '13px', marginBottom: '8px' }}>
-                              {d.date}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: txns.length ? '10px' : '8px' }}>
+                              <span style={{ color: 'var(--text-secondary)', fontSize: '12px', fontWeight: '500' }}>{d.date}</span>
+                              <span style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: '700', marginLeft: '16px' }}>${d.balance.toLocaleString()}</span>
                             </div>
-                            {d.dayIncome > 0 && (
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                <span style={{ color: 'var(--text-tertiary)', fontSize: '12px' }}>Income</span>
-                                <span style={{ color: 'var(--accent-cyan)', fontSize: '12px', fontWeight: '600' }}>+${d.dayIncome.toLocaleString()}</span>
+                            {txns.length > 0 && (
+                              <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '8px' }}>
+                                {txns.map((txn, i) => (
+                                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: i < txns.length - 1 ? '5px' : '0', gap: '16px' }}>
+                                    <span style={{ color: 'var(--text-secondary)', fontSize: '12px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '140px' }}>{txn.category}</span>
+                                    <span style={{
+                                      fontSize: '12px',
+                                      fontWeight: '600',
+                                      color: txn.type === 'income' ? 'var(--accent-cyan)' : 'var(--accent-rose)',
+                                      whiteSpace: 'nowrap',
+                                    }}>
+                                      {txn.type === 'income' ? '+' : '-'}${txn.amount.toLocaleString()}
+                                    </span>
+                                  </div>
+                                ))}
                               </div>
                             )}
-                            {d.dayExpense > 0 && (
-                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                <span style={{ color: 'var(--text-tertiary)', fontSize: '12px' }}>Expenses</span>
-                                <span style={{ color: 'var(--accent-rose)', fontSize: '12px', fontWeight: '600' }}>-${d.dayExpense.toLocaleString()}</span>
-                              </div>
-                            )}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-subtle)', paddingTop: '4px', marginTop: '2px' }}>
-                              <span style={{ color: 'var(--text-tertiary)', fontSize: '12px' }}>Balance</span>
-                              <span style={{ color: 'var(--text-primary)', fontSize: '13px', fontWeight: '700' }}>${d.balance.toLocaleString()}</span>
-                            </div>
                           </div>
                         );
                       }}
                     />
-                    <Line
+                    <ReferenceLine
+                      y={0}
+                      stroke="var(--accent-rose)"
+                      strokeWidth={1.5}
+                      strokeDasharray="6 3"
+                    />
+                    {settings.cautionThreshold > 0 && (
+                      <ReferenceLine
+                        y={settings.cautionThreshold}
+                        stroke="var(--caution-amber)"
+                        strokeWidth={1}
+                        strokeDasharray="4 4"
+                        strokeOpacity={0.7}
+                        label={{ value: `$${settings.cautionThreshold.toLocaleString()}`, position: 'left', fill: 'var(--caution-amber)', fontSize: 10, fontWeight: 600 }}
+                      />
+                    )}
+                    <Area
                       type="monotone"
                       dataKey="balance"
                       stroke={lineColor}
-                      strokeWidth={3}
+                      strokeWidth={2.5}
+                      fill="url(#balanceGradient)"
                       dot={false}
                       activeDot={(props) => {
                         const { cx, cy, payload } = props;
+                        const hasTxns = payload.dayTxns && payload.dayTxns.length > 0;
                         return (
                           <g
-                            cursor="pointer"
+                            cursor={hasTxns ? 'pointer' : 'default'}
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDotClick(payload);
+                              handleDotClick(payload, e);
                             }}
                           >
-                            {/* Invisible larger hit area */}
                             <circle cx={cx} cy={cy} r={20} fill="transparent" />
-                            {/* Visible dot */}
-                            <circle cx={cx} cy={cy} r={6} fill="var(--accent-orange)" stroke="var(--accent-orange)" strokeWidth={2} />
+                            <circle cx={cx} cy={cy} r={5} fill={lineColor} stroke="var(--bg-card)" strokeWidth={2} />
                           </g>
                         );
                       }}
                     />
-                  </LineChart>
+                  </AreaChart>
                 </ResponsiveContainer>
               </div>
+
+              {/* CHART POPOVER */}
+              {pinnedDay && (
+                <ChartPopover
+                  ref={popoverRef}
+                  pinnedDay={pinnedDay}
+                  containerRef={chartContainerRef}
+                  editingTxnId={editingTxnId}
+                  setEditingTxnId={setEditingTxnId}
+                  onClose={() => { setPinnedDay(null); setEditingTxnId(null); }}
+                  updateTransaction={updateTransaction}
+                  deleteTransaction={(id) => { deleteTransaction(id); setPinnedDay(null); setEditingTxnId(null); }}
+                  getCategories={getCategories}
+                  addCustomCategory={addCustomCategory}
+                />
+              )}
             </div>
           </>
         )}
@@ -746,6 +832,278 @@ function App() {
 
       {/* WELCOME / ONBOARDING MODAL */}
       <WelcomeModal isOpen={showWelcome} onSkip={() => {}} />
+    </div>
+  );
+}
+
+// ── Chart Popover ──────────────────────────────────────────────────────
+
+const popoverStyles = {
+  wrapper: {
+    position: 'absolute',
+    zIndex: 50,
+    background: 'var(--bg-panel)',
+    border: '1px solid var(--border-subtle)',
+    borderRadius: '10px',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.35)',
+    minWidth: '260px',
+    maxWidth: '340px',
+    overflow: 'hidden',
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '12px 16px 10px',
+    borderBottom: '1px solid var(--border-subtle)',
+  },
+  closeBtn: {
+    width: '28px',
+    height: '28px',
+    background: 'transparent',
+    border: 'none',
+    color: 'var(--text-tertiary)',
+    fontSize: '16px',
+    cursor: 'pointer',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  body: {
+    padding: '8px 16px 14px',
+    maxHeight: '320px',
+    overflowY: 'auto',
+  },
+  txnRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '7px 8px',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    transition: 'background 120ms ease',
+    marginBottom: '2px',
+  },
+  editForm: {
+    background: 'var(--bg-card)',
+    border: '2px solid var(--accent-orange)',
+    borderRadius: '6px',
+    padding: '12px 14px',
+    marginBottom: '6px',
+  },
+  editField: { marginBottom: '7px' },
+  editLabel: {
+    fontSize: '11px', fontWeight: '600', color: 'var(--text-tertiary)',
+    textTransform: 'uppercase', display: 'block', marginBottom: '3px',
+  },
+  editInput: {
+    width: '100%', height: '32px', background: 'var(--bg-input)',
+    border: '1px solid var(--border-subtle)', borderRadius: '4px',
+    padding: '0 10px', color: 'var(--text-primary)', fontSize: '13px',
+    outline: 'none', boxSizing: 'border-box',
+  },
+  editSelect: {
+    width: '100%', height: '32px', background: 'var(--bg-input)',
+    border: '1px solid var(--border-subtle)', borderRadius: '4px',
+    padding: '0 8px', color: 'var(--text-primary)', fontSize: '13px',
+    outline: 'none', boxSizing: 'border-box',
+  },
+  editActions: { display: 'flex', gap: '6px', marginTop: '8px' },
+  editSave: {
+    flex: 1, height: '32px', background: 'var(--accent-orange)', color: '#FFFFFF',
+    border: 'none', borderRadius: '4px', fontSize: '13px', fontWeight: '700', cursor: 'pointer',
+  },
+  editCancel: {
+    flex: 1, height: '32px', background: 'transparent', color: 'var(--text-primary)',
+    border: '1px solid var(--border-focus)', borderRadius: '4px', fontSize: '13px',
+    fontWeight: '600', cursor: 'pointer',
+  },
+  editDelete: {
+    height: '32px', background: 'transparent', color: 'var(--critical-red)',
+    border: '1px solid var(--critical-red)', borderRadius: '4px', padding: '0 10px',
+    fontSize: '13px', fontWeight: '600', cursor: 'pointer',
+  },
+};
+
+const ChartPopover = React.forwardRef(function ChartPopover(
+  { pinnedDay, containerRef, editingTxnId, setEditingTxnId, onClose,
+    updateTransaction, deleteTransaction, getCategories, addCustomCategory },
+  ref
+) {
+  const { data, x, y } = pinnedDay;
+  const txns = data.dayTxns || [];
+
+  // Smart positioning: clamp to stay inside chart container
+  const containerEl = containerRef?.current;
+  const cw = containerEl ? containerEl.offsetWidth : 800;
+  const ch = containerEl ? containerEl.offsetHeight : 400;
+  const popW = 300;
+  const popH = 260;
+  let left = x + 12;
+  let top = y - 20;
+  if (left + popW > cw) left = x - popW - 12;
+  if (left < 0) left = 8;
+  if (top + popH > ch) top = ch - popH - 8;
+  if (top < 0) top = 8;
+
+  return (
+    <div ref={ref} style={{ ...popoverStyles.wrapper, left, top }}>
+      <div style={popoverStyles.header}>
+        <div>
+          <span style={{ color: 'var(--text-secondary)', fontSize: '12px', fontWeight: '500' }}>{data.date}</span>
+          <span style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: '700', marginLeft: '12px' }}>
+            ${data.balance.toLocaleString()}
+          </span>
+        </div>
+        <button
+          style={popoverStyles.closeBtn}
+          onClick={onClose}
+          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-tertiary)'; e.currentTarget.style.background = 'transparent'; }}
+        >
+          ✕
+        </button>
+      </div>
+      <div style={popoverStyles.body}>
+        {txns.map((txn) =>
+          editingTxnId === txn.id ? (
+            <PopoverEditForm
+              key={txn.id}
+              txn={txn}
+              onCancel={() => setEditingTxnId(null)}
+              onSave={(id, updates) => { updateTransaction(id, updates); setEditingTxnId(null); }}
+              onDelete={deleteTransaction}
+              getCategories={getCategories}
+              addCustomCategory={addCustomCategory}
+            />
+          ) : (
+            <div
+              key={txn.id}
+              style={popoverStyles.txnRow}
+              onClick={() => setEditingTxnId(txn.id)}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-card)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+            >
+              <span style={{ color: 'var(--text-secondary)', fontSize: '13px', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '160px' }}>
+                {txn.category}
+              </span>
+              <span style={{
+                fontSize: '13px', fontWeight: '700',
+                color: txn.type === 'income' ? 'var(--accent-cyan)' : 'var(--accent-rose)',
+              }}>
+                {txn.type === 'income' ? '+' : '-'}${txn.amount.toLocaleString()}
+              </span>
+            </div>
+          )
+        )}
+      </div>
+    </div>
+  );
+});
+
+function PopoverEditForm({ txn, onCancel, onSave, onDelete, getCategories, addCustomCategory }) {
+  const categories = getCategories(txn.type);
+  const isCustom = !categories.includes(txn.category);
+  const [form, setForm] = useState({
+    category: isCustom ? '__custom__' : txn.category,
+    customCategory: isCustom ? txn.category : '',
+    amount: String(txn.amount),
+    frequency: txn.frequency,
+    startDate: txn.startDate,
+    description: txn.description || '',
+  });
+
+  const handleSave = () => {
+    const amount = parseFloat(form.amount);
+    const category = form.category === '__custom__'
+      ? (form.customCategory || '').trim()
+      : form.category;
+    if (!category || isNaN(amount) || amount <= 0 || !form.startDate) return;
+    if (form.category === '__custom__' && category) {
+      addCustomCategory(txn.type, category);
+    }
+    onSave(txn.id, {
+      category, amount, frequency: form.frequency,
+      startDate: form.startDate, description: form.description,
+      endDate: form.frequency === 'one-time' ? form.startDate : null,
+    });
+  };
+
+  return (
+    <div style={popoverStyles.editForm} onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); }}>
+      <div style={popoverStyles.editField}>
+        <label style={popoverStyles.editLabel}>Category</label>
+        <select
+          style={popoverStyles.editSelect}
+          value={form.category || ''}
+          onChange={(e) => setForm({ ...form, category: e.target.value, customCategory: '' })}
+        >
+          <option value="">Select...</option>
+          {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+          <option value="__custom__">Custom...</option>
+        </select>
+      </div>
+      {form.category === '__custom__' && (
+        <div style={popoverStyles.editField}>
+          <label style={popoverStyles.editLabel}>Custom Name</label>
+          <input
+            type="text"
+            style={popoverStyles.editInput}
+            value={form.customCategory || ''}
+            onChange={(e) => setForm({ ...form, customCategory: e.target.value })}
+            placeholder="Enter category name..."
+            autoFocus
+          />
+        </div>
+      )}
+      <div style={popoverStyles.editField}>
+        <label style={popoverStyles.editLabel}>Amount</label>
+        <input
+          type="number"
+          step="0.01"
+          style={popoverStyles.editInput}
+          value={form.amount || ''}
+          onChange={(e) => setForm({ ...form, amount: e.target.value })}
+        />
+      </div>
+      <div style={popoverStyles.editField}>
+        <label style={popoverStyles.editLabel}>Frequency</label>
+        <select
+          style={popoverStyles.editSelect}
+          value={form.frequency || 'monthly'}
+          onChange={(e) => setForm({ ...form, frequency: e.target.value })}
+        >
+          {FREQUENCIES.map((f) => (
+            <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>
+          ))}
+        </select>
+      </div>
+      <div style={popoverStyles.editField}>
+        <label style={popoverStyles.editLabel}>Start Date</label>
+        <input
+          type="date"
+          style={{ ...popoverStyles.editInput, cursor: 'pointer' }}
+          value={form.startDate || ''}
+          onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+          onClick={(e) => { try { e.target.showPicker(); } catch {} }}
+        />
+      </div>
+      <div style={popoverStyles.editField}>
+        <label style={popoverStyles.editLabel}>Note</label>
+        <input
+          type="text"
+          style={popoverStyles.editInput}
+          value={form.description || ''}
+          onChange={(e) => setForm({ ...form, description: e.target.value })}
+          placeholder="Optional..."
+        />
+      </div>
+      <div style={popoverStyles.editActions}>
+        <button style={popoverStyles.editSave} onClick={handleSave}>Save</button>
+        <button style={popoverStyles.editCancel} onClick={onCancel}>Cancel</button>
+        <button style={popoverStyles.editDelete} onClick={() => onDelete(txn.id)}>Delete</button>
+      </div>
     </div>
   );
 }

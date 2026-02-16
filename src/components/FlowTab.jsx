@@ -62,7 +62,7 @@ export default function FlowTab({
 }) {
   const [tooltip, setTooltip] = useState(null);
   const [hoveredFlow, setHoveredFlow] = useState(null);
-  const [dimensions, setDimensions] = useState({ width: 960, height: 340 });
+  const [dimensions, setDimensions] = useState({ width: 960, height: 420 });
   const containerRef = useRef(null);
 
   useEffect(() => {
@@ -71,7 +71,7 @@ export default function FlowTab({
         const rect = containerRef.current.getBoundingClientRect();
         setDimensions({
           width: Math.max(rect.width - 48, 400),
-          height: 340,
+          height: 420,
         });
       }
     }
@@ -129,11 +129,11 @@ export default function FlowTab({
   const W = dimensions.width;
   const H = dimensions.height;
   const barW = 24;
-  const centerW = 30;
+  const centerW = 36;
   const topPad = 24;
   const bottomPad = 20;
   const usableH = H - topPad - bottomPad;
-  const barGap = 6;
+  const barGap = 8;
 
   // X positions: [labels] [bars] --- flows --- [center] --- flows --- [bars] [labels]
   const leftBarX = 180;
@@ -148,7 +148,7 @@ export default function FlowTab({
     let yOff = topPad;
 
     return groups.map((g) => {
-      const h = Math.max(18, (g.amount / totalRef) * availH);
+      const h = Math.max(34, (g.amount / totalRef) * availH);
       const bar = { ...g, y: yOff, h };
       yOff += h + barGap;
       return bar;
@@ -294,10 +294,10 @@ export default function FlowTab({
               key={flow.key}
               d={flow.path}
               fill={flow.color}
-              fillOpacity={hoveredFlow === flow.key ? 0.55 : 0.2}
+              fillOpacity={hoveredFlow === flow.key ? 0.55 : 0.28}
               stroke={flow.color}
               strokeWidth={0.5}
-              strokeOpacity={hoveredFlow === flow.key ? 0.8 : 0.3}
+              strokeOpacity={hoveredFlow === flow.key ? 0.8 : 0.4}
               style={{ cursor: flow.clickCategory ? 'pointer' : 'default', transition: 'fill-opacity 150ms ease' }}
               onMouseEnter={(e) => handleFlowHover(flow, e)}
               onMouseMove={(e) => handleFlowHover(flow, e)}
@@ -319,7 +319,7 @@ export default function FlowTab({
               <rect x={leftBarX} y={bar.y} width={barW} height={bar.h} rx={4} fill={CYAN} />
               <text
                 x={leftBarX - 10}
-                y={bar.y + bar.h / 2}
+                y={bar.h >= 34 ? bar.y + bar.h / 2 - 7 : bar.y + bar.h / 2}
                 textAnchor="end"
                 dominantBaseline="central"
                 fill={WHITE}
@@ -328,6 +328,19 @@ export default function FlowTab({
               >
                 {bar.category}
               </text>
+              {bar.h >= 34 && (
+                <text
+                  x={leftBarX - 10}
+                  y={bar.y + bar.h / 2 + 9}
+                  textAnchor="end"
+                  dominantBaseline="central"
+                  fill={TEXT_DIM}
+                  fontSize={11}
+                  fontWeight={400}
+                >
+                  {fmt(bar.amount)}
+                </text>
+              )}
             </g>
           ))}
 
@@ -344,11 +357,11 @@ export default function FlowTab({
             {/* Label centered on pillar — horizontal */}
             <text
               x={centerX + centerW / 2}
-              y={stackTop + centerH / 2 - 6}
+              y={stackTop + centerH / 2 - 7}
               textAnchor="middle"
               dominantBaseline="central"
-              fill="var(--text-primary)"
-              fontSize={11}
+              fill="#1A1A2E"
+              fontSize={10}
               fontWeight={700}
               letterSpacing="0.06em"
             >
@@ -356,11 +369,11 @@ export default function FlowTab({
             </text>
             <text
               x={centerX + centerW / 2}
-              y={stackTop + centerH / 2 + 8}
+              y={stackTop + centerH / 2 + 9}
               textAnchor="middle"
               dominantBaseline="central"
-              fill="var(--text-primary)"
-              fontSize={11}
+              fill="#1A1A2E"
+              fontSize={10}
               fontWeight={700}
               letterSpacing="0.06em"
             >
@@ -368,30 +381,56 @@ export default function FlowTab({
             </text>
           </g>
 
-          {/* ── Right: Expense + Savings bars + labels ─────────────── */}
+          {/* ── Right: section label ──────────────────────────────── */}
+          <text
+            x={rightBarX + barW + 10}
+            y={topPad - 8}
+            dominantBaseline="auto"
+            fill={TEXT_DIM}
+            fontSize={11}
+            fontWeight={500}
+            letterSpacing="0.02em"
+          >
+            Top Spending Categories
+          </text>
+
+          {/* ── Right: Expense + Surplus bars + labels ──────────────── */}
           {rightBars.map((bar) => {
-            const isSurplus = bar.category === 'Surplus';
-            const barColor = isSurplus ? GREEN : WHITE;
+            const isSurplusBar = bar.category === 'Surplus';
+            const barColor = isSurplusBar ? GREEN : ROSE;
+            const labelColor = isSurplusBar ? GREEN : WHITE;
             return (
               <g
                 key={bar.category}
-                style={{ cursor: isSurplus ? 'default' : 'pointer' }}
-                onMouseEnter={(e) => handleBarHover(bar, isSurplus ? 'savings' : 'expense', e)}
-                onMouseMove={(e) => handleBarHover(bar, isSurplus ? 'savings' : 'expense', e)}
+                style={{ cursor: isSurplusBar ? 'default' : 'pointer' }}
+                onMouseEnter={(e) => handleBarHover(bar, isSurplusBar ? 'savings' : 'expense', e)}
+                onMouseMove={(e) => handleBarHover(bar, isSurplusBar ? 'savings' : 'expense', e)}
                 onMouseLeave={() => handleBarHover(null)}
-                onClick={() => !isSurplus && handleBarClick(bar.category)}
+                onClick={() => !isSurplusBar && handleBarClick(bar.category)}
               >
                 <rect x={rightBarX} y={bar.y} width={barW} height={bar.h} rx={4} fill={barColor} />
                 <text
                   x={rightBarX + barW + 10}
-                  y={bar.y + bar.h / 2}
+                  y={bar.h >= 34 ? bar.y + bar.h / 2 - 7 : bar.y + bar.h / 2}
                   dominantBaseline="central"
-                  fill={isSurplus ? GREEN : WHITE}
+                  fill={labelColor}
                   fontSize={13}
                   fontWeight={600}
                 >
                   {bar.category}
                 </text>
+                {bar.h >= 34 && (
+                  <text
+                    x={rightBarX + barW + 10}
+                    y={bar.y + bar.h / 2 + 9}
+                    dominantBaseline="central"
+                    fill={TEXT_DIM}
+                    fontSize={11}
+                    fontWeight={400}
+                  >
+                    {fmt(bar.amount)}
+                  </text>
+                )}
               </g>
             );
           })}
@@ -418,7 +457,7 @@ const s = {
     border: `1px solid ${BORDER}`,
     borderRadius: '12px',
     padding: '24px',
-    minHeight: '380px',
+    minHeight: '460px',
   },
   header: {
     display: 'flex',
@@ -438,7 +477,7 @@ const s = {
   },
   summaryRow: {
     display: 'flex',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     gap: '16px',
     marginBottom: '8px',

@@ -37,12 +37,14 @@ const s = {
     border: 'none',
   },
   addIncome: {
-    background: 'var(--income-btn-bg)',
-    color: 'var(--text-primary)',
+    background: 'rgba(0, 151, 167, 0.15)',
+    color: 'var(--accent-cyan)',
+    border: '1px solid var(--accent-cyan)',
   },
   addExpense: {
-    background: 'var(--expense-btn-bg)',
-    color: 'var(--text-primary)',
+    background: 'rgba(212, 96, 90, 0.15)',
+    color: 'var(--accent-rose)',
+    border: '1px solid var(--accent-rose)',
   },
   divider: {
     borderRight: '1px solid var(--border-subtle)',
@@ -91,16 +93,25 @@ const s = {
     padding: '2px 8px',
     borderRadius: '4px',
   },
-  // Inline form — compact
+  // Inline form — compact 2-column grid
   form: {
     background: 'var(--bg-card)',
     border: '2px solid var(--accent-orange)',
     borderRadius: '6px',
-    padding: '14px 16px',
+    padding: '10px 12px',
     marginBottom: '8px',
   },
+  formGrid: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '8px',
+  },
   formField: {
-    marginBottom: '8px',
+    marginBottom: '4px',
+  },
+  formFieldFull: {
+    marginBottom: '4px',
+    gridColumn: '1 / -1',
   },
   formLabel: {
     fontSize: '11px',
@@ -112,7 +123,7 @@ const s = {
   },
   formInput: {
     width: '100%',
-    height: '36px',
+    height: '30px',
     background: 'var(--bg-input)',
     border: '1px solid var(--border-subtle)',
     borderRadius: '4px',
@@ -124,7 +135,7 @@ const s = {
   },
   formSelect: {
     width: '100%',
-    height: '36px',
+    height: '30px',
     background: 'var(--bg-input)',
     border: '1px solid var(--border-subtle)',
     borderRadius: '4px',
@@ -138,10 +149,12 @@ const s = {
     display: 'flex',
     gap: '6px',
     marginTop: '8px',
+    gridColumn: '1 / -1',
+    alignItems: 'center',
   },
   formSave: {
-    flex: 1,
-    height: '36px',
+    height: '32px',
+    padding: '0 20px',
     background: 'var(--accent-orange)',
     color: 'var(--text-primary)',
     border: 'none',
@@ -151,8 +164,8 @@ const s = {
     cursor: 'pointer',
   },
   formCancel: {
-    flex: 1,
-    height: '36px',
+    height: '32px',
+    padding: '0 20px',
     background: 'transparent',
     color: 'var(--text-primary)',
     border: '1px solid var(--border-focus)',
@@ -162,15 +175,22 @@ const s = {
     cursor: 'pointer',
   },
   formDelete: {
-    height: '36px',
     background: 'transparent',
+    border: 'none',
     color: 'var(--critical-red)',
-    border: '1px solid var(--critical-red)',
-    borderRadius: '4px',
-    padding: '0 12px',
-    fontSize: '14px',
+    fontSize: '12px',
     fontWeight: '600',
     cursor: 'pointer',
+    padding: '4px 8px',
+    marginLeft: 'auto',
+  },
+  netStrip: {
+    textAlign: 'center',
+    padding: '12px',
+    background: 'var(--bg-card)',
+    borderRadius: '8px',
+    marginBottom: '16px',
+    border: '1px solid var(--border-subtle)',
   },
   empty: {
     color: 'var(--text-tertiary)',
@@ -246,6 +266,16 @@ export default function TransactionsTab({
   const [filter, setFilter] = useState('All');
 
   const [sortBy, setSortBy] = useState('date'); // 'date' | 'amount'
+  const [sortDir, setSortDir] = useState('asc'); // 'asc' | 'desc'
+
+  const toggleSort = (field) => {
+    if (sortBy === field) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(field);
+      setSortDir('asc');
+    }
+  };
 
   const filtered = transactions.filter((t) => {
     if (filter === 'All') return true;
@@ -253,9 +283,10 @@ export default function TransactionsTab({
     return t.frequency === 'one-time';
   });
 
+  const dir = sortDir === 'asc' ? 1 : -1;
   const sortFn = sortBy === 'amount'
-    ? (a, b) => b.amount - a.amount
-    : (a, b) => (a.startDate || '').localeCompare(b.startDate || '');
+    ? (a, b) => (a.amount - b.amount) * dir
+    : (a, b) => ((a.startDate || '').localeCompare(b.startDate || '')) * dir;
 
   const income = filtered.filter((t) => t.type === 'income').sort(sortFn);
   const expenses = filtered.filter((t) => t.type === 'expense').sort(sortFn);
@@ -343,86 +374,108 @@ export default function TransactionsTab({
 
   const renderForm = (type) => {
     const categories = getCategories(type);
+    const borderColor = type === 'income' ? 'var(--accent-cyan)' : 'var(--accent-rose)';
     return (
-      <div style={s.form} onKeyDown={(e) => { if (e.key === 'Enter') handleSave(type); }}>
-        <div style={s.formField}>
-          <label style={s.formLabel}>Category</label>
-          <select
-            style={s.formSelect}
-            value={form.category}
-            onChange={(e) => setForm({ ...form, category: e.target.value, customCategory: '' })}
-          >
-            <option value="">Select category...</option>
-            {categories.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-            <option value="__custom__">Custom...</option>
-          </select>
-        </div>
-        {form.category === '__custom__' && (
+      <div style={{ ...s.form, borderLeft: `3px solid ${borderColor}` }} onKeyDown={(e) => { if (e.key === 'Enter') handleSave(type); }}>
+        <div style={s.formGrid}>
           <div style={s.formField}>
-            <label style={s.formLabel}>Custom Name</label>
+            <label style={s.formLabel}>Category</label>
+            <select
+              style={s.formSelect}
+              value={form.category}
+              onChange={(e) => setForm({ ...form, category: e.target.value, customCategory: '' })}
+            >
+              <option value="">Select...</option>
+              {categories.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+              <option value="__custom__">Custom...</option>
+            </select>
+          </div>
+          {form.category === '__custom__' ? (
+            <div style={s.formField}>
+              <label style={s.formLabel}>Custom Name</label>
+              <input
+                type="text"
+                style={s.formInput}
+                value={form.customCategory || ''}
+                onChange={(e) => setForm({ ...form, customCategory: e.target.value })}
+                placeholder="Category name..."
+                autoFocus
+              />
+            </div>
+          ) : (
+            <div style={s.formField}>
+              <label style={s.formLabel}>Amount</label>
+              <input
+                type="number"
+                step="0.01"
+                style={s.formInput}
+                value={form.amount}
+                onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                placeholder="0.00"
+              />
+            </div>
+          )}
+          {form.category === '__custom__' && (
+            <div style={s.formField}>
+              <label style={s.formLabel}>Amount</label>
+              <input
+                type="number"
+                step="0.01"
+                style={s.formInput}
+                value={form.amount}
+                onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                placeholder="0.00"
+              />
+            </div>
+          )}
+          <div style={s.formField}>
+            <label style={s.formLabel}>Frequency</label>
+            <select
+              style={s.formSelect}
+              value={form.frequency}
+              onChange={(e) => setForm({ ...form, frequency: e.target.value })}
+            >
+              {FREQUENCIES.map((f) => (
+                <option key={f} value={f}>
+                  {f.charAt(0).toUpperCase() + f.slice(1)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div style={s.formField}>
+            <label style={s.formLabel}>Start Date</label>
+            <input
+              type="date"
+              style={{ ...s.formInput, cursor: 'pointer' }}
+              value={form.startDate}
+              onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+              onFocus={(e) => { try { e.target.showPicker(); } catch {} }}
+            />
+          </div>
+          <div style={s.formFieldFull}>
+            <label style={s.formLabel}>Note (optional)</label>
             <input
               type="text"
               style={s.formInput}
-              value={form.customCategory || ''}
-              onChange={(e) => setForm({ ...form, customCategory: e.target.value })}
-              placeholder="Enter category name..."
-              autoFocus
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              placeholder="Optional note..."
             />
           </div>
-        )}
-        <div style={s.formField}>
-          <label style={s.formLabel}>Amount</label>
-          <input
-            type="number"
-            step="0.01"
-            style={s.formInput}
-            value={form.amount}
-            onChange={(e) => setForm({ ...form, amount: e.target.value })}
-            placeholder="0.00"
-          />
-        </div>
-        <div style={s.formField}>
-          <label style={s.formLabel}>Frequency</label>
-          <select
-            style={s.formSelect}
-            value={form.frequency}
-            onChange={(e) => setForm({ ...form, frequency: e.target.value })}
-          >
-            {FREQUENCIES.map((f) => (
-              <option key={f} value={f}>
-                {f.charAt(0).toUpperCase() + f.slice(1)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div style={s.formField}>
-          <label style={s.formLabel}>Start Date</label>
-          <input
-            type="date"
-            style={{ ...s.formInput, cursor: 'pointer' }}
-            value={form.startDate}
-            onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-            onClick={(e) => { try { e.target.showPicker(); } catch {} }}
-          />
-        </div>
-        <div style={s.formField}>
-          <label style={s.formLabel}>Note (optional)</label>
-          <input
-            type="text"
-            style={s.formInput}
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-            placeholder="Optional note..."
-          />
-        </div>
-        <div style={s.formActions}>
-          <button style={s.formSave} onClick={() => handleSave(type)}>Save</button>
-          <button style={s.formCancel} onClick={cancel}>Cancel</button>
-          {editingId && (
-            <button style={s.formDelete} onClick={() => handleDelete(editingId)}>Delete</button>
-          )}
+          <div style={s.formActions}>
+            <button style={s.formSave} onClick={() => handleSave(type)}>Save</button>
+            <button style={s.formCancel} onClick={cancel}>Cancel</button>
+            {editingId && (
+              <button
+                style={s.formDelete}
+                onClick={() => handleDelete(editingId)}
+                onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; }}
+              >Delete</button>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -437,16 +490,18 @@ export default function TransactionsTab({
         </div>
       );
     }
+    const accentColor = isIncome ? 'var(--accent-cyan)' : 'var(--accent-rose)';
     return (
       <div
         key={txn.id}
         style={{
           ...s.item,
+          borderLeft: `3px solid ${accentColor}`,
           ...(txn.isActive ? {} : { opacity: 0.5 }),
         }}
         onClick={() => startEdit(txn)}
-        onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--border-focus)'; e.currentTarget.style.transform = 'translateX(4px)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-subtle)'; e.currentTarget.style.transform = 'translateX(0)'; }}
+        onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--border-focus)'; e.currentTarget.style.borderLeftColor = accentColor; e.currentTarget.style.transform = 'translateX(4px)'; e.currentTarget.style.background = 'var(--bg-hover, var(--bg-panel))'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-subtle)'; e.currentTarget.style.borderLeftColor = accentColor; e.currentTarget.style.transform = 'translateX(0)'; e.currentTarget.style.background = 'var(--bg-card)'; }}
       >
         <div style={s.itemRow}>
           <span style={s.itemCategory}>{txn.category}</span>
@@ -490,26 +545,38 @@ export default function TransactionsTab({
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--text-tertiary)' }}>
           <span>Sort:</span>
-          {['date', 'amount'].map((opt) => (
-            <button
-              key={opt}
-              style={{
-                background: sortBy === opt ? 'var(--accent-orange)' : 'transparent',
-                color: sortBy === opt ? 'var(--text-primary)' : 'var(--text-tertiary)',
-                border: sortBy === opt ? 'none' : '1px solid var(--border-subtle)',
-                borderRadius: '4px',
-                padding: '4px 12px',
-                fontSize: '13px',
-                fontWeight: '600',
-                cursor: 'pointer',
-              }}
-              onClick={() => setSortBy(opt)}
-            >
-              {opt.charAt(0).toUpperCase() + opt.slice(1)}
-            </button>
-          ))}
+          {['date', 'amount'].map((opt) => {
+            const isActive = sortBy === opt;
+            const arrow = isActive ? (sortDir === 'asc' ? ' \u2191' : ' \u2193') : '';
+            return (
+              <button
+                key={opt}
+                style={{
+                  background: isActive ? 'var(--accent-orange)' : 'transparent',
+                  color: isActive ? 'var(--text-primary)' : 'var(--text-tertiary)',
+                  border: isActive ? 'none' : '1px solid var(--border-subtle)',
+                  borderRadius: '4px',
+                  padding: '4px 12px',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                }}
+                onClick={() => toggleSort(opt)}
+              >
+                {opt.charAt(0).toUpperCase() + opt.slice(1)}{arrow}
+              </button>
+            );
+          })}
         </div>
       </div>
+    {/* Net summary strip */}
+    {(income.length > 0 || expenses.length > 0) && (
+      <div style={s.netStrip}>
+        <span style={{ fontSize: '15px', fontWeight: 700, color: net >= 0 ? 'var(--safe-green)' : 'var(--critical-red)' }}>
+          Net: {net >= 0 ? '+' : '-'}${Math.abs(net).toLocaleString()} / month
+        </span>
+      </div>
+    )}
     <div style={{
       ...s.wrapper,
       ...(isMobile ? { gridTemplateColumns: '1fr', gap: '32px' } : {}),
@@ -559,13 +626,8 @@ export default function TransactionsTab({
           </button>
         </div>
         {expenses.length > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', padding: '0 2px' }}>
-            <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--accent-rose)' }}>
-              Total: ${expenseTotal.toLocaleString()}
-            </span>
-            <span style={{ fontSize: '13px', fontWeight: '700', color: net >= 0 ? 'var(--safe-green)' : 'var(--critical-red)' }}>
-              Net: {net >= 0 ? '+' : '-'}${Math.abs(net).toLocaleString()}
-            </span>
+          <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--accent-rose)', marginBottom: '12px', padding: '0 2px' }}>
+            Total: ${expenseTotal.toLocaleString()}
           </div>
         )}
         <div style={s.list}>

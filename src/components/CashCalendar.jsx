@@ -19,12 +19,6 @@ const DAY_NAMES_MON = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const DAY_NAMES_SUN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const FREQUENCIES = ['one-time', 'weekly', 'bi-weekly', 'monthly', 'quarterly', 'annually'];
 
-// Badge colors
-const INCOME_BG = 'var(--income-btn-bg)';
-const EXPENSE_BG = 'var(--expense-btn-bg)';
-const INCOME_HOVER = '#00ACC1';
-const EXPENSE_HOVER = '#D4587A';
-
 const s = {
   header: {
     display: 'flex',
@@ -91,8 +85,8 @@ const s = {
   badge: {
     display: 'flex',
     alignItems: 'center',
-    gap: '3px',
-    padding: '3px 6px',
+    gap: '4px',
+    padding: '2px 4px',
     borderRadius: '4px',
     fontSize: '10px',
     fontWeight: '700',
@@ -103,19 +97,64 @@ const s = {
     whiteSpace: 'nowrap',
     cursor: 'grab',
     userSelect: 'none',
-    color: 'var(--text-primary)',
+    background: 'transparent',
     transition: 'background 150ms ease',
+  },
+  badgeDot: {
+    width: '6px',
+    height: '6px',
+    borderRadius: '50%',
+    flexShrink: 0,
   },
   gripDots: {
     fontSize: '8px',
     letterSpacing: '-1px',
-    opacity: 0.5,
+    opacity: 0,
     lineHeight: 1,
+    transition: 'opacity 150ms ease',
   },
   balanceLabel: {
+    position: 'absolute',
+    bottom: '6px',
+    right: '8px',
     fontSize: '11px',
-    fontWeight: '600',
-    marginTop: '4px',
+    fontWeight: '700',
+  },
+  tooltip: {
+    position: 'fixed',
+    zIndex: 3000,
+    background: 'var(--bg-panel)',
+    border: '1px solid var(--border-subtle)',
+    borderRadius: '8px',
+    padding: '12px 16px',
+    boxShadow: 'var(--shadow-hover)',
+    pointerEvents: 'none',
+    minWidth: '160px',
+    maxWidth: '260px',
+  },
+  tooltipHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '12px',
+    marginBottom: '8px',
+    paddingBottom: '8px',
+    borderBottom: '1px solid var(--border-subtle)',
+  },
+  tooltipCategory: {
+    fontSize: '13px',
+    fontWeight: '700',
+    color: 'var(--text-primary)',
+  },
+  tooltipAmount: {
+    fontSize: '13px',
+    fontWeight: '700',
+    whiteSpace: 'nowrap',
+  },
+  tooltipDetail: {
+    fontSize: '11px',
+    color: 'var(--text-tertiary)',
+    lineHeight: '1.5',
   },
   // Inline edit popover
   editOverlay: {
@@ -310,6 +349,9 @@ export default function CashCalendar({
   // Inline edit state
   const [editTxn, setEditTxn] = useState(null); // { txn, x, y }
   const [editForm, setEditForm] = useState({});
+
+  // Hover tooltip state
+  const [hoveredBadge, setHoveredBadge] = useState(null); // { txn, x, y }
 
   const monthStart = startOfMonth(viewDate);
   const monthEnd = endOfMonth(viewDate);
@@ -598,19 +640,14 @@ export default function CashCalendar({
               onDrop={(e) => handleDrop(e, dateKey)}
               onMouseEnter={(e) => {
                 if (!isDragOver && !isDragging) {
-                  e.currentTarget.style.transform = 'scale(1.02)';
+                  e.currentTarget.style.background = 'var(--bg-hover)';
                 }
               }}
               onMouseLeave={(e) => {
                 if (!isDragOver && !isDragging) {
-                  e.currentTarget.style.transform = 'scale(1)';
+                  e.currentTarget.style.background = 'var(--bg-card)';
                 }
               }}
-              title={
-                balance !== undefined && isFuture
-                  ? `Projected: $${balance.toLocaleString()}`
-                  : undefined
-              }
             >
               <div style={{
                 ...s.cellDate,
@@ -623,6 +660,8 @@ export default function CashCalendar({
               {/* Transaction badges — draggable + clickable for edit */}
               {txns.slice(0, 3).map((txn, i) => {
                 const isIncome = txn.type === 'income';
+                const badgeColor = isIncome ? 'var(--accent-cyan)' : 'var(--accent-rose)';
+                const amtStr = txn.amount >= 1000 ? `${(txn.amount / 1000).toFixed(1)}k` : txn.amount.toLocaleString();
                 return (
                   <div
                     key={`${txn.id}-${i}`}
@@ -630,21 +669,23 @@ export default function CashCalendar({
                     onDragStart={(e) => handleDragStart(e, txn, dateKey)}
                     onDragEnd={handleDragEnd}
                     onClick={(e) => openEdit(e, txn)}
-                    style={{
-                      ...s.badge,
-                      background: isIncome ? INCOME_BG : EXPENSE_BG,
-                    }}
+                    style={s.badge}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = isIncome ? INCOME_HOVER : EXPENSE_HOVER;
+                      e.currentTarget.style.background = 'var(--bg-hover)';
+                      e.currentTarget.querySelector('[data-grip]').style.opacity = '0.5';
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      setHoveredBadge({ txn, x: rect.right + 8, y: rect.top });
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.background = isIncome ? INCOME_BG : EXPENSE_BG;
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.querySelector('[data-grip]').style.opacity = '0';
+                      setHoveredBadge(null);
                     }}
-                    title={`${txn.category} \u2022 ${isIncome ? '+' : '-'}$${txn.amount.toLocaleString()} \u2022 ${txn.frequency.charAt(0).toUpperCase() + txn.frequency.slice(1)}${txn.description ? ' \u2022 ' + txn.description : ''}`}
                   >
-                    <span style={s.gripDots}>⠿</span>
-                    <span>
-                      {isIncome ? '+' : '-'}${txn.amount >= 1000 ? `${(txn.amount / 1000).toFixed(1)}k` : txn.amount.toLocaleString()}
+                    <span data-grip style={s.gripDots}>⠿</span>
+                    <span style={{ ...s.badgeDot, background: badgeColor }} />
+                    <span style={{ color: badgeColor, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {txn.category} {isIncome ? '+' : '-'}${amtStr}
                     </span>
                   </div>
                 );
@@ -655,19 +696,48 @@ export default function CashCalendar({
                 </div>
               )}
 
-              {/* Projected balance */}
+              {/* Projected balance — anchored bottom-right */}
               {isFuture && balance !== undefined && (
                 <div style={{
                   ...s.balanceLabel,
                   color: balance <= 0 ? 'var(--critical-red)' : balance < cautionThreshold ? 'var(--caution-amber)' : 'var(--text-tertiary)',
                 }}>
-                  ${balance >= 1000 ? `${(balance / 1000).toFixed(1)}k` : balance.toLocaleString()}
+                  ${balance.toLocaleString()}
                 </div>
               )}
             </div>
           );
         })}
       </div>
+
+      {/* ── Hover tooltip ───────────────────────────────────────────── */}
+      {hoveredBadge && !editTxn && !isDragging && (() => {
+        const t = hoveredBadge.txn;
+        const isInc = t.type === 'income';
+        const amtColor = isInc ? 'var(--accent-cyan)' : 'var(--accent-rose)';
+        // Keep tooltip in viewport
+        let tx = hoveredBadge.x;
+        let ty = hoveredBadge.y;
+        if (tx + 260 > window.innerWidth) tx = hoveredBadge.x - 280;
+        if (ty + 120 > window.innerHeight) ty = window.innerHeight - 130;
+        if (ty < 10) ty = 10;
+        return (
+          <div style={{ ...s.tooltip, left: tx, top: ty }}>
+            <div style={s.tooltipHeader}>
+              <span style={s.tooltipCategory}>{t.category}</span>
+              <span style={{ ...s.tooltipAmount, color: amtColor }}>
+                {isInc ? '+' : '-'}${t.amount.toLocaleString()}
+              </span>
+            </div>
+            <div style={s.tooltipDetail}>
+              {t.frequency.charAt(0).toUpperCase() + t.frequency.slice(1)}
+              <br />
+              Starts {t.startDate}
+              {t.description && (<><br />{t.description}</>)}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Inline edit popover ─────────────────────────────────────── */}
       {editTxn && (

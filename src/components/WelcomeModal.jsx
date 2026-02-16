@@ -135,15 +135,18 @@ export default function WelcomeModal({ isOpen, onSkip }) {
         {/* ── STEP 1: WELCOME ─────────────────────────────── */}
         {step === 1 && (
           <div style={s.stepContent}>
-            <h2 style={s.headline}>"Forward, not backward."</h2>
+            <h2 style={s.headline}>Life, not lattes.</h2>
             <p style={s.body}>
-              I've managed billion-dollar budgets across Fortune 100 companies, and I realized something: the only data that matters is the data that helps you move forward.
+              We built NLB Cash because every finance app we tried wanted to judge our past. We just needed to see what's ahead.
             </p>
             <p style={s.body}>
-              Welcome to <strong>NLB Cash</strong>. No guilt. No history. Just your runway.
+              One checking account. No bank linking. No reconciliation. Just a clear view of your runway — built by a team that's been on severance, on pension, and on deadline.
+            </p>
+            <p style={s.body}>
+              We focus on what's ahead because that's what you can control.
             </p>
             <p style={s.hint}>30 minutes to set up. 30 seconds a day to stay ahead.</p>
-            <button style={s.btnPrimary} onClick={() => setStep(2)}>Let's Get Started</button>
+            <button style={s.btnPrimary} onClick={() => setStep(2)}>Let's Go</button>
             <button style={s.linkBtn} onClick={handleSkip}>Skip, I'll explore first</button>
           </div>
         )}
@@ -152,7 +155,7 @@ export default function WelcomeModal({ isOpen, onSkip }) {
         {step === 2 && (
           <div style={s.stepContent}>
             <div style={s.stepLabel}>Step 1 of 3</div>
-            <h2 style={s.headline}>"What's in your account right now?"</h2>
+            <h2 style={s.headline}>What's in your account right now?</h2>
             <div style={s.fieldGroup}>
               <input
                 ref={balanceRef}
@@ -167,9 +170,8 @@ export default function WelcomeModal({ isOpen, onSkip }) {
               />
             </div>
             <p style={s.hint}>
-              Be honest. We're looking at liquid cash, not "maybe" money. Precision here buys you peace of mind later.
+              Your primary checking account — that's your command center. Everything else is noise.
             </p>
-            <p style={s.hintSmall}>One primary checking account. That's your command center.</p>
             <div style={s.navRow}>
               <button style={s.btnPrimary} onClick={() => setStep(3)}>Next</button>
               <button style={s.btnBack} onClick={() => setStep(1)}>Back</button>
@@ -255,7 +257,7 @@ export default function WelcomeModal({ isOpen, onSkip }) {
               + Add Another Income
             </button>
 
-            <p style={s.hint}>Most people start with their paycheck or main gig. You can always add more later.</p>
+            <p style={s.hint}>Start with the big one — paycheck, pension, side gig. You can always add more later.</p>
             <div style={s.navRow}>
               <button style={s.btnPrimary} onClick={advanceFromIncome}>Next</button>
               <button style={s.linkBtn} onClick={() => { setIncomeDraft({ ...emptyForm }); setStep(4); }}>Skip this step</button>
@@ -342,7 +344,7 @@ export default function WelcomeModal({ isOpen, onSkip }) {
               + Add Another Expense
             </button>
 
-            <p style={s.hint}>Don't track the coffee. Track the rent. Track the payroll. Manage the big levers, and the lattes will take care of themselves.</p>
+            <p style={s.hint}>Rent, car, groceries, insurance — the 80% that matters. Manage the big levers, and the lattes take care of themselves.</p>
             <div style={s.navRow}>
               <button style={s.btnPrimary} onClick={advanceFromExpense}>See My Runway</button>
               <button style={s.linkBtn} onClick={() => { setExpenseDraft({ ...emptyForm }); setStep(5); }}>Skip this step</button>
@@ -354,9 +356,12 @@ export default function WelcomeModal({ isOpen, onSkip }) {
         {/* ── STEP 5: LAUNCH ──────────────────────────────── */}
         {step === 5 && (
           <div style={s.stepContent}>
-            <h2 style={s.headline}>"You're in."</h2>
+            <h2 style={s.headline}>You're set.</h2>
             <p style={s.body}>
-              Your runway is live. From here, it's 30 seconds a day: glance at your projection, drag things around if something shifts. That's it.
+              Your runway is live. From here, it's 30 seconds a day — glance at your projection, drag things around if something shifts. That's the whole system.
+            </p>
+            <p style={s.body}>
+              This isn't the shortcut. It's the smart way. Consistent daily snapshots beat sporadic deep dives — every time.
             </p>
 
             {/* Mini summary */}
@@ -383,13 +388,13 @@ export default function WelcomeModal({ isOpen, onSkip }) {
               ))}
               {incomeList.length === 0 && expenseList.length === 0 && (
                 <div style={{ fontSize: '13px', color: 'var(--text-tertiary)', textAlign: 'center' }}>
-                  No transactions yet — you can add them from the Transactions tab.
+                  No transactions yet — add them from the Transactions tab.
                 </div>
               )}
             </div>
 
-            <p style={s.hint}>Real ups, real downs, real life.</p>
-            <button style={s.btnPrimary} onClick={handleComplete}>View Your Runway</button>
+            <p style={s.hint}>Life's complex enough. Your daily finance app shouldn't be.</p>
+            <button style={s.btnPrimary} onClick={handleComplete}>View My Runway</button>
           </div>
         )}
       </div>
