@@ -590,7 +590,7 @@ function App() {
                 onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-card)'; }}
               >
                 <div style={{ ...styles.cardLabel, color: 'var(--accent-cyan)' }}>Income</div>
-                <div style={{ ...styles.cardValue, fontSize: '36px' }}>
+                <div className="kpi-card-value" style={{ ...styles.cardValue, fontSize: '36px' }}>
                   ${totalIncome.toLocaleString()}
                 </div>
                 <div style={styles.cardMeta}>Next {tfLabel}</div>
@@ -604,7 +604,7 @@ function App() {
                 onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-card)'; }}
               >
                 <div style={{ ...styles.cardLabel, color: 'var(--accent-rose)' }}>Expenses</div>
-                <div style={{ ...styles.cardValue, fontSize: '36px' }}>
+                <div className="kpi-card-value" style={{ ...styles.cardValue, fontSize: '36px' }}>
                   ${totalExpenses.toLocaleString()}
                 </div>
                 <div style={styles.cardMeta}>Next {tfLabel}</div>
@@ -613,7 +613,7 @@ function App() {
               {/* CHANGE */}
               <div style={{ ...styles.card, borderLeft: `3px solid ${changeColor}` }}>
                 <div style={{ ...styles.cardLabel, color: changeColor }}>Change</div>
-                <div style={{ ...styles.cardValue, fontSize: '36px', color: changeColor }}>
+                <div className="kpi-card-value" style={{ ...styles.cardValue, fontSize: '36px', color: changeColor }}>
                   {change > 0 ? '\u2191' : change < 0 ? '\u2193' : '\u2192'} ${Math.abs(change).toLocaleString()}
                 </div>
                 <div style={styles.cardMeta}>{changeMeta}</div>
@@ -627,7 +627,7 @@ function App() {
                 onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-card)'; }}
               >
                 <div style={{ ...styles.cardLabel, color: lineColor }}>Runway</div>
-                <div style={{ ...styles.cardValue, fontSize: '44px', color: lineColor, display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                <div className="kpi-card-value" style={{ ...styles.cardValue, fontSize: '44px', color: lineColor, display: 'flex', alignItems: 'baseline', gap: '4px' }}>
                   {runway.runwayDays === Infinity ? '>365' : runway.runwayDays}
                   <span style={{ fontSize: '16px', fontWeight: '600', opacity: 0.85 }}>days</span>
                 </div>
