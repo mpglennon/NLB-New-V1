@@ -582,7 +582,30 @@ export default function CashCalendar({
         >
           ‹
         </button>
-        <span style={s.monthTitle}>{format(viewDate, 'MMMM yyyy')}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={s.monthTitle}>{format(viewDate, 'MMMM yyyy')}</span>
+          {!isSameMonth(viewDate, today) && (
+            <button
+              style={{
+                background: 'transparent',
+                border: '1px solid var(--accent-orange)',
+                color: 'var(--accent-orange)',
+                borderRadius: '6px',
+                padding: '4px 12px',
+                fontSize: '12px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                letterSpacing: '0.04em',
+                transition: 'all 200ms ease',
+              }}
+              onClick={() => setViewDate(today)}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--accent-orange)'; e.currentTarget.style.color = '#FFFFFF'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--accent-orange)'; }}
+            >
+              Today
+            </button>
+          )}
+        </div>
         <button
           style={s.navBtn}
           onClick={nextMonth}
@@ -613,7 +636,7 @@ export default function CashCalendar({
           const isDragOver = dragOverDate === dateKey;
 
           const borderColor = isToday
-            ? 'var(--border-focus)'
+            ? 'var(--accent-orange)'
             : isFuture && balance !== undefined
               ? getCellBorderColor(balance, cautionThreshold)
               : 'var(--border-subtle)';

@@ -1,5 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { format, parseISO } from 'date-fns';
 import useStore from '../store/useStore';
+import { getOccurrences } from '../utils/runway';
 
 const FREQUENCIES = ['one-time', 'weekly', 'bi-weekly', 'monthly', 'quarterly', 'annually'];
 
@@ -293,7 +295,23 @@ export default function TransactionsTab({
 
   const incomeTotal = income.reduce((sum, t) => sum + t.amount, 0);
   const expenseTotal = expenses.reduce((sum, t) => sum + t.amount, 0);
-  const net = incomeTotal - expenseTotal;
+
+  // True 30-day outlook — computed from ALL active transactions regardless of filter
+  const { outlook30Income, outlook30Expenses } = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let inc = 0;
+    let exp = 0;
+    for (const t of transactions) {
+      if (!t.isActive) continue;
+      const occs = getOccurrences(t, 30);
+      const count = occs.filter((d) => d >= today).length;
+      if (t.type === 'income') inc += t.amount * count;
+      else exp += t.amount * count;
+    }
+    return { outlook30Income: Math.round(inc), outlook30Expenses: Math.round(exp) };
+  }, [transactions]);
+  const outlook30Net = outlook30Income - outlook30Expenses;
 
   const startAdd = (type) => {
     setEditingId(null);
@@ -512,7 +530,7 @@ export default function TransactionsTab({
         <div style={s.itemMeta}>
           <span>{txn.frequency.charAt(0).toUpperCase() + txn.frequency.slice(1)}</span>
           <span>&middot;</span>
-          <span>{txn.startDate}</span>
+          <span>{txn.startDate ? format(parseISO(txn.startDate), 'MMM d, yyyy') : '—'}</span>
           {txn.description && (
             <>
               <span>&middot;</span>
@@ -569,11 +587,17 @@ export default function TransactionsTab({
           })}
         </div>
       </div>
-    {/* Net summary strip */}
-    {(income.length > 0 || expenses.length > 0) && (
+    {/* 30-Day Outlook strip */}
+    {(outlook30Income > 0 || outlook30Expenses > 0) && (
       <div style={s.netStrip}>
-        <span style={{ fontSize: '15px', fontWeight: 700, color: net >= 0 ? 'var(--safe-green)' : 'var(--critical-red)' }}>
-          Net: {net >= 0 ? '+' : '-'}${Math.abs(net).toLocaleString()} / month
+        <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: '0.08em', textTransform: 'uppercase', marginRight: '12px' }}>
+          30-Day Outlook
+        </span>
+        <span style={{ fontSize: '15px', fontWeight: 700, color: outlook30Net >= 0 ? 'var(--safe-green)' : 'var(--critical-red)' }}>
+          Net {outlook30Net >= 0 ? '+' : '-'}${Math.abs(outlook30Net).toLocaleString()}
+        </span>
+        <span style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginLeft: '12px' }}>
+          ${outlook30Income.toLocaleString()} in · ${outlook30Expenses.toLocaleString()} out
         </span>
       </div>
     )}
@@ -595,8 +619,8 @@ export default function TransactionsTab({
           </button>
         </div>
         {income.length > 0 && (
-          <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--accent-cyan)', marginBottom: '12px', padding: '0 2px' }}>
-            Total: ${incomeTotal.toLocaleString()}
+          <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-tertiary)', marginBottom: '12px', padding: '0 2px' }}>
+            {income.length} {income.length === 1 ? 'source' : 'sources'}
           </div>
         )}
         <div style={s.list}>
@@ -626,8 +650,8 @@ export default function TransactionsTab({
           </button>
         </div>
         {expenses.length > 0 && (
-          <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--accent-rose)', marginBottom: '12px', padding: '0 2px' }}>
-            Total: ${expenseTotal.toLocaleString()}
+          <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-tertiary)', marginBottom: '12px', padding: '0 2px' }}>
+            {expenses.length} {expenses.length === 1 ? 'item' : 'items'}
           </div>
         )}
         <div style={s.list}>

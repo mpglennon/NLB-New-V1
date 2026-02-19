@@ -379,7 +379,12 @@ export default function Drawer({
         <div style={s.columns}>
           {mode !== 'expensesOnly' && (
             <div style={s.column}>
-              <div style={s.columnHeader}>Income</div>
+              <div style={{ ...s.columnHeader, color: 'var(--accent-cyan)', borderBottomColor: 'var(--accent-cyan)' }}>
+                Income
+                {incomeItems.length > 0 && (
+                  <span style={{ float: 'right', fontWeight: '600', letterSpacing: 0 }}>{incomeItems.length}</span>
+                )}
+              </div>
               <div style={s.columnScroll}>
                 {incomeItems.length === 0 ? (
                   <div style={s.empty}>No income in this period</div>
@@ -401,7 +406,12 @@ export default function Drawer({
           )}
 
           <div style={s.column}>
-            <div style={s.columnHeader}>Expenses</div>
+            <div style={{ ...s.columnHeader, color: 'var(--accent-rose)', borderBottomColor: 'var(--accent-rose)' }}>
+              Expenses
+              {expenseItems.length > 0 && (
+                <span style={{ float: 'right', fontWeight: '600', letterSpacing: 0 }}>{expenseItems.length}</span>
+              )}
+            </div>
             <div style={s.columnScroll}>
               {expenseItems.length === 0 ? (
                 <div style={s.empty}>No expenses in this period</div>

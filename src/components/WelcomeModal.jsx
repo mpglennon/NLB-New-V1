@@ -183,7 +183,7 @@ export default function WelcomeModal({ isOpen, onSkip }) {
         {step === 3 && (
           <div style={s.stepContent}>
             <div style={s.stepLabel}>Step 2 of 3</div>
-            <h2 style={s.headline}>"Let's start with what's coming in."</h2>
+            <h2 style={s.headline}>Let's start with what's coming in.</h2>
 
             {/* Already-added entries */}
             {incomeList.length > 0 && (
@@ -270,7 +270,7 @@ export default function WelcomeModal({ isOpen, onSkip }) {
         {step === 4 && (
           <div style={s.stepContent}>
             <div style={s.stepLabel}>Step 3 of 3</div>
-            <h2 style={s.headline}>"Now the big levers."</h2>
+            <h2 style={s.headline}>Now the big levers.</h2>
 
             {/* Already-added entries */}
             {expenseList.length > 0 && (

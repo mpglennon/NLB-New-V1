@@ -161,6 +161,7 @@ const styles = {
     borderRadius: '12px',
     padding: '24px',
     height: '350px',
+    outline: 'none',
   },
   placeholder: {
     display: 'flex',
@@ -180,16 +181,16 @@ function getChartLineColor(status) {
   switch (status) {
     case 'safe': return 'var(--safe-green)';
     case 'caution': return 'var(--caution-amber)';
-    case 'critical': return 'var(--text-primary)';
+    case 'critical': return 'var(--critical-red)';
     default: return 'var(--safe-green)';
   }
 }
 
-// Balance card border color
-function getBalanceBorderColor(balance) {
-  if (balance >= 2000) return 'var(--safe-green)';
-  if (balance >= 1000) return 'var(--caution-amber)';
-  return 'var(--text-primary)';
+// Balance card border color — uses the user's caution threshold
+function getBalanceBorderColor(balance, threshold) {
+  if (balance >= threshold * 2) return 'var(--safe-green)';
+  if (balance >= threshold) return 'var(--caution-amber)';
+  return 'var(--critical-red)';
 }
 
 // Sum all occurrences of transactions of a given type over timeframe
@@ -308,6 +309,16 @@ function App() {
     });
   }, [transactions, timeframe, account.currentBalance]);
 
+  const yDomain = useMemo(() => {
+    if (!chartData.length) return ['auto', 'auto'];
+    const balances = chartData.map((d) => d.balance);
+    const dataMin = Math.min(...balances, 0, settings.cautionThreshold > 0 ? settings.cautionThreshold : 0);
+    const dataMax = Math.max(...balances, settings.cautionThreshold > 0 ? settings.cautionThreshold : 0);
+    const range = Math.max(dataMax - dataMin, 1);
+    const pad = range * 0.12;
+    return [Math.floor(dataMin - pad), Math.ceil(dataMax + pad)];
+  }, [chartData, settings.cautionThreshold]);
+
   const lineColor = getChartLineColor(runway.status);
 
   // ── Chart dot click → popover ──────────────────────────────────────
@@ -389,7 +400,7 @@ function App() {
     <div style={styles.app}>
       {/* HEADER */}
       <div style={styles.headerWrapper}>
-        <header style={styles.header}>
+        <header style={styles.header} className="nlb-header-inner">
           <div
             style={{ display: 'flex', flexDirection: 'column', cursor: 'pointer' }}
             onClick={() => setActiveTab('Snapshot')}
@@ -424,7 +435,7 @@ function App() {
               paddingLeft: '2px',
             }}>Never Look Back</div>
           </div>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }} className="nlb-header-actions">
             <button
               style={{
                 background: 'transparent',
@@ -495,7 +506,7 @@ function App() {
 
       {/* TAB NAVIGATION */}
       <div style={styles.navWrapper}>
-        <nav style={styles.tabNav}>
+        <nav style={styles.tabNav} className="nlb-tab-nav">
           {TABS.map((tab) => (
             <button
               key={tab}
@@ -512,7 +523,7 @@ function App() {
       </div>
 
       {/* PERSISTENT BALANCE BAR */}
-      <div style={{
+      <div className="nlb-balance-bar" style={{
         maxWidth: '1400px',
         margin: '0 auto',
         padding: '10px 24px',
@@ -543,7 +554,7 @@ function App() {
       </div>
 
       {/* MAIN CONTENT */}
-      <main style={styles.mainContent}>
+      <main style={styles.mainContent} className="nlb-main-content">
         {/* TIMEFRAME SELECTOR — hidden on Cash Calendar tab */}
         {activeTab !== 'Cash Calendar' && (
           <div style={styles.topControls}>
@@ -569,7 +580,7 @@ function App() {
         {activeTab === 'Snapshot' && (
           <>
             {/* KPI CARDS — 4 columns */}
-            <div style={styles.cardGrid}>
+            <div style={styles.cardGrid} className="kpi-card-grid">
               {/* INCOME */}
               <div
                 style={{ ...styles.card, borderLeft: '3px solid var(--accent-cyan)', cursor: 'pointer' }}
@@ -607,34 +618,35 @@ function App() {
                 <div style={styles.cardMeta}>{changeMeta}</div>
               </div>
 
-              {/* BALANCE */}
+              {/* RUNWAY — primary KPI: time > money */}
               <div
-                style={{ ...styles.card, borderLeft: `3px solid ${getBalanceBorderColor(account.currentBalance)}`, cursor: 'pointer' }}
+                style={{ ...styles.card, borderLeft: `3px solid ${lineColor}`, cursor: 'pointer' }}
                 onClick={() => setCheckInOpen(true)}
                 onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--shadow-hover)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-card)'; }}
               >
-                <div style={{ ...styles.cardLabel, color: 'var(--text-tertiary)' }}>Balance</div>
-                <div style={{ ...styles.cardValue, fontSize: '36px' }}>
-                  ${account.currentBalance.toLocaleString()}
+                <div style={{ ...styles.cardLabel, color: lineColor }}>Runway</div>
+                <div style={{ ...styles.cardValue, fontSize: '44px', color: lineColor, display: 'flex', alignItems: 'baseline', gap: '4px' }}>
+                  {runway.runwayDays === Infinity ? '>365' : runway.runwayDays}
+                  <span style={{ fontSize: '16px', fontWeight: '600', opacity: 0.85 }}>days</span>
                 </div>
                 <div style={styles.cardMeta}>
-                  Last updated {account.lastUpdated ? format(new Date(account.lastUpdated), 'h:mm a') : 'Never'}
+                  ${account.currentBalance.toLocaleString()} balance
                 </div>
               </div>
             </div>
 
             {/* PROJECTION CHART */}
-            <div style={{ ...styles.chartContainer, position: 'relative' }} ref={chartContainerRef}>
+            <div style={{ ...styles.chartContainer, position: 'relative' }} className="nlb-chart-container" ref={chartContainerRef}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '12px' }}>
                 <span style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)' }}>Cash Flow Projection</span>
                 <span style={{ fontSize: '13px', color: 'var(--text-tertiary)' }}>{changeMeta}</span>
               </div>
-              <div style={{ height: 'calc(100% - 36px)' }}>
+              <div style={{ height: 'calc(100% - 36px)', outline: 'none' }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart
                     data={chartData}
-                    margin={{ top: 5, right: 20, bottom: 5, left: 0 }}
+                    margin={{ top: 8, right: 56, bottom: 8, left: 8 }}
                   >
                     <defs>
                       <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
@@ -663,10 +675,7 @@ function App() {
                         const prefix = val < 0 ? '-' : '';
                         return abs >= 1000 ? `${prefix}$${(abs / 1000).toFixed(0)}k` : `${prefix}$${abs.toLocaleString()}`;
                       }}
-                      domain={[
-                        (dataMin) => Math.min(dataMin, 0),
-                        'auto',
-                      ]}
+                      domain={yDomain}
                     />
                     <Tooltip
                       content={({ active, payload }) => {
@@ -708,17 +717,17 @@ function App() {
                     <ReferenceLine
                       y={0}
                       stroke="var(--accent-rose)"
-                      strokeWidth={1.5}
+                      strokeWidth={2}
                       strokeDasharray="6 3"
+                      label={<ZeroLabel />}
                     />
                     {settings.cautionThreshold > 0 && (
                       <ReferenceLine
                         y={settings.cautionThreshold}
                         stroke="var(--caution-amber)"
-                        strokeWidth={1}
-                        strokeDasharray="4 4"
-                        strokeOpacity={0.7}
-                        label={{ value: `$${settings.cautionThreshold.toLocaleString()}`, position: 'left', fill: 'var(--caution-amber)', fontSize: 10, fontWeight: 600 }}
+                        strokeWidth={2}
+                        strokeDasharray="5 3"
+                        label={<ThresholdLabel threshold={settings.cautionThreshold} onUpdate={(v) => updateSettings({ cautionThreshold: v })} />}
                       />
                     )}
                     <Area
@@ -804,6 +813,18 @@ function App() {
         )}
       </main>
 
+      {/* TRUST SIGNAL FOOTER */}
+      <footer style={{
+        textAlign: 'center',
+        padding: '10px 24px',
+        fontSize: '11px',
+        color: 'var(--text-tertiary)',
+        borderTop: '1px solid var(--border-subtle)',
+        letterSpacing: '0.03em',
+      }}>
+        Data stored locally on your device. Zero external access.
+      </footer>
+
       {/* CINEMATIC DRAWER */}
       <Drawer
         isOpen={drawerOpen}
@@ -872,8 +893,6 @@ const popoverStyles = {
   },
   body: {
     padding: '8px 16px 14px',
-    maxHeight: '320px',
-    overflowY: 'auto',
   },
   txnRow: {
     display: 'flex',
@@ -939,7 +958,7 @@ const ChartPopover = React.forwardRef(function ChartPopover(
   const cw = containerEl ? containerEl.offsetWidth : 800;
   const ch = containerEl ? containerEl.offsetHeight : 400;
   const popW = 300;
-  const popH = 260;
+  const popH = 420;
   let left = x + 12;
   let top = y - 20;
   if (left + popW > cw) left = x - popW - 12;
@@ -1105,6 +1124,131 @@ function PopoverEditForm({ txn, onCancel, onSave, onDelete, getCategories, addCu
         <button style={popoverStyles.editDelete} onClick={() => onDelete(txn.id)}>Delete</button>
       </div>
     </div>
+  );
+}
+
+// ── Threshold Reference Line Label ────────────────────────────────────
+function ZeroLabel({ viewBox }) {
+  if (!viewBox) return null;
+  const { x, y, width } = viewBox;
+  return (
+    <text
+      x={x + width + 6}
+      y={y - 3}
+      textAnchor="start"
+      dominantBaseline="auto"
+      fill="var(--accent-rose)"
+      fontSize={10}
+      fontWeight={700}
+      style={{ pointerEvents: 'none' }}
+    >
+      $0
+    </text>
+  );
+}
+
+function ThresholdLabel({ viewBox, threshold, onUpdate }) {
+  const [hovered, setHovered] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState('');
+
+  if (!viewBox) return null;
+  const { x, y, width } = viewBox;
+
+  const commit = () => {
+    const v = Math.round(parseFloat(draft));
+    if (!isNaN(v) && v >= 0) onUpdate(v);
+    setEditing(false);
+    setHovered(false);
+  };
+
+  const labelText = `$${threshold.toLocaleString()}`;
+
+  // Outside the plot area — sits in the right margin, aligned with $0
+  const labelX = x + width + 6;
+  const labelY = y - 3;
+
+  // Edit box: right-aligned inside the chart
+  const editW = 120;
+  const editX = x + width - editW;
+
+  // Tooltip: right-aligned inside the chart, appears on hover of the outside label
+  const tooltipW = 176;
+  const tooltipX = x + width - tooltipW;
+
+  return (
+    <g>
+      {/* Label sits outside the plot area in the right margin */}
+      {!editing && (
+        <text
+          x={labelX}
+          y={labelY}
+          textAnchor="start"
+          dominantBaseline="auto"
+          fill="var(--caution-amber)"
+          fontSize={11}
+          fontWeight={700}
+          style={{ cursor: 'pointer' }}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => { if (!editing) setHovered(false); }}
+          onClick={() => { setDraft(String(threshold)); setEditing(true); setHovered(false); }}
+        >
+          {labelText}
+        </text>
+      )}
+
+      {/* Hover tooltip — right-aligned, above the line */}
+      {hovered && !editing && (
+        <g style={{ pointerEvents: 'none' }}>
+          <rect
+            x={tooltipX}
+            y={y - 60}
+            width={tooltipW}
+            height={40}
+            rx={5}
+            fill="var(--bg-panel)"
+            stroke="var(--caution-amber)"
+            strokeWidth={1}
+          />
+          <text x={tooltipX + 8} y={y - 45} textAnchor="start" fill="var(--caution-amber)" fontSize={11} fontWeight={700}>
+            Caution threshold: {labelText}
+          </text>
+          <text x={tooltipX + 8} y={y - 30} textAnchor="start" fill="var(--text-tertiary)" fontSize={10}>
+            Click to edit
+          </text>
+        </g>
+      )}
+
+      {/* Inline edit — narrow box, right-aligned, clears the chart */}
+      {editing && (
+        <foreignObject x={editX} y={y - 46} width={editW} height={32}>
+          <input
+            type="number"
+            autoFocus
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') { e.preventDefault(); commit(); }
+              if (e.key === 'Escape') { setEditing(false); setHovered(false); }
+            }}
+            style={{
+              width: '100%',
+              height: '32px',
+              background: 'var(--bg-panel)',
+              border: '1px solid var(--caution-amber)',
+              borderRadius: '4px',
+              color: 'var(--caution-amber)',
+              fontSize: '13px',
+              fontWeight: '700',
+              padding: '0 10px',
+              outline: 'none',
+              boxSizing: 'border-box',
+            }}
+          />
+        </foreignObject>
+      )}
+    </g>
   );
 }
 

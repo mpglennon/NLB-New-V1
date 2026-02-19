@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+
+const FADE_MS = 200;
 import useStore from '../store/useStore';
 import { defaultIncomeCategories, defaultExpenseCategories } from '../data/demoData';
 
@@ -6,21 +8,43 @@ const s = {
   overlay: {
     position: 'fixed',
     inset: 0,
-    background: 'var(--overlay-bg)',
     zIndex: 3000,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    pointerEvents: 'none',
+  },
+  overlayOpen: {
+    pointerEvents: 'auto',
+  },
+  backdrop: {
+    position: 'absolute',
+    inset: 0,
+    background: 'var(--overlay-bg)',
+    opacity: 0,
+    transition: `opacity ${FADE_MS}ms ease`,
+  },
+  backdropOpen: {
+    opacity: 1,
   },
   modal: {
+    position: 'relative',
     background: 'var(--bg-panel)',
     border: '1px solid var(--border-subtle)',
     borderRadius: '12px',
-    padding: '28px',
+    padding: '22px',
     width: '480px',
     maxWidth: '90vw',
     maxHeight: '80vh',
     overflowY: 'auto',
+    opacity: 0,
+    transform: 'translateY(16px)',
+    transition: `opacity ${FADE_MS}ms ease, transform ${FADE_MS}ms ease`,
+    zIndex: 1,
+  },
+  modalOpen: {
+    opacity: 1,
+    transform: 'translateY(0)',
   },
   header: {
     display: 'flex',
@@ -34,14 +58,21 @@ const s = {
     color: 'var(--text-primary)',
   },
   closeBtn: {
+    width: '32px',
+    height: '32px',
     background: 'transparent',
     border: 'none',
     color: 'var(--text-tertiary)',
-    fontSize: '20px',
+    fontSize: '18px',
     cursor: 'pointer',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'color 200ms ease, background 200ms ease',
   },
   section: {
-    marginBottom: '24px',
+    marginBottom: '16px',
   },
   sectionTitle: {
     fontSize: '12px',
@@ -49,9 +80,9 @@ const s = {
     color: 'var(--text-tertiary)',
     textTransform: 'uppercase',
     letterSpacing: '0.08em',
-    marginBottom: '12px',
+    marginBottom: '8px',
     borderBottom: '1px solid var(--border-subtle)',
-    paddingBottom: '8px',
+    paddingBottom: '6px',
   },
   row: {
     display: 'flex',
@@ -188,7 +219,20 @@ export default function SettingsModal({ isOpen, onClose }) {
     }
   }, [isOpen, settings.cautionThreshold]);
 
-  if (!isOpen) return null;
+  // ESC key
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [isOpen, onClose]);
+
+  // Body scroll lock
+  useEffect(() => {
+    if (isOpen) document.body.style.overflow = 'hidden';
+    else document.body.style.overflow = '';
+    return () => { document.body.style.overflow = ''; };
+  }, [isOpen]);
 
   const activeIncome = getCategories('income');
   const activeExpense = getCategories('expense');
@@ -219,11 +263,23 @@ export default function SettingsModal({ isOpen, onClose }) {
   };
 
   return (
-    <div style={s.overlay} onClick={onClose}>
-      <div style={s.modal} onClick={(e) => e.stopPropagation()}>
+    <div style={{ ...s.overlay, ...(isOpen ? s.overlayOpen : {}) }}>
+      <div
+        style={{ ...s.backdrop, ...(isOpen ? s.backdropOpen : {}) }}
+        onClick={onClose}
+      />
+      <div
+        style={{ ...s.modal, ...(isOpen ? s.modalOpen : {}) }}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div style={s.header}>
           <h2 style={s.title}>Settings</h2>
-          <button style={s.closeBtn} onClick={onClose}>✕</button>
+          <button
+            style={s.closeBtn}
+            onClick={onClose}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-tertiary)'; e.currentTarget.style.background = 'transparent'; }}
+          >✕</button>
         </div>
 
         {/* Appearance */}
@@ -258,12 +314,7 @@ export default function SettingsModal({ isOpen, onClose }) {
               ))}
             </div>
           </div>
-        </div>
-
-        {/* Onboarding */}
-        {settings.hasCompletedOnboarding && (
-          <div style={s.section}>
-            <div style={s.sectionTitle}>Onboarding</div>
+          {settings.hasCompletedOnboarding && (
             <div style={s.row}>
               <div>
                 <div style={s.label}>Replay welcome tour</div>
@@ -288,12 +339,12 @@ export default function SettingsModal({ isOpen, onClose }) {
                 Replay
               </button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* Thresholds */}
+        {/* Preferences */}
         <div style={s.section}>
-          <div style={s.sectionTitle}>Thresholds</div>
+          <div style={s.sectionTitle}>Preferences</div>
           <div style={s.row}>
             <div>
               <div style={s.label}>Caution threshold</div>
@@ -311,18 +362,6 @@ export default function SettingsModal({ isOpen, onClose }) {
               />
             </div>
           </div>
-          <div style={s.row}>
-            <div>
-              <div style={s.label}>Critical threshold</div>
-              <div style={s.sublabel}>Red warning when balance drops to zero</div>
-            </div>
-            <span style={{ color: 'var(--text-tertiary)', fontSize: '14px' }}>$0 (fixed)</span>
-          </div>
-        </div>
-
-        {/* Calendar */}
-        <div style={s.section}>
-          <div style={s.sectionTitle}>Calendar</div>
           <div style={s.row}>
             <div style={s.label}>Week starts on</div>
             <select

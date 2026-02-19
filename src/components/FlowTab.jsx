@@ -4,6 +4,7 @@ import { getOccurrences } from '../utils/runway';
 // ── Colors (CSS variable references) ────────────────────────────────
 const CYAN = 'var(--accent-cyan)';
 const AMBER = 'var(--caution-amber)';
+const CENTER_GOLD = '#B07A00'; // Dark amber-gold — white text readable on this
 const ROSE = 'var(--accent-rose)';
 const GREEN = 'var(--safe-green)';
 const RED = 'var(--critical-red)';
@@ -62,7 +63,7 @@ export default function FlowTab({
 }) {
   const [tooltip, setTooltip] = useState(null);
   const [hoveredFlow, setHoveredFlow] = useState(null);
-  const [dimensions, setDimensions] = useState({ width: 960, height: 420 });
+  const [dimensions, setDimensions] = useState({ width: 960, height: 400 });
   const containerRef = useRef(null);
 
   useEffect(() => {
@@ -71,7 +72,7 @@ export default function FlowTab({
         const rect = containerRef.current.getBoundingClientRect();
         setDimensions({
           width: Math.max(rect.width - 48, 400),
-          height: 420,
+          height: 400,
         });
       }
     }
@@ -107,6 +108,7 @@ export default function FlowTab({
   const surplus = totalIncome - totalExpenses;
   const isSurplus = surplus > 0;
   const surplusColor = surplus > 0 ? GREEN : surplus < 0 ? RED : WHITE;
+  const available = currentBalance + totalIncome;
   const tfLabel = timeframe === 365 ? '1 year' : `${timeframe} days`;
 
   // ── Empty state ───────────────────────────────────────────────────
@@ -128,10 +130,10 @@ export default function FlowTab({
   // ── Layout constants ──────────────────────────────────────────────
   const W = dimensions.width;
   const H = dimensions.height;
-  const barW = 24;
+  const barW = 18;
   const centerW = 36;
   const topPad = 24;
-  const bottomPad = 20;
+  const bottomPad = 40;
   const usableH = H - topPad - bottomPad;
   const barGap = 8;
 
@@ -148,7 +150,7 @@ export default function FlowTab({
     let yOff = topPad;
 
     return groups.map((g) => {
-      const h = Math.max(34, (g.amount / totalRef) * availH);
+      const h = Math.max(22, (g.amount / totalRef) * availH);
       const bar = { ...g, y: yOff, h };
       yOff += h + barGap;
       return bar;
@@ -197,7 +199,7 @@ export default function FlowTab({
     flows.push({
       key: `in-${bar.category}`,
       from: bar.category,
-      to: 'Your Account',
+      to: 'Cash Reserve',
       amount: bar.amount,
       color: CYAN,
       path: ribbon(
@@ -214,7 +216,7 @@ export default function FlowTab({
     const isSurplus = bar.category === 'Surplus';
     flows.push({
       key: `out-${bar.category}`,
-      from: 'Your Account',
+      from: 'Cash Reserve',
       to: bar.category,
       amount: bar.amount,
       color: isSurplus ? GREEN : ROSE,
@@ -282,6 +284,12 @@ export default function FlowTab({
             {surplus >= 0 ? '+' : '-'}{fmt(surplus)}
           </span>
         </div>
+        <span style={s.summaryDivider}>/</span>
+        <div style={s.summaryItem}>
+          <span style={{ ...s.summaryDot, background: AMBER }} />
+          <span style={s.summaryLabel}>Available</span>
+          <span style={{ ...s.summaryValue, color: AMBER }}>{fmt(available)}</span>
+        </div>
       </div>
 
       {/* SVG Sankey */}
@@ -344,7 +352,7 @@ export default function FlowTab({
             </g>
           ))}
 
-          {/* ── Center: Your Account node ──────────────────────────── */}
+          {/* ── Center: Cash Reserve node ──────────────────────────── */}
           <g>
             <rect
               x={centerX}
@@ -352,32 +360,32 @@ export default function FlowTab({
               width={centerW}
               height={centerH}
               rx={6}
-              fill={AMBER}
+              fill={CENTER_GOLD}
             />
-            {/* Label centered on pillar — horizontal */}
+            {/* Label centered on pillar */}
             <text
               x={centerX + centerW / 2}
               y={stackTop + centerH / 2 - 7}
               textAnchor="middle"
               dominantBaseline="central"
-              fill="#1A1A2E"
+              fill="#FFFFFF"
               fontSize={10}
               fontWeight={700}
               letterSpacing="0.06em"
             >
-              YOUR
+              CASH
             </text>
             <text
               x={centerX + centerW / 2}
               y={stackTop + centerH / 2 + 9}
               textAnchor="middle"
               dominantBaseline="central"
-              fill="#1A1A2E"
+              fill="#FFFFFF"
               fontSize={10}
               fontWeight={700}
               letterSpacing="0.06em"
             >
-              ACCOUNT
+              RESERVE
             </text>
           </g>
 

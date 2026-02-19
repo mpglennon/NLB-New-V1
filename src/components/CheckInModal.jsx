@@ -213,19 +213,14 @@ export default function CheckInModal({ isOpen, onClose, currentBalance, onUpdate
             />
           </div>
 
-          <div style={s.fieldGroup}>
-            <label style={s.label}>Quick Note (Optional)</label>
-            <input
-              type="text"
-              style={s.noteInput}
-              placeholder="e.g., 'Paid rent early'"
-              onFocus={(e) => { e.target.style.borderColor = 'var(--accent-orange)'; }}
-              onBlur={(e) => { e.target.style.borderColor = 'var(--border-subtle)'; }}
-            />
+          {/* Delta — shows inline so you see the change before committing */}
+          <div style={{ ...s.delta, textAlign: 'left', marginBottom: '4px' }}>
+            Change from last check-in:{' '}
+            <span style={{ color: deltaColor, fontWeight: '700' }}>{deltaText}</span>
           </div>
 
           <div style={s.actions}>
-            <button type="submit" style={s.btnPrimary}>Update</button>
+            <button type="submit" style={s.btnPrimary}>Check In</button>
             <button
               type="button"
               style={s.btnSecondary}
@@ -235,11 +230,6 @@ export default function CheckInModal({ isOpen, onClose, currentBalance, onUpdate
             </button>
           </div>
         </form>
-
-        <div style={s.delta}>
-          Delta from last check-in:{' '}
-          <span style={{ color: deltaColor, fontWeight: '600' }}>{deltaText}</span>
-        </div>
       </div>
     </div>
   );

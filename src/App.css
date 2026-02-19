@@ -204,6 +204,17 @@ body {
   border-color: var(--accent-emerald);
 }
 
+/* Suppress browser focus rings on the Recharts SVG and its wrapper */
+.recharts-wrapper,
+.recharts-wrapper:focus,
+.recharts-wrapper svg,
+.recharts-wrapper svg:focus,
+.recharts-surface,
+.recharts-surface:focus,
+.recharts-wrapper * {
+  outline: none !important;
+}
+
 .btn-primary {
   height: 48px; /* Accessibility requirement */
   background-color: var(--accent-emerald);

@@ -85,6 +85,12 @@
   box-sizing: border-box;
 }
 
+/* Kill focus rings on SVG elements globally — Recharts triggers these on click */
+svg:focus,
+svg *:focus {
+  outline: none !important;
+}
+
 body {
   margin: 0;
   min-width: 320px;
@@ -112,9 +118,49 @@ input[type="date"] {
 ::-webkit-scrollbar-track { background: var(--bg-page); }
 ::-webkit-scrollbar-thumb { background: var(--border-subtle); border-radius: 3px; }
 
-/* Responsive card grid */
+/* ── MOBILE RESPONSIVE ─────────────────────────────────────── */
 @media (max-width: 768px) {
+  /* KPI cards: 2×2 grid on phones */
   .kpi-card-grid {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Header: wrap logo + actions gracefully, touch-friendly */
+  .nlb-header-inner {
+    flex-wrap: wrap !important;
+    padding: 10px 16px !important;
+    gap: 10px !important;
+  }
+
+  .nlb-header-actions {
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+
+  /* Balance bar: allow wrapping */
+  .nlb-balance-bar {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    padding: 8px 16px !important;
+  }
+
+  /* Tab nav: horizontal scroll so no tabs get clipped */
+  .nlb-tab-nav {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .nlb-tab-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Main content: tighter padding on small screens */
+  .nlb-main-content {
+    padding: 16px !important;
+  }
+
+  /* Chart: shorter on phones so page doesn't require heavy scrolling */
+  .nlb-chart-container {
+    height: 220px !important;
   }
 }
