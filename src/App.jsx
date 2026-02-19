@@ -510,6 +510,7 @@ function App() {
           {TABS.map((tab) => (
             <button
               key={tab}
+              className="nlb-tab-btn"
               style={{
                 ...styles.tab,
                 ...(activeTab === tab ? styles.activeTab : {}),

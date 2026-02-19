@@ -154,6 +154,26 @@ input[type="date"] {
     display: none;
   }
 
+  /* Tab buttons: tighter padding, no wrapping */
+  .nlb-tab-btn {
+    padding: 12px 14px !important;
+    font-size: 14px !important;
+    white-space: nowrap !important;
+  }
+
+  /* Flow tab: hide Sankey SVG, show mobile message instead */
+  .nlb-sankey-svg {
+    display: none !important;
+  }
+  .nlb-sankey-mobile-msg {
+    display: block !important;
+  }
+
+  /* Flow summary dividers: hide the "/" separators when wrapping */
+  .nlb-flow-divider {
+    display: none !important;
+  }
+
   /* Main content: tighter padding on small screens */
   .nlb-main-content {
     padding: 16px !important;

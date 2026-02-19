@@ -270,13 +270,13 @@ export default function FlowTab({
           <span style={s.summaryLabel}>Income</span>
           <span style={{ ...s.summaryValue, color: CYAN }}>{fmt(totalIncome)}</span>
         </div>
-        <span style={s.summaryDivider}>/</span>
+        <span className="nlb-flow-divider" style={s.summaryDivider}>/</span>
         <div style={s.summaryItem}>
           <span style={{ ...s.summaryDot, background: ROSE }} />
           <span style={s.summaryLabel}>Expenses</span>
           <span style={{ ...s.summaryValue, color: ROSE }}>{fmt(totalExpenses)}</span>
         </div>
-        <span style={s.summaryDivider}>/</span>
+        <span className="nlb-flow-divider" style={s.summaryDivider}>/</span>
         <div style={s.summaryItem}>
           <span style={{ ...s.summaryDot, background: surplusColor }} />
           <span style={s.summaryLabel}>{surplus >= 0 ? 'Surplus' : 'Deficit'}</span>
@@ -284,7 +284,7 @@ export default function FlowTab({
             {surplus >= 0 ? '+' : '-'}{fmt(surplus)}
           </span>
         </div>
-        <span style={s.summaryDivider}>/</span>
+        <span className="nlb-flow-divider" style={s.summaryDivider}>/</span>
         <div style={s.summaryItem}>
           <span style={{ ...s.summaryDot, background: AMBER }} />
           <span style={s.summaryLabel}>Available</span>
@@ -292,8 +292,13 @@ export default function FlowTab({
         </div>
       </div>
 
+      {/* Mobile fallback — shown instead of Sankey on small screens */}
+      <div className="nlb-sankey-mobile-msg" style={{ display: 'none', padding: '24px 0 8px', color: 'var(--text-tertiary)', fontSize: '13px', textAlign: 'center' }}>
+        Full Cash Flow diagram available on desktop.
+      </div>
+
       {/* SVG Sankey */}
-      <div style={s.svgContainer}>
+      <div className="nlb-sankey-svg" style={s.svgContainer}>
         <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} style={{ display: 'block' }}>
 
           {/* ── Flow ribbons ──────────────────────────────────────── */}
