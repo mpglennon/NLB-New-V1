@@ -253,6 +253,26 @@ function App() {
     document.documentElement.setAttribute('data-theme', settings.theme || 'dark');
   }, [settings.theme]);
 
+  // ── Swipe between tabs (mobile) ──────────────────────────────────
+  const touchStart = useRef(null);
+  const MOBILE_TABS = ['Snapshot', 'Transactions'];
+
+  const handleTouchStart = useCallback((e) => {
+    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }, []);
+
+  const handleTouchEnd = useCallback((e) => {
+    if (!touchStart.current) return;
+    const dx = e.changedTouches[0].clientX - touchStart.current.x;
+    const dy = e.changedTouches[0].clientY - touchStart.current.y;
+    touchStart.current = null;
+    if (Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx)) return;
+    const idx = MOBILE_TABS.indexOf(activeTab);
+    if (idx === -1) return;
+    if (dx < 0 && idx < MOBILE_TABS.length - 1) setActiveTab(MOBILE_TABS[idx + 1]);
+    if (dx > 0 && idx > 0) setActiveTab(MOBILE_TABS[idx - 1]);
+  }, [activeTab]);
+
   // ── Calculations ────────────────────────────────────────────────────
   const runway = useMemo(() =>
     calculateRunway(account, transactions, timeframe),
@@ -510,7 +530,7 @@ function App() {
           {TABS.map((tab) => (
             <button
               key={tab}
-              className={`nlb-tab-btn${tab === 'Cash Calendar' ? ' nlb-tab-calendar' : ''}`}
+              className={`nlb-tab-btn${tab === 'Cash Calendar' ? ' nlb-tab-calendar' : ''}${tab === 'Flow' ? ' nlb-tab-flow' : ''}`}
               style={{
                 ...styles.tab,
                 ...(activeTab === tab ? styles.activeTab : {}),
@@ -555,9 +575,9 @@ function App() {
       </div>
 
       {/* MAIN CONTENT */}
-      <main style={styles.mainContent} className="nlb-main-content">
-        {/* TIMEFRAME SELECTOR — hidden on Cash Calendar tab */}
-        {activeTab !== 'Cash Calendar' && (
+      <main style={styles.mainContent} className="nlb-main-content" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+        {/* TIMEFRAME SELECTOR — Snapshot & Flow only */}
+        {(activeTab === 'Snapshot' || activeTab === 'Flow') && (
           <div style={styles.topControls}>
             <div style={styles.timeframeSelector}>
               {[30, 60, 90, 365].map((tf) => (
@@ -610,29 +630,29 @@ function App() {
                 <div style={styles.cardMeta}>Next {tfLabel}</div>
               </div>
 
-              {/* CHANGE */}
-              <div style={{ ...styles.card, borderLeft: `3px solid ${changeColor}` }}>
-                <div style={{ ...styles.cardLabel, color: changeColor }}>Change</div>
+              {/* SURPLUS / DEFICIT */}
+              <div className="kpi-card-surplus" style={{ ...styles.card, borderLeft: `3px solid ${changeColor}` }}>
+                <div style={{ ...styles.cardLabel, color: changeColor }}>{change >= 0 ? 'Surplus' : 'Deficit'}</div>
                 <div className="kpi-card-value" style={{ ...styles.cardValue, fontSize: '36px', color: changeColor }}>
                   {change > 0 ? '\u2191' : change < 0 ? '\u2193' : '\u2192'} ${Math.abs(change).toLocaleString()}
                 </div>
-                <div style={styles.cardMeta}>{changeMeta}</div>
+                <div style={styles.cardMeta}>Next {tfLabel}</div>
               </div>
 
-              {/* RUNWAY — primary KPI: time > money */}
+              {/* BALANCE — primary KPI, tapping opens Check In */}
               <div
-                style={{ ...styles.card, borderLeft: `3px solid ${lineColor}`, cursor: 'pointer' }}
+                className="kpi-card-balance"
+                style={{ ...styles.card, borderLeft: `3px solid ${getBalanceBorderColor(account.currentBalance, settings.cautionThreshold)}`, cursor: 'pointer' }}
                 onClick={() => setCheckInOpen(true)}
                 onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = 'var(--shadow-hover)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-card)'; }}
               >
-                <div style={{ ...styles.cardLabel, color: lineColor }}>Runway</div>
-                <div className="kpi-card-value" style={{ ...styles.cardValue, fontSize: '44px', color: lineColor, display: 'flex', alignItems: 'baseline', gap: '4px' }}>
-                  {runway.runwayDays === Infinity ? '>365' : runway.runwayDays}
-                  <span style={{ fontSize: '16px', fontWeight: '600', opacity: 0.85 }}>days</span>
+                <div style={{ ...styles.cardLabel, color: getBalanceBorderColor(account.currentBalance, settings.cautionThreshold) }}>Balance</div>
+                <div className="kpi-card-value" style={{ ...styles.cardValue, fontSize: '36px' }}>
+                  ${account.currentBalance.toLocaleString()}
                 </div>
                 <div style={styles.cardMeta}>
-                  ${account.currentBalance.toLocaleString()} balance
+                  {runway.runwayDays === Infinity ? '>365' : runway.runwayDays} days runway
                 </div>
               </div>
             </div>

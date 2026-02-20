@@ -561,31 +561,21 @@ export default function TransactionsTab({
             </button>
           ))}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--text-tertiary)' }}>
-          <span>Sort:</span>
-          {['date', 'amount'].map((opt) => {
-            const isActive = sortBy === opt;
-            const arrow = isActive ? (sortDir === 'asc' ? ' \u2191' : ' \u2193') : '';
-            return (
-              <button
-                key={opt}
-                style={{
-                  background: isActive ? 'var(--accent-orange)' : 'transparent',
-                  color: isActive ? 'var(--text-primary)' : 'var(--text-tertiary)',
-                  border: isActive ? 'none' : '1px solid var(--border-subtle)',
-                  borderRadius: '4px',
-                  padding: '4px 12px',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                }}
-                onClick={() => toggleSort(opt)}
-              >
-                {opt.charAt(0).toUpperCase() + opt.slice(1)}{arrow}
-              </button>
-            );
-          })}
-        </div>
+        <button
+          style={{
+            background: 'var(--accent-orange)',
+            color: 'var(--text-primary)',
+            border: 'none',
+            borderRadius: '4px',
+            padding: '4px 12px',
+            fontSize: '13px',
+            fontWeight: '600',
+            cursor: 'pointer',
+          }}
+          onClick={() => toggleSort('date')}
+        >
+          Date {sortDir === 'asc' ? '\u2191' : '\u2193'}
+        </button>
       </div>
     {/* 30-Day Outlook strip */}
     {(outlook30Income > 0 || outlook30Expenses > 0) && (

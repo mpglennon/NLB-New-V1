@@ -3,8 +3,7 @@ import { getOccurrences } from '../utils/runway';
 
 // ── Colors (CSS variable references) ────────────────────────────────
 const CYAN = 'var(--accent-cyan)';
-const AMBER = 'var(--caution-amber)';
-const CENTER_GOLD = '#B07A00'; // Dark amber-gold — white text readable on this
+const CENTER_GOLD = '#B07A00';
 const ROSE = 'var(--accent-rose)';
 const GREEN = 'var(--safe-green)';
 const RED = 'var(--critical-red)';
@@ -108,7 +107,6 @@ export default function FlowTab({
   const surplus = totalIncome - totalExpenses;
   const isSurplus = surplus > 0;
   const surplusColor = surplus > 0 ? GREEN : surplus < 0 ? RED : WHITE;
-  const available = currentBalance + totalIncome;
   const tfLabel = timeframe === 365 ? '1 year' : `${timeframe} days`;
 
   // ── Empty state ───────────────────────────────────────────────────
@@ -199,7 +197,7 @@ export default function FlowTab({
     flows.push({
       key: `in-${bar.category}`,
       from: bar.category,
-      to: 'Cash Reserve',
+      to: 'Total Income',
       amount: bar.amount,
       color: CYAN,
       path: ribbon(
@@ -216,7 +214,7 @@ export default function FlowTab({
     const isSurplus = bar.category === 'Surplus';
     flows.push({
       key: `out-${bar.category}`,
-      from: 'Cash Reserve',
+      from: 'Total Income',
       to: bar.category,
       amount: bar.amount,
       color: isSurplus ? GREEN : ROSE,
@@ -283,12 +281,6 @@ export default function FlowTab({
           <span style={{ ...s.summaryValue, color: surplusColor }}>
             {surplus >= 0 ? '+' : '-'}{fmt(surplus)}
           </span>
-        </div>
-        <span className="nlb-flow-divider" style={s.summaryDivider}>/</span>
-        <div style={s.summaryItem}>
-          <span style={{ ...s.summaryDot, background: AMBER }} />
-          <span style={s.summaryLabel}>Available</span>
-          <span style={{ ...s.summaryValue, color: AMBER }}>{fmt(available)}</span>
         </div>
       </div>
 
@@ -357,7 +349,7 @@ export default function FlowTab({
             </g>
           ))}
 
-          {/* ── Center: Cash Reserve node ──────────────────────────── */}
+          {/* ── Center: Total Income node ──────────────────────────── */}
           <g>
             <rect
               x={centerX}
@@ -367,7 +359,6 @@ export default function FlowTab({
               rx={6}
               fill={CENTER_GOLD}
             />
-            {/* Label centered on pillar */}
             <text
               x={centerX + centerW / 2}
               y={stackTop + centerH / 2 - 7}
@@ -378,7 +369,7 @@ export default function FlowTab({
               fontWeight={700}
               letterSpacing="0.06em"
             >
-              CASH
+              TOTAL
             </text>
             <text
               x={centerX + centerW / 2}
@@ -390,7 +381,7 @@ export default function FlowTab({
               fontWeight={700}
               letterSpacing="0.06em"
             >
-              RESERVE
+              INCOME
             </text>
           </g>
 

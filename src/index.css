@@ -120,12 +120,14 @@ input[type="date"] {
 
 /* ── MOBILE RESPONSIVE ─────────────────────────────────────── */
 @media (max-width: 768px) {
-  /* KPI cards: 2×2 grid, tighter spacing and padding */
+  /* KPI cards: 2×2 grid, reordered — Balance & Surplus top row, Income & Expenses bottom */
   .kpi-card-grid {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 10px !important;
     margin-bottom: 10px !important;
   }
+
+  /* Natural DOM order: Income, Expenses, Surplus, Balance — no reorder needed */
 
   /* KPI card bodies: reduce padding so cards are shorter */
   .kpi-card-grid > div {
@@ -150,19 +152,17 @@ input[type="date"] {
     gap: 6px !important;
   }
 
-  /* Balance bar: allow wrapping */
+  /* Balance bar: hidden on mobile — Balance + Surplus now in KPI cards */
   .nlb-balance-bar {
-    flex-wrap: wrap !important;
-    gap: 8px !important;
-    padding: 8px 16px !important;
+    display: none !important;
   }
 
-  /* Tab nav: no scroll — squeeze all 4 tabs visible at once */
+  /* Tab nav: no scroll — 2 tabs on mobile */
   .nlb-tab-nav {
     overflow-x: visible !important;
   }
 
-  /* Tab buttons: 3 tabs on mobile — more breathing room */
+  /* Tab buttons: 2 tabs on mobile — more breathing room */
   .nlb-tab-btn {
     padding: 10px 14px !important;
     font-size: 13px !important;
@@ -174,16 +174,8 @@ input[type="date"] {
     display: none !important;
   }
 
-  /* Flow tab: hide Sankey SVG, show mobile message instead */
-  .nlb-sankey-svg {
-    display: none !important;
-  }
-  .nlb-sankey-mobile-msg {
-    display: block !important;
-  }
-
-  /* Flow summary dividers: hide the "/" separators when wrapping */
-  .nlb-flow-divider {
+  /* Flow tab: desktop only */
+  .nlb-tab-flow {
     display: none !important;
   }
 
