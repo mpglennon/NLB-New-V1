@@ -202,7 +202,7 @@ const s = {
 export default function SettingsModal({ isOpen, onClose }) {
   const {
     settings, updateSettings, addCustomCategory, removeCategory, restoreCategory, getCategories,
-    resetAll,
+    resetAll, signOut,
   } = useStore();
 
   const [threshold, setThreshold] = useState(String(settings.cautionThreshold));
@@ -440,6 +440,32 @@ export default function SettingsModal({ isOpen, onClose }) {
               placeholder="Add custom category..."
             />
             <button style={s.addBtn} onClick={handleAddExpense}>Add</button>
+          </div>
+        </div>
+
+        {/* Account */}
+        <div style={s.section}>
+          <div style={s.sectionTitle}>Account</div>
+          <div style={s.row}>
+            <div>
+              <div style={s.label}>Sign out</div>
+              <div style={s.sublabel}>Your data is saved and will sync when you sign back in</div>
+            </div>
+            <button
+              style={{
+                background: 'transparent',
+                border: '1px solid var(--border-subtle)',
+                color: 'var(--text-tertiary)',
+                padding: '6px 14px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: '700',
+                cursor: 'pointer',
+              }}
+              onClick={() => { signOut(); onClose(); }}
+            >
+              Sign Out
+            </button>
           </div>
         </div>
 
