@@ -257,6 +257,7 @@ export default function WelcomeModal({ isOpen, onSkip }) {
                   style={{ ...s.input, cursor: 'pointer' }}
                   value={incomeDraft.startDate || today}
                   onChange={(e) => setIncomeDraft({ ...incomeDraft, startDate: e.target.value })}
+                  onClick={(e) => { try { e.target.showPicker(); } catch {} }}
                 />
               </div>
             </div>
@@ -354,6 +355,7 @@ export default function WelcomeModal({ isOpen, onSkip }) {
                   style={{ ...s.input, cursor: 'pointer' }}
                   value={expenseDraft.startDate || today}
                   onChange={(e) => setExpenseDraft({ ...expenseDraft, startDate: e.target.value })}
+                  onClick={(e) => { try { e.target.showPicker(); } catch {} }}
                 />
               </div>
             </div>

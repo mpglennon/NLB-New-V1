@@ -10,7 +10,18 @@
       "Bash(gh auth status:*)",
       "Bash(wc:*)",
       "Bash(git add:*)",
-      "Bash(lattes\" lead, removed guilt language, added key brand phrases, team voice\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")"
+      "Bash(lattes\" lead, removed guilt language, added key brand phrases, team voice\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(gh auth login:*)",
+      "Bash(openclaw config get:*)",
+      "Bash(openclaw channels status:*)",
+      "Bash(ss:*)",
+      "Bash(openclaw gateway:*)",
+      "Bash(openclaw status:*)",
+      "Bash(openclaw --help:*)",
+      "Bash(openclaw devices list:*)",
+      "Bash(openclaw dashboard:*)"
     ]
   }
 }

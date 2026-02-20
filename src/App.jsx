@@ -861,6 +861,7 @@ function App() {
                   setEditingTxnId={setEditingTxnId}
                   onClose={() => { setPinnedDay(null); setEditingTxnId(null); }}
                   updateTransaction={updateTransaction}
+                  addTransaction={addTransaction}
                   deleteTransaction={(id) => { deleteTransaction(id); setPinnedDay(null); setEditingTxnId(null); }}
                   getCategories={getCategories}
                   addCustomCategory={addCustomCategory}
@@ -1041,7 +1042,7 @@ const popoverStyles = {
 
 const ChartPopover = React.forwardRef(function ChartPopover(
   { pinnedDay, containerRef, editingTxnId, setEditingTxnId, onClose,
-    updateTransaction, deleteTransaction, getCategories, addCustomCategory },
+    updateTransaction, deleteTransaction, addTransaction, getCategories, addCustomCategory },
   ref
 ) {
   const { data, x, y } = pinnedDay;
@@ -1084,8 +1085,24 @@ const ChartPopover = React.forwardRef(function ChartPopover(
             <PopoverEditForm
               key={txn.id}
               txn={txn}
+              occurrenceDate={data.isoDate}
               onCancel={() => setEditingTxnId(null)}
               onSave={(id, updates) => { updateTransaction(id, updates); setEditingTxnId(null); }}
+              onSaveThisOne={(originalTxn, updates, date) => {
+                const excludes = [...(originalTxn.excludeDates || []), date];
+                updateTransaction(originalTxn.id, { excludeDates: excludes });
+                addTransaction({
+                  type: originalTxn.type,
+                  category: updates.category || originalTxn.category,
+                  amount: updates.amount || originalTxn.amount,
+                  description: updates.description ?? originalTxn.description,
+                  frequency: 'one-time',
+                  startDate: date,
+                  endDate: date,
+                  isActive: true,
+                });
+                setEditingTxnId(null);
+              }}
               onDelete={deleteTransaction}
               getCategories={getCategories}
               addCustomCategory={addCustomCategory}
@@ -1115,9 +1132,10 @@ const ChartPopover = React.forwardRef(function ChartPopover(
   );
 });
 
-function PopoverEditForm({ txn, onCancel, onSave, onDelete, getCategories, addCustomCategory }) {
+function PopoverEditForm({ txn, occurrenceDate, onCancel, onSave, onSaveThisOne, onDelete, getCategories, addCustomCategory }) {
   const categories = getCategories(txn.type);
   const isCustom = !categories.includes(txn.category);
+  const isRecurring = txn.frequency !== 'one-time';
   const [form, setForm] = useState({
     category: isCustom ? '__custom__' : txn.category,
     customCategory: isCustom ? txn.category : '',
@@ -1127,20 +1145,30 @@ function PopoverEditForm({ txn, onCancel, onSave, onDelete, getCategories, addCu
     description: txn.description || '',
   });
 
-  const handleSave = () => {
+  const buildUpdates = () => {
     const amount = parseFloat(form.amount);
     const category = form.category === '__custom__'
       ? (form.customCategory || '').trim()
       : form.category;
-    if (!category || isNaN(amount) || amount <= 0 || !form.startDate) return;
+    if (!category || isNaN(amount) || amount <= 0 || !form.startDate) return null;
     if (form.category === '__custom__' && category) {
       addCustomCategory(txn.type, category);
     }
-    onSave(txn.id, {
+    return {
       category, amount, frequency: form.frequency,
       startDate: form.startDate, description: form.description,
       endDate: form.frequency === 'one-time' ? form.startDate : null,
-    });
+    };
+  };
+
+  const handleSave = () => {
+    const updates = buildUpdates();
+    if (updates) onSave(txn.id, updates);
+  };
+
+  const handleSaveThisOne = () => {
+    const updates = buildUpdates();
+    if (updates && onSaveThisOne) onSaveThisOne(txn, updates, occurrenceDate);
   };
 
   return (
@@ -1213,7 +1241,14 @@ function PopoverEditForm({ txn, onCancel, onSave, onDelete, getCategories, addCu
         />
       </div>
       <div style={popoverStyles.editActions}>
-        <button style={popoverStyles.editSave} onClick={handleSave}>Save</button>
+        {isRecurring ? (
+          <>
+            <button style={{ ...popoverStyles.editSave, fontSize: '12px' }} onClick={handleSaveThisOne}>This One</button>
+            <button style={{ ...popoverStyles.editSave, fontSize: '12px', background: 'var(--accent-cyan)' }} onClick={handleSave}>All</button>
+          </>
+        ) : (
+          <button style={popoverStyles.editSave} onClick={handleSave}>Save</button>
+        )}
         <button style={popoverStyles.editCancel} onClick={onCancel}>Cancel</button>
         <button style={popoverStyles.editDelete} onClick={() => onDelete(txn.id)}>Delete</button>
       </div>
