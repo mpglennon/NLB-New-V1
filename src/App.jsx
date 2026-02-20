@@ -672,6 +672,7 @@ function App() {
                       tickLine={false}
                       tick={{ fill: 'var(--text-tertiary)', fontSize: 11 }}
                       tickFormatter={(val) => {
+                        if (val === 0) return '';
                         const abs = Math.abs(val);
                         const prefix = val < 0 ? '-' : '';
                         return abs >= 1000 ? `${prefix}$${(abs / 1000).toFixed(0)}k` : `${prefix}$${abs.toLocaleString()}`;

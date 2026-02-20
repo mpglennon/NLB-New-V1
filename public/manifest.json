@@ -4,7 +4,7 @@
   "description": "Never Look Back — Cash flow forecasting for freelancers and operators.",
   "start_url": "/",
   "display": "standalone",
-  "orientation": "landscape",
+  "orientation": "portrait",
   "background_color": "#0B1120",
   "theme_color": "#0B1120",
   "icons": [
