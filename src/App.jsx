@@ -9,9 +9,9 @@ import {
   ReferenceLine,
   ResponsiveContainer,
 } from 'recharts';
-import { format, addDays, startOfToday } from 'date-fns';
+import { format, addDays, startOfToday, startOfMonth, endOfMonth, addMonths as addMonthsFn, getDaysInMonth, differenceInCalendarDays } from 'date-fns';
 import useStore from './store/useStore';
-import { calculateRunway, generateDailyCashFlow, getOccurrences } from './utils/runway';
+import { calculateRunway, generateDailyCashFlow, getOccurrences, getOccurrencesInRange, buildViewRange } from './utils/runway';
 import Drawer from './components/Drawer';
 import CheckInModal from './components/CheckInModal';
 import TransactionsTab from './components/TransactionsTab';
@@ -193,15 +193,21 @@ function getBalanceBorderColor(balance, threshold) {
   return 'var(--critical-red)';
 }
 
-// Sum all occurrences of transactions of a given type over timeframe
-function sumByType(transactions, type, timeframe) {
+// Sum all occurrences of transactions of a given type over a view range
+function sumByType(transactions, type, timeframe, viewMonth) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   let total = 0;
   for (const txn of transactions) {
     if (!txn.isActive || txn.type !== type) continue;
-    const occs = getOccurrences(txn, timeframe);
-    const count = occs.filter((d) => d >= today).length;
+    let occs;
+    if (viewMonth) {
+      const range = buildViewRange(timeframe, viewMonth);
+      occs = getOccurrencesInRange(txn, range.start, range.end);
+    } else {
+      occs = getOccurrences(txn, timeframe);
+    }
+    const count = occs.filter((d) => d >= (viewMonth ? buildViewRange(timeframe, viewMonth).start : today)).length;
     total += txn.amount * count;
   }
   return Math.round(total);
@@ -209,7 +215,8 @@ function sumByType(transactions, type, timeframe) {
 
 function App() {
   const {
-    account, transactions, timeframe, setTimeframe, settings, updateSettings,
+    account, transactions, timeframe, setTimeframe, viewMonth, setViewMonth,
+    settings, updateSettings,
     updateBalance, addTransaction, updateTransaction, deleteTransaction,
     getCategories, addCustomCategory,
   } = useStore();
@@ -273,37 +280,77 @@ function App() {
     if (dx > 0 && idx > 0) setActiveTab(MOBILE_TABS[idx - 1]);
   }, [activeTab]);
 
+  // ── View range (rolling or month) ──────────────────────────────────
+  const vr = useMemo(() => buildViewRange(timeframe, viewMonth), [timeframe, viewMonth]);
+
   // ── Calculations ────────────────────────────────────────────────────
   const runway = useMemo(() =>
     calculateRunway(account, transactions, timeframe),
     [account, transactions, timeframe]
   );
 
-  const totalIncome = useMemo(() => sumByType(transactions, 'income', timeframe), [transactions, timeframe]);
-  const totalExpenses = useMemo(() => sumByType(transactions, 'expense', timeframe), [transactions, timeframe]);
+  const totalIncome = useMemo(() => sumByType(transactions, 'income', timeframe, viewMonth), [transactions, timeframe, viewMonth]);
+  const totalExpenses = useMemo(() => sumByType(transactions, 'expense', timeframe, viewMonth), [transactions, timeframe, viewMonth]);
   const change = totalIncome - totalExpenses;
   const changePct = account.currentBalance > 0
     ? Math.round((change / account.currentBalance) * 100)
     : 0;
   const changeColor = change > 0 ? 'var(--safe-green)' : change < 0 ? 'var(--critical-red)' : 'var(--text-primary)';
-  const dailyRate = Math.round(Math.abs(change) / timeframe);
-  const changeMeta = change > 0
-    ? `Saving $${dailyRate.toLocaleString()}/day`
-    : change < 0
-      ? `Burning $${dailyRate.toLocaleString()}/day`
-      : 'Breakeven';
-  const tfLabel = timeframe === 365 ? '1 year' : `${timeframe} days`;
+  const tfLabel = vr.label;
 
   const chartData = useMemo(() => {
-    const dailyFlow = generateDailyCashFlow(transactions, timeframe);
     const today = startOfToday();
+    const active = transactions.filter((t) => t.isActive);
+
+    if (vr.isMonth) {
+      // Month view: project balance from today to month start, then show daily within month
+      const daysToMonthStart = differenceInCalendarDays(vr.start, today);
+      let startBalance = account.currentBalance;
+      if (daysToMonthStart > 0) {
+        const preFlow = generateDailyCashFlow(transactions, daysToMonthStart);
+        for (const f of preFlow) startBalance += f;
+      }
+
+      // Build per-day maps for the month
+      const dayIncome = {};
+      const dayExpense = {};
+      const dayTxns = {};
+      for (const txn of active) {
+        const occs = getOccurrencesInRange(txn, vr.start, vr.end);
+        for (const occ of occs) {
+          const key = format(occ, 'yyyy-MM-dd');
+          if (txn.type === 'income') dayIncome[key] = (dayIncome[key] || 0) + txn.amount;
+          else dayExpense[key] = (dayExpense[key] || 0) + txn.amount;
+          if (!dayTxns[key]) dayTxns[key] = [];
+          dayTxns[key].push(txn);
+        }
+      }
+
+      let runningBalance = startBalance;
+      return Array.from({ length: vr.days }, (_, i) => {
+        const day = addDays(vr.start, i);
+        const isoDate = format(day, 'yyyy-MM-dd');
+        const inc = dayIncome[isoDate] || 0;
+        const exp = dayExpense[isoDate] || 0;
+        runningBalance += inc - exp;
+        return {
+          date: format(day, 'MMM d'),
+          isoDate,
+          balance: Math.round(runningBalance),
+          dayIncome: Math.round(inc),
+          dayExpense: Math.round(exp),
+          dayTxns: dayTxns[isoDate] || [],
+        };
+      });
+    }
+
+    // Rolling view: existing logic
+    const dailyFlow = generateDailyCashFlow(transactions, timeframe);
     let runningBalance = account.currentBalance;
 
-    // Build per-day income/expense maps
     const dayIncome = {};
     const dayExpense = {};
     const dayTxns = {};
-    const active = transactions.filter((t) => t.isActive);
     for (const txn of active) {
       const occs = getOccurrences(txn, timeframe);
       for (const occ of occs) {
@@ -327,7 +374,7 @@ function App() {
         dayTxns: dayTxns[isoDate] || [],
       };
     });
-  }, [transactions, timeframe, account.currentBalance]);
+  }, [transactions, timeframe, viewMonth, account.currentBalance, vr]);
 
   const yDomain = useMemo(() => {
     if (!chartData.length) return ['auto', 'auto'];
@@ -576,24 +623,49 @@ function App() {
 
       {/* MAIN CONTENT */}
       <main style={styles.mainContent} className="nlb-main-content" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-        {/* TIMEFRAME SELECTOR — Snapshot & Flow only */}
+        {/* VIEW SELECTOR — Snapshot & Flow only */}
         {(activeTab === 'Snapshot' || activeTab === 'Flow') && (
           <div style={styles.topControls}>
-            <div style={styles.timeframeSelector}>
-              {[30, 60, 90, 365].map((tf) => (
-                <button
-                  key={tf}
-                  style={{
-                    ...styles.timeframeBtn,
-                    ...(timeframe === tf ? styles.activeTimeframe : {}),
-                    ...(tf === 365 ? { borderRight: 'none' } : {}),
-                  }}
-                  onClick={() => setTimeframe(tf)}
-                >
-                  {tf === 365 ? '1Y' : tf}
-                </button>
-              ))}
-            </div>
+            <select
+              className="nlb-view-select"
+              style={{
+                height: '36px',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: '6px',
+                color: 'var(--text-primary)',
+                fontSize: '14px',
+                fontWeight: '600',
+                padding: '0 12px',
+                cursor: 'pointer',
+                outline: 'none',
+                minWidth: '160px',
+              }}
+              value={viewMonth || String(timeframe)}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (['30', '60', '90', '365'].includes(val)) {
+                  setTimeframe(Number(val));
+                } else {
+                  setViewMonth(val);
+                }
+              }}
+            >
+              <optgroup label="Rolling Forecast">
+                <option value="30">Next 30 days</option>
+                <option value="60">Next 60 days</option>
+                <option value="90">Next 90 days</option>
+                <option value="365">Next 1 year</option>
+              </optgroup>
+              <optgroup label="By Month">
+                {Array.from({ length: 4 }, (_, i) => {
+                  const d = addMonthsFn(startOfToday(), i);
+                  const val = format(d, 'yyyy-MM');
+                  const label = format(d, 'MMMM yyyy');
+                  return <option key={val} value={val}>{label}</option>;
+                })}
+              </optgroup>
+            </select>
           </div>
         )}
 
@@ -661,7 +733,7 @@ function App() {
             <div style={{ ...styles.chartContainer, position: 'relative' }} className="nlb-chart-container" ref={chartContainerRef}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '12px', marginBottom: '12px' }}>
                 <span style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)' }}>Cash Flow Projection</span>
-                <span style={{ fontSize: '13px', color: 'var(--text-tertiary)' }}>{changeMeta}</span>
+                <span style={{ fontSize: '13px', color: 'var(--text-tertiary)' }}>{tfLabel}</span>
               </div>
               <div style={{ height: 'calc(100% - 36px)', outline: 'none' }}>
                 <ResponsiveContainer width="100%" height="100%">
@@ -803,6 +875,7 @@ function App() {
           <FlowTab
             transactions={transactions}
             timeframe={timeframe}
+            viewMonth={viewMonth}
             currentBalance={account.currentBalance}
             onCategoryClick={(category) => openDrawer('category', category)}
           />

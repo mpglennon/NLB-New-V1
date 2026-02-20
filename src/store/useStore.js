@@ -87,6 +87,7 @@ const useStore = create(
       account: { ...defaultAccount, currentBalance: 0 },
       transactions: [],
       timeframe: 30,
+      viewMonth: null, // null = rolling, "YYYY-MM" = discrete month
       settings: { ...defaultSettings },
 
       // ── Auth state ─────────────────────────────────────
@@ -216,7 +217,8 @@ const useStore = create(
         }
       },
 
-      setTimeframe: (days) => set({ timeframe: days }),
+      setTimeframe: (days) => set({ timeframe: days, viewMonth: null }),
+      setViewMonth: (month) => set({ viewMonth: month }),
 
       updateSettings: async (updates) => {
         set((state) => ({

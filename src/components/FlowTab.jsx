@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
-import { getOccurrences } from '../utils/runway';
+import { getOccurrences, getOccurrencesInRange, buildViewRange } from '../utils/runway';
 
 // ── Colors (CSS variable references) ────────────────────────────────
 const CYAN = 'var(--accent-cyan)';
@@ -14,19 +14,26 @@ const TEXT_DIM = 'var(--text-tertiary)';
 
 // ── Helpers ─────────────────────────────────────────────────────────
 
-function sumOverTimeframe(txn, timeframe) {
+function sumOverTimeframe(txn, timeframe, viewMonth) {
   if (!txn.isActive) return 0;
-  const occurrences = getOccurrences(txn, timeframe);
+  let occurrences;
+  if (viewMonth) {
+    const range = buildViewRange(timeframe, viewMonth);
+    occurrences = getOccurrencesInRange(txn, range.start, range.end);
+  } else {
+    occurrences = getOccurrences(txn, timeframe);
+  }
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const count = occurrences.filter((d) => d >= today).length;
+  const filterStart = viewMonth ? buildViewRange(timeframe, viewMonth).start : today;
+  const count = occurrences.filter((d) => d >= filterStart).length;
   return txn.amount * count;
 }
 
-function groupByCategory(transactions, timeframe) {
+function groupByCategory(transactions, timeframe, viewMonth) {
   const map = {};
   for (const txn of transactions) {
-    const total = sumOverTimeframe(txn, timeframe);
+    const total = sumOverTimeframe(txn, timeframe, viewMonth);
     if (total <= 0) continue;
     if (!map[txn.category]) map[txn.category] = 0;
     map[txn.category] += total;
@@ -57,6 +64,7 @@ function ribbon(x1, y1Top, y1Bot, x2, y2Top, y2Bot) {
 export default function FlowTab({
   transactions,
   timeframe,
+  viewMonth,
   currentBalance,
   onCategoryClick,
 }) {
@@ -86,8 +94,8 @@ export default function FlowTab({
     const income = active.filter((t) => t.type === 'income');
     const expenses = active.filter((t) => t.type === 'expense');
 
-    const incomeGroups = groupByCategory(income, timeframe);
-    const allExpenses = groupByCategory(expenses, timeframe);
+    const incomeGroups = groupByCategory(income, timeframe, viewMonth);
+    const allExpenses = groupByCategory(expenses, timeframe, viewMonth);
 
     const bigFive = allExpenses.slice(0, 5);
     const otherAmount = allExpenses.slice(5).reduce((sum, e) => sum + e.amount, 0);
@@ -107,7 +115,8 @@ export default function FlowTab({
   const surplus = totalIncome - totalExpenses;
   const isSurplus = surplus > 0;
   const surplusColor = surplus > 0 ? GREEN : surplus < 0 ? RED : WHITE;
-  const tfLabel = timeframe === 365 ? '1 year' : `${timeframe} days`;
+  const vr = buildViewRange(timeframe, viewMonth);
+  const tfLabel = vr.label;
 
   // ── Empty state ───────────────────────────────────────────────────
   if (incomeGroups.length === 0 && expenseGroups.length === 0) {

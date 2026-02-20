@@ -4,6 +4,9 @@ import {
   addMonths,
   differenceInCalendarDays,
   startOfToday,
+  startOfMonth,
+  endOfMonth,
+  getDaysInMonth,
   parseISO,
   format,
 } from 'date-fns';
@@ -67,6 +70,70 @@ export function getOccurrences(transaction, timeframe) {
   }
 
   return dates;
+}
+
+/**
+ * Get all occurrence dates for a transaction within a specific date range.
+ * Used for discrete month views.
+ * @param {import('../types/index.js').Transaction} transaction
+ * @param {Date} rangeStart
+ * @param {Date} rangeEnd
+ * @returns {Date[]}
+ */
+export function getOccurrencesInRange(transaction, rangeStart, rangeEnd) {
+  const txnStart = parseISO(transaction.startDate);
+  const excluded = new Set((transaction.excludeDates || []).map((d) => d));
+
+  if (transaction.frequency === 'one-time') {
+    const key = format(txnStart, 'yyyy-MM-dd');
+    if (excluded.has(key)) return [];
+    return txnStart >= rangeStart && txnStart <= rangeEnd ? [txnStart] : [];
+  }
+
+  const txnEnd = transaction.endDate ? parseISO(transaction.endDate) : rangeEnd;
+  const effectiveEnd = txnEnd < rangeEnd ? txnEnd : rangeEnd;
+
+  const dates = [];
+  let current = txnStart;
+
+  while (current <= effectiveEnd) {
+    if (current >= rangeStart) {
+      const key = format(current, 'yyyy-MM-dd');
+      if (!excluded.has(key)) dates.push(current);
+    }
+
+    switch (transaction.frequency) {
+      case 'weekly': current = addWeeks(current, 1); break;
+      case 'bi-weekly': current = addWeeks(current, 2); break;
+      case 'monthly': current = addMonths(current, 1); break;
+      case 'quarterly': current = addMonths(current, 3); break;
+      case 'annually': current = addMonths(current, 12); break;
+      default: return dates;
+    }
+  }
+
+  return dates;
+}
+
+/**
+ * Build a view range from either a rolling timeframe or a month string.
+ * @param {number} timeframe - Rolling days (30, 60, 90, 365)
+ * @param {string|null} viewMonth - "YYYY-MM" or null for rolling
+ * @returns {{ start: Date, end: Date, days: number, label: string, isMonth: boolean }}
+ */
+export function buildViewRange(timeframe, viewMonth) {
+  if (viewMonth) {
+    const monthDate = parseISO(viewMonth + '-01');
+    const start = startOfMonth(monthDate);
+    const end = endOfMonth(monthDate);
+    const days = getDaysInMonth(monthDate);
+    const label = format(monthDate, 'MMMM yyyy');
+    return { start, end, days, label, isMonth: true };
+  }
+  const today = startOfToday();
+  const days = timeframe;
+  const label = timeframe === 365 ? '1 year' : `${timeframe} days`;
+  return { start: today, end: addDays(today, timeframe), days, label, isMonth: false };
 }
 
 /**
