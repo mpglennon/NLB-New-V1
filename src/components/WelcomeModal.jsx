@@ -3,7 +3,7 @@ import useStore from '../store/useStore';
 
 const FADE_MS = 200;
 const FREQUENCIES = ['one-time', 'weekly', 'bi-weekly', 'monthly', 'quarterly', 'annually'];
-const emptyForm = { category: '', amount: '', frequency: 'monthly', startDate: '' };
+const emptyForm = { category: '', customCategory: '', amount: '', frequency: 'monthly', startDate: '' };
 
 export default function WelcomeModal({ isOpen, onSkip }) {
   const [step, setStep] = useState(1);
@@ -59,11 +59,14 @@ export default function WelcomeModal({ isOpen, onSkip }) {
   };
 
   // Check if a draft has valid data
-  const isDraftValid = (draft) => draft.category && parseFloat(draft.amount) > 0;
+  const isDraftValid = (draft) => {
+    const cat = draft.category === 'Custom' ? draft.customCategory.trim() : draft.category;
+    return cat && parseFloat(draft.amount) > 0;
+  };
 
   // Finalize a draft into a clean entry
   const finalizeDraft = (draft) => ({
-    category: draft.category,
+    category: draft.category === 'Custom' ? draft.customCategory.trim() : draft.category,
     amount: parseFloat(draft.amount),
     frequency: draft.frequency,
     startDate: draft.startDate || new Date().toISOString().split('T')[0],
@@ -137,15 +140,15 @@ export default function WelcomeModal({ isOpen, onSkip }) {
           <div style={s.stepContent}>
             <h2 style={s.headline}>Life, not lattes.</h2>
             <p style={s.body}>
-              We built NLB Cash because every finance app we tried wanted to judge our past. We just needed to see what's ahead.
+              We built NLB Cash because every finance app we tried would dwell on the past. We just needed to see what's ahead.
             </p>
             <p style={s.body}>
-              One checking account. No bank linking. No reconciliation. Just a clear view of your runway — built by a team that's been on severance, on pension, and on deadline.
+              One checking account. No bank linking. No reconciliation. Just a clear view of your runway — built by a team that's been on a severance package, on a pension, and on a deadline.
             </p>
             <p style={s.body}>
               We focus on what's ahead because that's what you can control.
             </p>
-            <p style={s.hint}>30 minutes to set up. 30 seconds a day to stay ahead.</p>
+            <p style={s.hint}>30 minutes (or less) to set up. 30 seconds a day to stay ahead.</p>
             <button style={s.btnPrimary} onClick={() => setStep(2)}>Let's Go</button>
             <button style={s.linkBtn} onClick={handleSkip}>Skip, I'll explore first</button>
           </div>
@@ -170,7 +173,7 @@ export default function WelcomeModal({ isOpen, onSkip }) {
               />
             </div>
             <p style={s.hint}>
-              Your primary checking account — that's your command center. Everything else is noise.
+              Your primary checking account — that's your control center. Everything else is noise.
             </p>
             <div style={s.navRow}>
               <button style={s.btnPrimary} onClick={() => setStep(3)}>Next</button>
@@ -212,7 +215,17 @@ export default function WelcomeModal({ isOpen, onSkip }) {
                   {getCategories('income').map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}
+                  <option value="Custom">Custom...</option>
                 </select>
+                {incomeDraft.category === 'Custom' && (
+                  <input
+                    type="text"
+                    style={{ ...s.input, marginTop: '6px' }}
+                    placeholder="Enter category name"
+                    value={incomeDraft.customCategory}
+                    onChange={(e) => setIncomeDraft({ ...incomeDraft, customCategory: e.target.value })}
+                  />
+                )}
               </div>
               <div style={s.fieldGroup}>
                 <label style={s.label}>Amount</label>
@@ -257,7 +270,7 @@ export default function WelcomeModal({ isOpen, onSkip }) {
               + Add Another Income
             </button>
 
-            <p style={s.hint}>Start with the big one — paycheck, pension, side gig. You can always add more later.</p>
+            <p style={s.hint}>Start with the big ones — your main sources of income: paycheck, pension, severance. Add side hustle, bonus, etc. now or later.</p>
             <div style={s.navRow}>
               <button style={s.btnPrimary} onClick={advanceFromIncome}>Next</button>
               <button style={s.linkBtn} onClick={() => { setIncomeDraft({ ...emptyForm }); setStep(4); }}>Skip this step</button>
@@ -299,7 +312,17 @@ export default function WelcomeModal({ isOpen, onSkip }) {
                   {getCategories('expense').map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}
+                  <option value="Custom">Custom...</option>
                 </select>
+                {expenseDraft.category === 'Custom' && (
+                  <input
+                    type="text"
+                    style={{ ...s.input, marginTop: '6px' }}
+                    placeholder="Enter category name"
+                    value={expenseDraft.customCategory}
+                    onChange={(e) => setExpenseDraft({ ...expenseDraft, customCategory: e.target.value })}
+                  />
+                )}
               </div>
               <div style={s.fieldGroup}>
                 <label style={s.label}>Amount</label>
@@ -358,10 +381,10 @@ export default function WelcomeModal({ isOpen, onSkip }) {
           <div style={s.stepContent}>
             <h2 style={s.headline}>You're set.</h2>
             <p style={s.body}>
-              Your runway is live. From here, it's 30 seconds a day — glance at your projection, drag things around if something shifts. That's the whole system.
+              Your runway is live. From here, it's 30 seconds a day (more if you choose) — glance at your projection, drag or edit transactions if something shifts.
             </p>
             <p style={s.body}>
-              This isn't the shortcut. It's the smart way. Consistent daily snapshots beat sporadic deep dives — every time.
+              This isn't a shortcut. It's the smart way. Consistent daily snapshots beat sporadic deep dives — every time.
             </p>
 
             {/* Mini summary */}
