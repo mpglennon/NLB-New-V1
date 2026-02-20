@@ -721,7 +721,6 @@ function App() {
                       stroke="var(--accent-rose)"
                       strokeWidth={2}
                       strokeDasharray="6 3"
-                      label={<ZeroLabel />}
                     />
                     {settings.cautionThreshold > 0 && (
                       <ReferenceLine
@@ -1130,24 +1129,6 @@ function PopoverEditForm({ txn, onCancel, onSave, onDelete, getCategories, addCu
 }
 
 // ── Threshold Reference Line Label ────────────────────────────────────
-function ZeroLabel({ viewBox }) {
-  if (!viewBox) return null;
-  const { x, y, width } = viewBox;
-  return (
-    <text
-      x={x + width + 6}
-      y={y - 3}
-      textAnchor="start"
-      dominantBaseline="auto"
-      fill="var(--accent-rose)"
-      fontSize={10}
-      fontWeight={700}
-      style={{ pointerEvents: 'none' }}
-    >
-      $0
-    </text>
-  );
-}
 
 function ThresholdLabel({ viewBox, threshold, onUpdate }) {
   const [hovered, setHovered] = useState(false);
