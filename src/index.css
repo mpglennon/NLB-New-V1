@@ -162,11 +162,16 @@ input[type="date"] {
     overflow-x: visible !important;
   }
 
-  /* Tab buttons: tight enough that all 4 fit on a phone */
+  /* Tab buttons: 3 tabs on mobile — more breathing room */
   .nlb-tab-btn {
-    padding: 10px 8px !important;
-    font-size: 12px !important;
+    padding: 10px 14px !important;
+    font-size: 13px !important;
     white-space: nowrap !important;
+  }
+
+  /* Cash Calendar: desktop only */
+  .nlb-tab-calendar {
+    display: none !important;
   }
 
   /* Flow tab: hide Sankey SVG, show mobile message instead */

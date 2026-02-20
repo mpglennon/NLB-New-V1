@@ -510,7 +510,7 @@ function App() {
           {TABS.map((tab) => (
             <button
               key={tab}
-              className="nlb-tab-btn"
+              className={`nlb-tab-btn${tab === 'Cash Calendar' ? ' nlb-tab-calendar' : ''}`}
               style={{
                 ...styles.tab,
                 ...(activeTab === tab ? styles.activeTab : {}),
