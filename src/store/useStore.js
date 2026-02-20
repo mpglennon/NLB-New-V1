@@ -8,7 +8,7 @@ const useStore = create(
       // ── State ───────────────────────────────────────
       account: defaultAccount,
       transactions: demoTransactions,
-      timeframe: 90,
+      timeframe: 30,
 
       // ── Settings ────────────────────────────────────
       settings: {
@@ -146,7 +146,7 @@ const useStore = create(
         set({
           account: { ...defaultAccount, lastUpdated: new Date().toISOString() },
           transactions: [],
-          timeframe: 90,
+          timeframe: 30,
           settings: {
             theme: 'dark',
             cautionThreshold: 1000,
