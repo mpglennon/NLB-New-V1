@@ -107,6 +107,7 @@ const useStore = create(
       userId: null,
       syncing: false,
       syncStatus: 'synced', // 'synced' | 'syncing' | 'error'
+      lastSyncError: null,
 
       setUserId: (uid) => set({ userId: uid }),
 
@@ -214,10 +215,20 @@ const useStore = create(
         set((state) => ({ transactions: [...state.transactions, newTxn] }));
         const uid = get().userId;
         if (uid) {
-          const { error } = await supabase.from('transactions').insert(txnToRow(newTxn, uid));
+          const row = txnToRow(newTxn, uid);
+          const { error } = await supabase.from('transactions').insert(row);
           if (error) {
             console.error('addTransaction sync failed:', error);
-            set({ syncStatus: 'error' });
+            set({ syncStatus: 'error', lastSyncError: `Add failed: ${error.message} (${error.code})` });
+            // Retry once after a short delay
+            setTimeout(async () => {
+              const { error: retryErr } = await supabase.from('transactions').insert(row);
+              if (retryErr) {
+                console.error('addTransaction retry failed:', retryErr);
+              } else {
+                set({ syncStatus: 'synced', lastSyncError: null });
+              }
+            }, 2000);
           }
         }
       },

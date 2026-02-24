@@ -432,7 +432,7 @@ function App() {
     settings, updateSettings,
     updateBalance, addTransaction, updateTransaction, deleteTransaction,
     getCategories, addCustomCategory,
-    syncStatus, userId, loadFromSupabase, signOut,
+    syncStatus, lastSyncError, userId, loadFromSupabase, signOut,
   } = useStore();
 
   // ── Tab state ───────────────────────────────────────────────────────
@@ -747,17 +747,24 @@ function App() {
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }} className="nlb-header-actions">
             {/* Sync indicator */}
             {userId && (
-              <div
-                title={syncStatus === 'synced' ? 'Synced' : syncStatus === 'syncing' ? 'Syncing...' : 'Sync error — tap to retry'}
-                onClick={() => { if (syncStatus === 'error') loadFromSupabase(); }}
-                style={{
-                  width: '8px', height: '8px', borderRadius: '50%',
-                  background: syncStatus === 'synced' ? 'var(--safe-green)' : syncStatus === 'syncing' ? 'var(--caution-amber)' : 'var(--critical-red)',
-                  cursor: syncStatus === 'error' ? 'pointer' : 'default',
-                  transition: 'background 300ms ease',
-                  ...(syncStatus === 'syncing' ? { animation: 'pulse 1.5s ease-in-out infinite' } : {}),
-                }}
-              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div
+                  title={syncStatus === 'synced' ? 'Synced' : syncStatus === 'syncing' ? 'Syncing...' : `Sync error — tap to retry${lastSyncError ? ': ' + lastSyncError : ''}`}
+                  onClick={() => { if (syncStatus === 'error') loadFromSupabase(); }}
+                  style={{
+                    width: '8px', height: '8px', borderRadius: '50%',
+                    background: syncStatus === 'synced' ? 'var(--safe-green)' : syncStatus === 'syncing' ? 'var(--caution-amber)' : 'var(--critical-red)',
+                    cursor: syncStatus === 'error' ? 'pointer' : 'default',
+                    transition: 'background 300ms ease',
+                    ...(syncStatus === 'syncing' ? { animation: 'pulse 1.5s ease-in-out infinite' } : {}),
+                  }}
+                />
+                {syncStatus === 'error' && lastSyncError && (
+                  <span style={{ fontSize: '10px', color: 'var(--critical-red)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {lastSyncError}
+                  </span>
+                )}
+              </div>
             )}
             <button
               style={{
