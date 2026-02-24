@@ -4,7 +4,7 @@ import useBackButton from '../hooks/useBackButton';
 
 const FADE_MS = 200;
 const FREQUENCIES = ['one-time', 'weekly', 'bi-weekly', 'monthly', 'quarterly', 'annually'];
-const emptyForm = { category: '', customCategory: '', amount: '', frequency: 'monthly', startDate: '' };
+const emptyForm = { category: '', customCategory: '', subcategory: '', customSubcategory: '', amount: '', frequency: 'monthly', startDate: '', description: '' };
 
 export default function WelcomeModal({ isOpen, onSkip }) {
   const [step, setStep] = useState(1);
@@ -23,6 +23,10 @@ export default function WelcomeModal({ isOpen, onSkip }) {
   const getCategories = useStore((s) => s.getCategories);
   const completeOnboarding = useStore((s) => s.completeOnboarding);
   const updateSettings = useStore((s) => s.updateSettings);
+  const settings = useStore((s) => s.settings);
+  const updateCategoryClassification = useStore((s) => s.updateCategoryClassification);
+  const hierarchy = settings.categoryHierarchy || {};
+  const classification = settings.categoryClassification || {};
 
   const handleSkipCb = useCallback(() => {
     updateSettings({ hasCompletedOnboarding: true });
@@ -72,12 +76,19 @@ export default function WelcomeModal({ isOpen, onSkip }) {
   };
 
   // Finalize a draft into a clean entry
-  const finalizeDraft = (draft) => ({
-    category: draft.category === 'Custom' ? draft.customCategory.trim() : draft.category,
-    amount: parseFloat(draft.amount),
-    frequency: draft.frequency,
-    startDate: draft.startDate || new Date().toISOString().split('T')[0],
-  });
+  const finalizeDraft = (draft) => {
+    const subcategory = draft.subcategory === '__custom_sub__'
+      ? (draft.customSubcategory || '').trim() || null
+      : draft.subcategory || null;
+    return {
+      category: draft.category === 'Custom' ? draft.customCategory.trim() : draft.category,
+      subcategory,
+      amount: parseFloat(draft.amount),
+      frequency: draft.frequency,
+      startDate: draft.startDate || new Date().toISOString().split('T')[0],
+      description: draft.description || '',
+    };
+  };
 
   // Add current income draft to the list
   const addIncome = () => {
@@ -184,7 +195,7 @@ export default function WelcomeModal({ isOpen, onSkip }) {
                 {incomeList.map((entry, i) => (
                   <div key={i} style={s.entryChip}>
                     <span style={s.entryChipText}>
-                      {entry.category} &mdash; ${entry.amount.toLocaleString()} / {entry.frequency}
+                      {entry.category}{entry.subcategory ? ` · ${entry.subcategory}` : ''} &mdash; ${entry.amount.toLocaleString()} / {entry.frequency}
                     </span>
                     <button style={s.entryRemove} onClick={() => removeIncome(i)}>&#x2715;</button>
                   </div>
@@ -199,7 +210,7 @@ export default function WelcomeModal({ isOpen, onSkip }) {
                 <select
                   style={s.select}
                   value={incomeDraft.category}
-                  onChange={(e) => setIncomeDraft({ ...incomeDraft, category: e.target.value })}
+                  onChange={(e) => setIncomeDraft({ ...incomeDraft, category: e.target.value, customCategory: '', subcategory: '', customSubcategory: '' })}
                 >
                   <option value="">Select...</option>
                   {getCategories('income').map((c) => (
@@ -217,6 +228,31 @@ export default function WelcomeModal({ isOpen, onSkip }) {
                   />
                 )}
               </div>
+              {incomeDraft.category && incomeDraft.category !== 'Custom' && (
+                <div style={s.fieldGroup}>
+                  <label style={s.label}>Subcategory</label>
+                  <select
+                    style={s.select}
+                    value={incomeDraft.subcategory || ''}
+                    onChange={(e) => setIncomeDraft({ ...incomeDraft, subcategory: e.target.value, customSubcategory: '' })}
+                  >
+                    <option value="">None</option>
+                    {(hierarchy[incomeDraft.category] || []).map((sub) => (
+                      <option key={sub} value={sub}>{sub}</option>
+                    ))}
+                    <option value="__custom_sub__">Custom...</option>
+                  </select>
+                  {incomeDraft.subcategory === '__custom_sub__' && (
+                    <input
+                      type="text"
+                      style={{ ...s.input, marginTop: '6px' }}
+                      placeholder="Enter subcategory name"
+                      value={incomeDraft.customSubcategory || ''}
+                      onChange={(e) => setIncomeDraft({ ...incomeDraft, customSubcategory: e.target.value })}
+                    />
+                  )}
+                </div>
+              )}
               <div style={s.fieldGroup}>
                 <label style={s.label}>Amount</label>
                 <input
@@ -250,21 +286,30 @@ export default function WelcomeModal({ isOpen, onSkip }) {
                   onClick={(e) => { try { e.target.showPicker(); } catch {} }}
                 />
               </div>
+              <div style={{ ...s.fieldGroup, gridColumn: '1 / -1' }}>
+                <label style={s.label}>Note (optional)</label>
+                <input
+                  type="text"
+                  style={s.input}
+                  value={incomeDraft.description || ''}
+                  onChange={(e) => setIncomeDraft({ ...incomeDraft, description: e.target.value })}
+                  placeholder="Optional note..."
+                />
+              </div>
             </div>
 
-            {/* Add Another button */}
+            {/* Save button — adds entry and clears form */}
             <button
-              style={{ ...s.btnAddAnother, opacity: isDraftValid(incomeDraft) ? 1 : 0.4 }}
+              style={{ ...s.btnSave, opacity: isDraftValid(incomeDraft) ? 1 : 0.4 }}
               disabled={!isDraftValid(incomeDraft)}
               onClick={addIncome}
             >
-              + Add Another Income
+              Save
             </button>
 
             <p style={s.hint}>Start with the big ones — your main sources of income: paycheck, pension, severance. Add side hustle, bonus, etc. now or later.</p>
             <div style={s.navRow}>
               <button style={s.btnPrimary} onClick={advanceFromIncome}>Next</button>
-              <button style={s.linkBtn} onClick={() => { setIncomeDraft({ ...emptyForm }); setStep(3); }}>Skip this step</button>
               <button style={s.btnBack} onClick={() => setStep(1)}>Back</button>
             </div>
           </div>
@@ -282,7 +327,7 @@ export default function WelcomeModal({ isOpen, onSkip }) {
                 {expenseList.map((entry, i) => (
                   <div key={i} style={s.entryChip}>
                     <span style={s.entryChipText}>
-                      {entry.category} &mdash; ${entry.amount.toLocaleString()} / {entry.frequency}
+                      {entry.category}{entry.subcategory ? ` · ${entry.subcategory}` : ''} &mdash; ${entry.amount.toLocaleString()} / {entry.frequency}
                     </span>
                     <button style={s.entryRemove} onClick={() => removeExpense(i)}>&#x2715;</button>
                   </div>
@@ -297,7 +342,7 @@ export default function WelcomeModal({ isOpen, onSkip }) {
                 <select
                   style={s.select}
                   value={expenseDraft.category}
-                  onChange={(e) => setExpenseDraft({ ...expenseDraft, category: e.target.value })}
+                  onChange={(e) => setExpenseDraft({ ...expenseDraft, category: e.target.value, customCategory: '', subcategory: '', customSubcategory: '' })}
                 >
                   <option value="">Select...</option>
                   {getCategories('expense').map((c) => (
@@ -315,6 +360,31 @@ export default function WelcomeModal({ isOpen, onSkip }) {
                   />
                 )}
               </div>
+              {expenseDraft.category && expenseDraft.category !== 'Custom' && (
+                <div style={s.fieldGroup}>
+                  <label style={s.label}>Subcategory</label>
+                  <select
+                    style={s.select}
+                    value={expenseDraft.subcategory || ''}
+                    onChange={(e) => setExpenseDraft({ ...expenseDraft, subcategory: e.target.value, customSubcategory: '' })}
+                  >
+                    <option value="">None</option>
+                    {(hierarchy[expenseDraft.category] || []).map((sub) => (
+                      <option key={sub} value={sub}>{sub}</option>
+                    ))}
+                    <option value="__custom_sub__">Custom...</option>
+                  </select>
+                  {expenseDraft.subcategory === '__custom_sub__' && (
+                    <input
+                      type="text"
+                      style={{ ...s.input, marginTop: '6px' }}
+                      placeholder="Enter subcategory name"
+                      value={expenseDraft.customSubcategory || ''}
+                      onChange={(e) => setExpenseDraft({ ...expenseDraft, customSubcategory: e.target.value })}
+                    />
+                  )}
+                </div>
+              )}
               <div style={s.fieldGroup}>
                 <label style={s.label}>Amount</label>
                 <input
@@ -348,21 +418,52 @@ export default function WelcomeModal({ isOpen, onSkip }) {
                   onClick={(e) => { try { e.target.showPicker(); } catch {} }}
                 />
               </div>
+              <div style={{ ...s.fieldGroup, gridColumn: '1 / -1' }}>
+                <label style={s.label}>Note (optional)</label>
+                <input
+                  type="text"
+                  style={s.input}
+                  value={expenseDraft.description || ''}
+                  onChange={(e) => setExpenseDraft({ ...expenseDraft, description: e.target.value })}
+                  placeholder="Optional note..."
+                />
+              </div>
+              {expenseDraft.category && expenseDraft.category !== 'Custom' && (() => {
+                const catName = expenseDraft.category;
+                const cls = classification[catName] || 'flex';
+                return (
+                  <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <label style={{ ...s.label, marginBottom: 0 }}>Type</label>
+                    <div style={{ display: 'flex', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
+                      <button type="button" style={{
+                        padding: '4px 12px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: '700',
+                        background: cls === 'non-negotiable' ? 'var(--accent-rose)' : 'transparent',
+                        color: cls === 'non-negotiable' ? '#FFF' : 'var(--text-tertiary)',
+                      }} onClick={() => updateCategoryClassification({ ...classification, [catName]: 'non-negotiable' })}>Fixed</button>
+                      <button type="button" style={{
+                        padding: '4px 12px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: '700',
+                        background: cls === 'flex' ? 'var(--caution-amber)' : 'transparent',
+                        color: cls === 'flex' ? '#FFF' : 'var(--text-tertiary)',
+                      }} onClick={() => updateCategoryClassification({ ...classification, [catName]: 'flex' })}>Flex</button>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
-            {/* Add Another button */}
+            {/* Save button — adds entry and clears form */}
             <button
-              style={{ ...s.btnAddAnother, opacity: isDraftValid(expenseDraft) ? 1 : 0.4 }}
+              style={{ ...s.btnSave, opacity: isDraftValid(expenseDraft) ? 1 : 0.4 }}
               disabled={!isDraftValid(expenseDraft)}
               onClick={addExpense}
             >
-              + Add Another Expense
+              Save
             </button>
 
             <p style={s.hint}>Rent, car, groceries, insurance — the 80% that matters. Manage the big levers, and the lattes take care of themselves.</p>
             <div style={s.navRow}>
               <button style={s.btnPrimary} onClick={advanceFromExpense}>See My Runway</button>
-              <button style={s.linkBtn} onClick={() => { setExpenseDraft({ ...emptyForm }); setStep(4); }}>Skip this step</button>
+              <button style={s.linkBtn} onClick={() => setStep(2)}>Back to Income</button>
               <button style={s.btnBack} onClick={() => setStep(2)}>Back</button>
             </div>
           </div>
@@ -389,7 +490,7 @@ export default function WelcomeModal({ isOpen, onSkip }) {
                 <div key={`i-${i}`} style={s.summaryRow}>
                   <span style={s.summaryLabel}>{i === 0 ? 'Income' : ''}</span>
                   <span style={{ ...s.summaryValue, color: 'var(--accent-cyan)' }}>
-                    {entry.category} &mdash; ${entry.amount.toLocaleString()} / {entry.frequency}
+                    {entry.category}{entry.subcategory ? ` · ${entry.subcategory}` : ''} &mdash; ${entry.amount.toLocaleString()} / {entry.frequency}
                   </span>
                 </div>
               ))}
@@ -397,24 +498,35 @@ export default function WelcomeModal({ isOpen, onSkip }) {
                 <div key={`e-${i}`} style={s.summaryRow}>
                   <span style={s.summaryLabel}>{i === 0 ? 'Expenses' : ''}</span>
                   <span style={{ ...s.summaryValue, color: 'var(--accent-rose)' }}>
-                    {entry.category} &mdash; ${entry.amount.toLocaleString()} / {entry.frequency}
+                    {entry.category}{entry.subcategory ? ` · ${entry.subcategory}` : ''} &mdash; ${entry.amount.toLocaleString()} / {entry.frequency}
                   </span>
                 </div>
               ))}
               {incomeList.length === 0 && expenseList.length === 0 && (
-                <div style={{ fontSize: '13px', color: 'var(--text-tertiary)', textAlign: 'center' }}>
-                  No transactions yet — add them from the Transactions tab.
+                <div style={{ fontSize: '13px', color: 'var(--caution-amber)', textAlign: 'center', fontWeight: '600' }}>
+                  Your runway needs at least one income and one expense to work.
                 </div>
               )}
             </div>
 
             <p style={s.hint}>Life's complex enough. Your daily finance app shouldn't be.</p>
-            <button style={{
-              ...s.btnPrimary,
-              background: 'transparent',
-              border: '2px solid var(--accent-orange)',
-              color: 'var(--accent-orange)',
-            }} onClick={handleComplete}>View My Runway</button>
+            {incomeList.length > 0 && expenseList.length > 0 ? (
+              <button style={{
+                ...s.btnPrimary,
+                background: 'transparent',
+                border: '2px solid var(--accent-orange)',
+                color: 'var(--accent-orange)',
+              }} onClick={handleComplete}>View My Runway</button>
+            ) : (
+              <button style={{
+                ...s.btnPrimary,
+                background: 'transparent',
+                border: '2px solid var(--caution-amber)',
+                color: 'var(--caution-amber)',
+              }} onClick={() => setStep(incomeList.length === 0 ? 2 : 3)}>
+                {incomeList.length === 0 ? 'Add Income First' : 'Add Expenses First'}
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -621,6 +733,20 @@ const s = {
     width: '100%',
     marginTop: '4px',
     transition: 'opacity 200ms ease',
+  },
+  btnSave: {
+    background: 'var(--accent-orange)',
+    color: '#FFFFFF',
+    border: 'none',
+    borderRadius: '8px',
+    padding: '10px 0',
+    fontSize: '14px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    width: '100%',
+    marginTop: '4px',
+    transition: 'opacity 200ms ease',
+    letterSpacing: '0.02em',
   },
   linkBtn: {
     background: 'none',

@@ -546,6 +546,35 @@ export default function SettingsModal({ isOpen, onClose }) {
           </div>
         </div>
 
+        {/* Replay Onboarding */}
+        <div style={s.section}>
+          <div style={s.sectionTitle}>Onboarding</div>
+          <div style={s.row}>
+            <div>
+              <div style={s.label}>Replay setup walkthrough</div>
+              <div style={s.sublabel}>Add more income or expenses via the guided flow — your existing data stays safe</div>
+            </div>
+            <button
+              style={{
+                background: 'transparent',
+                border: '1px solid var(--accent-orange)',
+                color: 'var(--accent-orange)',
+                padding: '6px 14px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: '700',
+                cursor: 'pointer',
+              }}
+              onClick={() => {
+                updateSettings({ hasCompletedOnboarding: false });
+                onClose();
+              }}
+            >
+              Replay
+            </button>
+          </div>
+        </div>
+
         {/* Danger Zone */}
         <div style={{ ...s.section, marginBottom: 0 }}>
           <div style={{ ...s.sectionTitle, color: 'var(--critical-red)', borderBottomColor: 'var(--critical-red)' }}>

@@ -367,7 +367,7 @@ const useStore = create(
         const newBalance = balance ?? get().account.currentBalance;
         set((state) => ({
           account: { ...state.account, currentBalance: newBalance, lastUpdated: now },
-          transactions: newTxns,
+          transactions: [...state.transactions, ...newTxns],
           settings: { ...state.settings, hasCompletedOnboarding: true },
         }));
 
@@ -377,8 +377,7 @@ const useStore = create(
             last_updated: now,
           }).eq('user_id', uid);
 
-          // Clear old transactions and insert new
-          await supabase.from('transactions').delete().eq('user_id', uid);
+          // Append new transactions (never delete existing)
           if (newTxns.length > 0) {
             await supabase.from('transactions').insert(newTxns.map((t) => txnToRow(t, uid)));
           }

@@ -459,6 +459,26 @@ function App() {
   useBackButton(checkInOpen, useCallback(() => setCheckInOpen(false), []));
   useBackButton(settingsOpen, useCallback(() => setSettingsOpen(false), []));
 
+  // ── Prevent accidental app exit on Android back button ────────────
+  useEffect(() => {
+    // Push a guard entry so back button doesn't immediately exit the PWA
+    window.history.pushState({ guard: true }, '');
+
+    const handler = (e) => {
+      // If no modal is open, this fires — re-push guard and confirm exit
+      if (!e.state?.overlay) {
+        window.history.pushState({ guard: true }, '');
+        if (window.confirm('Leave NLBCash?')) {
+          window.history.back();
+          window.history.back();
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handler);
+    return () => window.removeEventListener('popstate', handler);
+  }, []);
+
   // ── Apply theme ───────────────────────────────────────────────────
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', settings.theme || 'dark');
