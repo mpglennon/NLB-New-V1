@@ -196,7 +196,11 @@ const useStore = create(
         set((state) => ({ transactions: [...state.transactions, newTxn] }));
         const uid = get().userId;
         if (uid) {
-          await supabase.from('transactions').insert(txnToRow(newTxn, uid));
+          const { error } = await supabase.from('transactions').insert(txnToRow(newTxn, uid));
+          if (error) {
+            console.error('addTransaction sync failed:', error);
+            set({ syncStatus: 'error' });
+          }
         }
       },
 
@@ -220,7 +224,11 @@ const useStore = create(
           if (updates.isActive !== undefined) row.is_active = updates.isActive;
           if (updates.excludeDates !== undefined) row.exclude_dates = updates.excludeDates;
           row.updated_at = now;
-          await supabase.from('transactions').update(row).eq('id', id).eq('user_id', uid);
+          const { error } = await supabase.from('transactions').update(row).eq('id', id).eq('user_id', uid);
+          if (error) {
+            console.error('updateTransaction sync failed:', error);
+            set({ syncStatus: 'error' });
+          }
         }
       },
 
@@ -230,7 +238,11 @@ const useStore = create(
         }));
         const uid = get().userId;
         if (uid) {
-          await supabase.from('transactions').delete().eq('id', id).eq('user_id', uid);
+          const { error } = await supabase.from('transactions').delete().eq('id', id).eq('user_id', uid);
+          if (error) {
+            console.error('deleteTransaction sync failed:', error);
+            set({ syncStatus: 'error' });
+          }
         }
       },
 

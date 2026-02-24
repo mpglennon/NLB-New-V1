@@ -325,6 +325,7 @@ export default function SettingsModal({ isOpen, onClose }) {
         {/* Preferences */}
         <div style={s.section}>
           <div style={s.sectionTitle}>Preferences</div>
+          {!(typeof window !== 'undefined' && window.innerWidth < 768) && (
           <div style={s.row}>
             <div>
               <div style={s.label}>Caution threshold</div>
@@ -342,6 +343,7 @@ export default function SettingsModal({ isOpen, onClose }) {
               />
             </div>
           </div>
+          )}
           <div style={s.row}>
             <div style={s.label}>Week starts on</div>
             <select

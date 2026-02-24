@@ -179,6 +179,11 @@ input[type="date"] {
     display: none !important;
   }
 
+  /* Spending tab: desktop only */
+  .nlb-tab-spending {
+    display: none !important;
+  }
+
   /* Main content: tight padding on small screens */
   .nlb-main-content {
     padding: 12px !important;

@@ -127,39 +127,44 @@ export default function SpendingTab({
     if (match) {
       const cats = getCategories('expense');
       const isCustom = !cats.includes(match.category);
+      const subs = hierarchy[match.category] || [];
+      const isCustomSub = match.subcategory && !subs.includes(match.subcategory);
       setEditingTxn(match);
       setEditForm({
         category: isCustom ? '__custom__' : match.category,
         customCategory: isCustom ? match.category : '',
-        subcategory: match.subcategory || '',
+        subcategory: isCustomSub ? '__custom_sub__' : (match.subcategory || ''),
+        customSubcategory: isCustomSub ? match.subcategory : '',
         amount: String(match.amount),
         frequency: match.frequency,
         startDate: match.startDate,
         description: match.description || '',
       });
     }
-  }, [transactions, getCategories]);
+  }, [transactions, getCategories, hierarchy]);
 
   const handleLeafClick = useCallback((category) => {
-    // Find first matching transaction for direct edit
     const match = transactions.find(
       (t) => t.isActive && t.type === 'expense' && t.category === category
     );
     if (match) {
       const cats = getCategories('expense');
       const isCustom = !cats.includes(match.category);
+      const subs = hierarchy[match.category] || [];
+      const isCustomSub = match.subcategory && !subs.includes(match.subcategory);
       setEditingTxn(match);
       setEditForm({
         category: isCustom ? '__custom__' : match.category,
         customCategory: isCustom ? match.category : '',
-        subcategory: match.subcategory || '',
+        subcategory: isCustomSub ? '__custom_sub__' : (match.subcategory || ''),
+        customSubcategory: isCustomSub ? match.subcategory : '',
         amount: String(match.amount),
         frequency: match.frequency,
         startDate: match.startDate,
         description: match.description || '',
       });
     }
-  }, [transactions, getCategories]);
+  }, [transactions, getCategories, hierarchy]);
 
   const handleEditSave = useCallback(() => {
     if (!editingTxn) return;
@@ -171,9 +176,12 @@ export default function SpendingTab({
     if (editForm.category === '__custom__' && category) {
       addCustomCategory('expense', category);
     }
+    const subcategory = editForm.subcategory === '__custom_sub__'
+      ? (editForm.customSubcategory || '').trim() || null
+      : editForm.subcategory || null;
     updateTransaction(editingTxn.id, {
       category,
-      subcategory: editForm.subcategory || null,
+      subcategory,
       amount,
       frequency: editForm.frequency,
       startDate: editForm.startDate,
@@ -213,7 +221,7 @@ export default function SpendingTab({
       </div>
 
       {groups.map((g) => {
-        const hasSubs = g.subcategories.length > 0 || (hierarchy[g.category] && hierarchy[g.category].length > 0);
+        const hasSubs = g.subcategories.length > 0;
         const isExpanded = expandedCategory === g.category;
         const pct = columnTotal > 0 ? Math.round((g.amount / columnTotal) * 100) : 0;
 
@@ -341,19 +349,30 @@ export default function SpendingTab({
                 />
               </div>
             )}
-            {editForm.category && editForm.category !== '__custom__' && (hierarchy[editForm.category] || []).length > 0 && (
+            {editForm.category && editForm.category !== '__custom__' && (
               <div style={s.editField}>
                 <label style={s.editLabel}>Subcategory</label>
                 <select
                   style={s.editSelect}
                   value={editForm.subcategory || ''}
-                  onChange={(e) => setEditForm({ ...editForm, subcategory: e.target.value })}
+                  onChange={(e) => setEditForm({ ...editForm, subcategory: e.target.value, customSubcategory: '' })}
                 >
                   <option value="">None</option>
                   {(hierarchy[editForm.category] || []).map((sub) => (
                     <option key={sub} value={sub}>{sub}</option>
                   ))}
+                  <option value="__custom_sub__">Custom...</option>
                 </select>
+                {editForm.subcategory === '__custom_sub__' && (
+                  <input
+                    type="text"
+                    style={{ ...s.editInput, marginTop: '6px' }}
+                    placeholder="Enter subcategory name"
+                    value={editForm.customSubcategory || ''}
+                    onChange={(e) => setEditForm({ ...editForm, customSubcategory: e.target.value })}
+                    autoFocus
+                  />
+                )}
               </div>
             )}
             <div style={s.editField}>

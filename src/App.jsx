@@ -256,9 +256,48 @@ function ViewToggle({ viewMonth, timeframe, setViewMonth, setTimeframe, tfLabel 
     transition: 'background 120ms ease',
   });
 
+  const goMonth = (dir) => {
+    const current = viewMonth || format(startOfToday(), 'yyyy-MM');
+    const d = new Date(current + '-01');
+    const next = addMonthsFn(d, dir);
+    setViewMonth(format(next, 'yyyy-MM'));
+    setOpenPanel(null);
+  };
+
+  const arrowBtn = {
+    background: 'transparent',
+    border: 'none',
+    color: 'var(--text-secondary)',
+    fontSize: '18px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    padding: '4px 8px',
+    lineHeight: 1,
+    borderRadius: '4px',
+    transition: 'color 120ms ease, background 120ms ease',
+  };
+
   return (
     <div style={{ ...styles.topControls, position: 'relative', alignItems: 'center' }} ref={ref}>
-      <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', marginRight: 'auto' }}>{tfLabel}</span>
+      {isMonthMode ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginRight: 'auto' }}>
+          <button
+            style={arrowBtn}
+            onClick={() => goMonth(-1)}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover, var(--bg-panel))'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'transparent'; }}
+          >‹</button>
+          <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', minWidth: '130px', textAlign: 'center' }}>{tfLabel}</span>
+          <button
+            style={arrowBtn}
+            onClick={() => goMonth(1)}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover, var(--bg-panel))'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'transparent'; }}
+          >›</button>
+        </div>
+      ) : (
+        <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', marginRight: 'auto' }}>{tfLabel}</span>
+      )}
       <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden' }}>
         <button
           style={{
@@ -425,14 +464,9 @@ function App() {
     document.documentElement.setAttribute('data-theme', settings.theme || 'dark');
   }, [settings.theme]);
 
-  // ── Periodic sync health check (every 60s) ─────────────────────────
-  useEffect(() => {
-    if (!userId) return;
-    const interval = setInterval(() => {
-      loadFromSupabase();
-    }, 60000);
-    return () => clearInterval(interval);
-  }, [userId, loadFromSupabase]);
+  // NOTE: Removed 60-second loadFromSupabase() poll — it was overwriting
+  // local optimistic state with stale server data, causing transactions to
+  // vanish when added in quick succession. Data syncs on auth + page load.
 
   // ── Apply default view on mount ────────────────────────────────────
   const defaultViewApplied = useRef(false);
@@ -1020,7 +1054,7 @@ function App() {
                       strokeWidth={2}
                       strokeDasharray="6 3"
                     />
-                    {settings.cautionThreshold > 0 && (
+                    {settings.cautionThreshold > 0 && !isMobile && (
                       <ReferenceLine
                         y={settings.cautionThreshold}
                         stroke="var(--caution-amber)"

@@ -226,6 +226,7 @@ const defaultForm = {
   category: '',
   customCategory: '',
   subcategory: '',
+  customSubcategory: '',
   amount: '',
   frequency: 'monthly',
   startDate: '',
@@ -338,10 +339,13 @@ export default function TransactionsTab({
     setEditingId(txn.id);
     const cats = getCategories(txn.type);
     const isCustom = !cats.includes(txn.category);
+    const subs = hierarchy[txn.category] || [];
+    const isCustomSub = txn.subcategory && !subs.includes(txn.subcategory);
     setForm({
       category: isCustom ? '__custom__' : txn.category,
       customCategory: isCustom ? txn.category : '',
-      subcategory: txn.subcategory || '',
+      subcategory: isCustomSub ? '__custom_sub__' : (txn.subcategory || ''),
+      customSubcategory: isCustomSub ? txn.subcategory : '',
       amount: String(txn.amount),
       frequency: txn.frequency,
       startDate: txn.startDate,
@@ -367,10 +371,14 @@ export default function TransactionsTab({
       addCustomCategory(type, category);
     }
 
+    const subcategory = form.subcategory === '__custom_sub__'
+      ? (form.customSubcategory || '').trim() || null
+      : form.subcategory || null;
+
     if (editingId) {
       updateTransaction(editingId, {
         category,
-        subcategory: form.subcategory || null,
+        subcategory,
         amount,
         frequency: form.frequency,
         startDate: form.startDate,
@@ -381,7 +389,7 @@ export default function TransactionsTab({
       addTransaction({
         type,
         category,
-        subcategory: form.subcategory || null,
+        subcategory,
         amount,
         frequency: form.frequency,
         startDate: form.startDate,
@@ -437,19 +445,30 @@ export default function TransactionsTab({
               />
             </div>
           )}
-          {form.category && form.category !== '__custom__' && (hierarchy[form.category] || []).length > 0 && (
+          {form.category && form.category !== '__custom__' && (
             <div style={s.formField}>
               <label style={s.formLabel}>Subcategory</label>
               <select
                 style={s.formSelect}
                 value={form.subcategory || ''}
-                onChange={(e) => setForm({ ...form, subcategory: e.target.value })}
+                onChange={(e) => setForm({ ...form, subcategory: e.target.value, customSubcategory: '' })}
               >
                 <option value="">None</option>
                 {(hierarchy[form.category] || []).map((sub) => (
                   <option key={sub} value={sub}>{sub}</option>
                 ))}
+                <option value="__custom_sub__">Custom...</option>
               </select>
+              {form.subcategory === '__custom_sub__' && (
+                <input
+                  type="text"
+                  style={{ ...s.formInput, marginTop: '6px' }}
+                  placeholder="Enter subcategory name"
+                  value={form.customSubcategory || ''}
+                  onChange={(e) => setForm({ ...form, customSubcategory: e.target.value })}
+                  autoFocus
+                />
+              )}
             </div>
           )}
           <div style={s.formField}>
