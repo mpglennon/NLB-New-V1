@@ -258,46 +258,59 @@ function ViewToggle({ viewMonth, timeframe, setViewMonth, setTimeframe, tfLabel 
 
   const goMonth = (dir) => {
     const current = viewMonth || format(startOfToday(), 'yyyy-MM');
-    const d = new Date(current + '-01');
+    const [y, m] = current.split('-').map(Number);
+    const d = new Date(y, m - 1, 1); // local date — avoids UTC timezone shift
     const next = addMonthsFn(d, dir);
     setViewMonth(format(next, 'yyyy-MM'));
     setOpenPanel(null);
   };
 
+  const forecastSteps = [30, 60, 90, 365];
+  const goForecast = (dir) => {
+    const idx = forecastSteps.indexOf(timeframe);
+    const nextIdx = Math.max(0, Math.min(forecastSteps.length - 1, idx + dir));
+    setTimeframe(forecastSteps[nextIdx]);
+    setOpenPanel(null);
+  };
+
   const arrowBtn = {
-    background: 'transparent',
-    border: 'none',
+    background: 'var(--bg-card)',
+    border: '1px solid var(--border-subtle)',
     color: 'var(--text-secondary)',
-    fontSize: '18px',
+    fontSize: '22px',
     fontWeight: '700',
     cursor: 'pointer',
-    padding: '4px 8px',
+    padding: '6px 14px',
     lineHeight: 1,
-    borderRadius: '4px',
-    transition: 'color 120ms ease, background 120ms ease',
+    borderRadius: '6px',
+    transition: 'color 120ms ease, background 120ms ease, border-color 120ms ease',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: '40px',
+    minHeight: '36px',
   };
+
+  const arrowHoverIn = (e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover, var(--bg-panel))'; e.currentTarget.style.borderColor = 'var(--border-focus)'; };
+  const arrowHoverOut = (e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'var(--bg-card)'; e.currentTarget.style.borderColor = 'var(--border-subtle)'; };
 
   return (
     <div style={{ ...styles.topControls, position: 'relative', alignItems: 'center' }} ref={ref}>
-      {isMonthMode ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginRight: 'auto' }}>
-          <button
-            style={arrowBtn}
-            onClick={() => goMonth(-1)}
-            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover, var(--bg-panel))'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'transparent'; }}
-          >‹</button>
-          <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', minWidth: '130px', textAlign: 'center' }}>{tfLabel}</span>
-          <button
-            style={arrowBtn}
-            onClick={() => goMonth(1)}
-            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover, var(--bg-panel))'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'transparent'; }}
-          >›</button>
-        </div>
-      ) : (
-        <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', marginRight: 'auto' }}>{tfLabel}</span>
-      )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: 'auto' }}>
+        <button
+          style={arrowBtn}
+          onClick={() => isMonthMode ? goMonth(-1) : goForecast(-1)}
+          onMouseEnter={arrowHoverIn}
+          onMouseLeave={arrowHoverOut}
+        >‹</button>
+        <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', minWidth: '140px', textAlign: 'center' }}>{tfLabel}</span>
+        <button
+          style={arrowBtn}
+          onClick={() => isMonthMode ? goMonth(1) : goForecast(1)}
+          onMouseEnter={arrowHoverIn}
+          onMouseLeave={arrowHoverOut}
+        >›</button>
+      </div>
       <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden' }}>
         <button
           style={{
