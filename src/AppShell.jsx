@@ -18,11 +18,16 @@ export default function AppShell() {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       if (session?.user) {
         setUserId(session.user.id);
-        loadFromSupabase();
+        // Only load from server on actual sign-in, not token refresh —
+        // TOKEN_REFRESHED fires ~hourly and was overwriting local state
+        // with stale server data, causing transactions to vanish.
+        if (event === 'SIGNED_IN') {
+          loadFromSupabase();
+        }
       }
     });
 

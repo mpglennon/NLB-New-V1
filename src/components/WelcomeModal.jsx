@@ -1,7 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import useStore from '../store/useStore';
-import useBackButton from '../hooks/useBackButton';
-
 const FADE_MS = 200;
 const FREQUENCIES = ['one-time', 'weekly', 'bi-weekly', 'monthly', 'quarterly', 'annually'];
 const emptyForm = { category: '', customCategory: '', subcategory: '', customSubcategory: '', amount: '', frequency: 'monthly', startDate: '', description: '' };
@@ -27,12 +25,6 @@ export default function WelcomeModal({ isOpen, onSkip }) {
   const updateCategoryClassification = useStore((s) => s.updateCategoryClassification);
   const hierarchy = settings.categoryHierarchy || {};
   const classification = settings.categoryClassification || {};
-
-  const handleSkipCb = useCallback(() => {
-    updateSettings({ hasCompletedOnboarding: true });
-    if (onSkip) onSkip();
-  }, [updateSettings, onSkip]);
-  useBackButton(isOpen, handleSkipCb);
 
   // Body scroll lock
   useEffect(() => {
