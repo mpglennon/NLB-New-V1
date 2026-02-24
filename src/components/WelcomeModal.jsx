@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import useStore from '../store/useStore';
+import useBackButton from '../hooks/useBackButton';
 
 const FADE_MS = 200;
 const FREQUENCIES = ['one-time', 'weekly', 'bi-weekly', 'monthly', 'quarterly', 'annually'];
@@ -23,6 +24,12 @@ export default function WelcomeModal({ isOpen, onSkip }) {
   const completeOnboarding = useStore((s) => s.completeOnboarding);
   const updateSettings = useStore((s) => s.updateSettings);
 
+  const handleSkipCb = useCallback(() => {
+    updateSettings({ hasCompletedOnboarding: true });
+    if (onSkip) onSkip();
+  }, [updateSettings, onSkip]);
+  useBackButton(isOpen, handleSkipCb);
+
   // Body scroll lock
   useEffect(() => {
     if (isOpen) {
@@ -43,13 +50,13 @@ export default function WelcomeModal({ isOpen, onSkip }) {
     return () => document.removeEventListener('keydown', handler);
   }, [isOpen]);
 
-  // Autofocus balance input on step 2
+  // Autofocus balance input on step 1
   useEffect(() => {
-    if (step === 2 && balanceRef.current) {
+    if (step === 1 && balanceRef.current) {
       setTimeout(() => {
         balanceRef.current?.focus();
         balanceRef.current?.select();
-      }, 50);
+      }, 300); // slightly longer delay for initial render
     }
   }, [step]);
 
@@ -96,7 +103,7 @@ export default function WelcomeModal({ isOpen, onSkip }) {
       setIncomeList([...incomeList, finalizeDraft(incomeDraft)]);
       setIncomeDraft({ ...emptyForm });
     }
-    setStep(4);
+    setStep(3);
   };
 
   const advanceFromExpense = () => {
@@ -104,7 +111,7 @@ export default function WelcomeModal({ isOpen, onSkip }) {
       setExpenseList([...expenseList, finalizeDraft(expenseDraft)]);
       setExpenseDraft({ ...emptyForm });
     }
-    setStep(5);
+    setStep(4);
   };
 
   const handleComplete = () => {
@@ -127,39 +134,25 @@ export default function WelcomeModal({ isOpen, onSkip }) {
       <div role="dialog" aria-modal="true" aria-label="Welcome" style={{ ...s.modal, ...(isOpen ? s.modalOpen : {}) }}>
 
         {/* Step indicator */}
-        {step >= 2 && step <= 4 && (
+        {step >= 1 && step <= 3 && (
           <div style={s.stepIndicator}>
-            {[2, 3, 4].map((n) => (
+            {[1, 2, 3].map((n) => (
               <div key={n} style={{ ...s.stepDot, ...(step >= n ? s.stepDotActive : {}) }} />
             ))}
           </div>
         )}
 
-        {/* ── STEP 1: WELCOME ─────────────────────────────── */}
+        {/* ── STEP 1: WELCOME + BALANCE (merged) ──────────── */}
         {step === 1 && (
           <div style={s.stepContent}>
+            <div style={s.stepLabel}>Step 1 of 3</div>
             <h2 style={s.headline}>Life, not lattes.</h2>
             <p style={s.body}>
-              We built NLB Cash because every finance app we tried would dwell on the past. We just needed to see what's ahead.
+              One checking account. No bank linking. Just a clear view of your runway — built by a team that's been on a severance package, on a pension, and on a deadline.
             </p>
-            <p style={s.body}>
-              One checking account. No bank linking. No reconciliation. Just a clear view of your runway — built by a team that's been on a severance package, on a pension, and on a deadline.
-            </p>
-            <p style={s.body}>
-              We focus on what's ahead because that's what you can control.
-            </p>
-            <p style={s.hint}>30 minutes (or less) to set up. 30 seconds a day to stay ahead.</p>
-            <button style={s.btnPrimary} onClick={() => setStep(2)}>Let's Go</button>
-            <button style={s.linkBtn} onClick={handleSkip}>Skip, I'll explore first</button>
-          </div>
-        )}
-
-        {/* ── STEP 2: BALANCE ─────────────────────────────── */}
-        {step === 2 && (
-          <div style={s.stepContent}>
-            <div style={s.stepLabel}>Step 1 of 3</div>
-            <h2 style={s.headline}>What's in your account right now?</h2>
+            <p style={s.hint}>30 seconds a day to stay ahead. Let's start with what's in your account right now.</p>
             <div style={s.fieldGroup}>
+              <label style={s.label}>Current Balance</label>
               <input
                 ref={balanceRef}
                 type="number"
@@ -172,18 +165,15 @@ export default function WelcomeModal({ isOpen, onSkip }) {
                 onBlur={(e) => { e.target.style.borderColor = 'var(--border-subtle)'; }}
               />
             </div>
-            <p style={s.hint}>
-              Your primary checking account — that's your control center. Everything else is noise.
-            </p>
             <div style={s.navRow}>
-              <button style={s.btnPrimary} onClick={() => setStep(3)}>Next</button>
-              <button style={s.btnBack} onClick={() => setStep(1)}>Back</button>
+              <button style={s.btnPrimary} onClick={() => setStep(2)}>Next</button>
+              <button style={s.linkBtn} onClick={handleSkip}>Skip, I'll explore first</button>
             </div>
           </div>
         )}
 
-        {/* ── STEP 3: INCOME (multiple) ───────────────────── */}
-        {step === 3 && (
+        {/* ── STEP 2: INCOME (multiple) ───────────────────── */}
+        {step === 2 && (
           <div style={s.stepContent}>
             <div style={s.stepLabel}>Step 2 of 3</div>
             <h2 style={s.headline}>Let's start with what's coming in.</h2>
@@ -274,14 +264,14 @@ export default function WelcomeModal({ isOpen, onSkip }) {
             <p style={s.hint}>Start with the big ones — your main sources of income: paycheck, pension, severance. Add side hustle, bonus, etc. now or later.</p>
             <div style={s.navRow}>
               <button style={s.btnPrimary} onClick={advanceFromIncome}>Next</button>
-              <button style={s.linkBtn} onClick={() => { setIncomeDraft({ ...emptyForm }); setStep(4); }}>Skip this step</button>
-              <button style={s.btnBack} onClick={() => setStep(2)}>Back</button>
+              <button style={s.linkBtn} onClick={() => { setIncomeDraft({ ...emptyForm }); setStep(3); }}>Skip this step</button>
+              <button style={s.btnBack} onClick={() => setStep(1)}>Back</button>
             </div>
           </div>
         )}
 
-        {/* ── STEP 4: EXPENSES (multiple) ─────────────────── */}
-        {step === 4 && (
+        {/* ── STEP 3: EXPENSES (multiple) ─────────────────── */}
+        {step === 3 && (
           <div style={s.stepContent}>
             <div style={s.stepLabel}>Step 3 of 3</div>
             <h2 style={s.headline}>Now the big levers.</h2>
@@ -372,14 +362,14 @@ export default function WelcomeModal({ isOpen, onSkip }) {
             <p style={s.hint}>Rent, car, groceries, insurance — the 80% that matters. Manage the big levers, and the lattes take care of themselves.</p>
             <div style={s.navRow}>
               <button style={s.btnPrimary} onClick={advanceFromExpense}>See My Runway</button>
-              <button style={s.linkBtn} onClick={() => { setExpenseDraft({ ...emptyForm }); setStep(5); }}>Skip this step</button>
-              <button style={s.btnBack} onClick={() => setStep(3)}>Back</button>
+              <button style={s.linkBtn} onClick={() => { setExpenseDraft({ ...emptyForm }); setStep(4); }}>Skip this step</button>
+              <button style={s.btnBack} onClick={() => setStep(2)}>Back</button>
             </div>
           </div>
         )}
 
-        {/* ── STEP 5: LAUNCH ──────────────────────────────── */}
-        {step === 5 && (
+        {/* ── STEP 4: LAUNCH ──────────────────────────────── */}
+        {step === 4 && (
           <div style={s.stepContent}>
             <h2 style={s.headline}>You're set.</h2>
             <p style={s.body}>
@@ -419,7 +409,12 @@ export default function WelcomeModal({ isOpen, onSkip }) {
             </div>
 
             <p style={s.hint}>Life's complex enough. Your daily finance app shouldn't be.</p>
-            <button style={s.btnPrimary} onClick={handleComplete}>View My Runway</button>
+            <button style={{
+              ...s.btnPrimary,
+              background: 'transparent',
+              border: '2px solid var(--accent-orange)',
+              color: 'var(--accent-orange)',
+            }} onClick={handleComplete}>View My Runway</button>
           </div>
         )}
       </div>

@@ -364,16 +364,19 @@ export default function Drawer({
 
         <div style={s.header}>
           <h2 style={s.title}>{title}</h2>
-          <button
-            ref={closeBtnRef}
-            style={s.closeBtn}
-            onClick={onClose}
-            aria-label="Close drawer"
-            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-tertiary)'; e.currentTarget.style.background = 'transparent'; }}
-          >
-            ✕
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontStyle: 'italic' }}>All data saved</span>
+            <button
+              ref={closeBtnRef}
+              style={s.closeBtn}
+              onClick={onClose}
+              aria-label="Close drawer"
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-tertiary)'; e.currentTarget.style.background = 'transparent'; }}
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         <div style={s.columns}>

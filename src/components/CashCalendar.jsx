@@ -353,6 +353,11 @@ export default function CashCalendar({
   // Hover tooltip state
   const [hoveredBadge, setHoveredBadge] = useState(null); // { txn, x, y }
 
+  // "+X more" expanded popover
+  const [expandedDateKey, setExpandedDateKey] = useState(null);
+  const [expandedPos, setExpandedPos] = useState({ x: 0, y: 0 });
+  const expandedRef = useRef(null);
+
   const monthStart = startOfMonth(viewDate);
   const monthEnd = endOfMonth(viewDate);
   const calStart = startOfWeek(monthStart, { weekStartsOn });
@@ -365,13 +370,30 @@ export default function CashCalendar({
     setViewDate((d) => addDays(endOfMonth(d), 1));
   }, []);
 
-  // ESC to close edit
+  // ESC to close edit or expanded popover
   useEffect(() => {
-    if (!editTxn) return;
-    const handler = (e) => { if (e.key === 'Escape') setEditTxn(null); };
+    if (!editTxn && !expandedDateKey) return;
+    const handler = (e) => {
+      if (e.key === 'Escape') {
+        if (editTxn) setEditTxn(null);
+        else setExpandedDateKey(null);
+      }
+    };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [editTxn]);
+  }, [editTxn, expandedDateKey]);
+
+  // Click outside to close expanded popover
+  useEffect(() => {
+    if (!expandedDateKey) return;
+    const handler = (e) => {
+      if (expandedRef.current && !expandedRef.current.contains(e.target)) {
+        setExpandedDateKey(null);
+      }
+    };
+    const timer = setTimeout(() => document.addEventListener('mousedown', handler), 0);
+    return () => { clearTimeout(timer); document.removeEventListener('mousedown', handler); };
+  }, [expandedDateKey]);
 
   // ── Normal daily balances & per-day transactions ────────────────────
   const { dailyBalances, dailyTxns } = useMemo(() => {
@@ -714,16 +736,37 @@ export default function CashCalendar({
                 );
               })}
               {txns.length > 3 && (
-                <div style={{ fontSize: '10px', color: 'var(--text-tertiary)', marginTop: '2px' }}>
+                <div
+                  style={{
+                    fontSize: '10px', color: 'var(--accent-orange)', marginTop: '2px',
+                    cursor: 'pointer', fontWeight: '600',
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (expandedDateKey === dateKey) {
+                      setExpandedDateKey(null);
+                    } else {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      let px = rect.left;
+                      let py = rect.bottom + 4;
+                      if (px + 240 > window.innerWidth) px = window.innerWidth - 250;
+                      if (py + 200 > window.innerHeight) py = rect.top - 210;
+                      if (px < 8) px = 8;
+                      setExpandedPos({ x: px, y: py });
+                      setExpandedDateKey(dateKey);
+                    }
+                  }}
+                >
                   +{txns.length - 3} more
                 </div>
               )}
+
 
               {/* Projected balance — anchored bottom-right */}
               {isFuture && balance !== undefined && (
                 <div style={{
                   ...s.balanceLabel,
-                  color: balance <= 0 ? 'var(--critical-red)' : balance < cautionThreshold ? 'var(--caution-amber)' : 'var(--text-tertiary)',
+                  color: balance <= 0 ? 'var(--critical-red)' : balance < cautionThreshold ? 'var(--caution-amber)' : 'var(--safe-green)',
                 }}>
                   ${balance.toLocaleString()}
                 </div>
@@ -732,6 +775,60 @@ export default function CashCalendar({
           );
         })}
       </div>
+
+      {/* ── Expanded "+N more" popover (fixed, outside grid overflow) ── */}
+      {expandedDateKey && (() => {
+        const expTxns = dailyTxns[expandedDateKey] || [];
+        if (expTxns.length <= 3) return null;
+        const expDay = new Date(expandedDateKey + 'T00:00:00');
+        return (
+          <div
+            ref={expandedRef}
+            style={{
+              position: 'fixed',
+              left: expandedPos.x,
+              top: expandedPos.y,
+              zIndex: 200,
+              background: 'var(--bg-panel)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: '8px',
+              padding: '10px 12px',
+              minWidth: '220px',
+              maxWidth: '300px',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-tertiary)', marginBottom: '8px', textTransform: 'uppercase' }}>
+              {format(expDay, 'MMM d')} — {expTxns.length} items
+            </div>
+            {expTxns.map((txn, i) => {
+              const isInc = txn.type === 'income';
+              const badgeCol = isInc ? 'var(--accent-cyan)' : 'var(--accent-rose)';
+              return (
+                <div
+                  key={`${txn.id}-exp-${i}`}
+                  style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '6px 8px', borderRadius: '6px', cursor: 'pointer',
+                    transition: 'background 120ms ease', marginBottom: '2px',
+                  }}
+                  onClick={(e) => { setExpandedDateKey(null); openEdit(e, txn); }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <span style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: '500' }}>
+                    {txn.category}
+                  </span>
+                  <span style={{ fontSize: '13px', fontWeight: '700', color: badgeCol }}>
+                    {isInc ? '+' : '-'}${txn.amount.toLocaleString()}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* ── Hover tooltip ───────────────────────────────────────────── */}
       {hoveredBadge && !editTxn && !isDragging && (() => {

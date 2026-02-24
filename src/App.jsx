@@ -16,11 +16,12 @@ import Drawer from './components/Drawer';
 import CheckInModal from './components/CheckInModal';
 import TransactionsTab from './components/TransactionsTab';
 import CashCalendar from './components/CashCalendar';
-import FlowTab from './components/FlowTab';
+import SpendingTab from './components/SpendingTab';
 import SettingsModal from './components/SettingsModal';
 import WelcomeModal from './components/WelcomeModal';
+import useBackButton from './hooks/useBackButton';
 
-const TABS = ['Snapshot', 'Flow', 'Cash Calendar', 'Transactions'];
+const TABS = ['Snapshot', 'Spending', 'Cash Calendar', 'Transactions'];
 
 // --- Style Objects ---
 const styles = {
@@ -70,7 +71,7 @@ const styles = {
   },
   navWrapper: {
     padding: '0 24px',
-    borderBottom: '2px solid var(--border-subtle)',
+    borderBottom: '1px solid var(--border-subtle)',
     maxWidth: '1400px',
     margin: '0 auto',
   },
@@ -87,11 +88,12 @@ const styles = {
     fontSize: '16px',
     fontWeight: '600',
     cursor: 'pointer',
-    marginBottom: '-2px',
+    marginBottom: '-1px',
+    transition: 'color 150ms ease, border-color 150ms ease',
   },
   activeTab: {
-    color: 'var(--text-primary)',
-    borderBottomColor: 'var(--text-primary)',
+    color: 'var(--accent-orange)',
+    borderBottomColor: 'var(--accent-orange)',
   },
   mainContent: {
     maxWidth: '1400px',
@@ -176,6 +178,163 @@ const styles = {
 
 const FREQUENCIES = ['one-time', 'weekly', 'bi-weekly', 'monthly', 'quarterly', 'annually'];
 
+// ── View Toggle (Month / Forecast) ──────────────────────────────────
+function ViewToggle({ viewMonth, timeframe, setViewMonth, setTimeframe, tfLabel }) {
+  const [openPanel, setOpenPanel] = useState(null); // 'month' | 'forecast' | null
+  const ref = useRef(null);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!openPanel) return;
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpenPanel(null);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [openPanel]);
+
+  const isMonthMode = !!viewMonth;
+  const forecastOptions = [
+    { value: 30, label: 'Next 30 days' },
+    { value: 60, label: 'Next 60 days' },
+    { value: 90, label: 'Next 90 days' },
+    { value: 365, label: 'Next 1 year' },
+  ];
+  const monthOptions = Array.from({ length: 12 }, (_, i) => {
+    const d = addMonthsFn(startOfToday(), i);
+    return { value: format(d, 'yyyy-MM'), label: format(d, 'MMMM yyyy') };
+  });
+
+  const toggleBtnBase = {
+    height: '36px',
+    padding: '0 16px',
+    fontSize: '13px',
+    fontWeight: '700',
+    border: '1px solid var(--border-subtle)',
+    cursor: 'pointer',
+    transition: 'all 150ms ease',
+    letterSpacing: '0.02em',
+  };
+
+  const activeStyle = {
+    background: 'var(--accent-orange)',
+    color: '#FFFFFF',
+    borderColor: 'var(--accent-orange)',
+  };
+
+  const inactiveStyle = {
+    background: 'var(--bg-card)',
+    color: 'var(--text-tertiary)',
+  };
+
+  const dropdownStyle = {
+    position: 'absolute',
+    top: '42px',
+    right: 0,
+    background: 'var(--bg-panel)',
+    border: '1px solid var(--border-subtle)',
+    borderRadius: '8px',
+    boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+    zIndex: 100,
+    minWidth: '180px',
+    padding: '4px 0',
+    maxHeight: '280px',
+    overflowY: 'auto',
+  };
+
+  const optionStyle = (isActive) => ({
+    display: 'block',
+    width: '100%',
+    padding: '10px 16px',
+    background: isActive ? 'var(--accent-orange-10, rgba(255,152,0,0.1))' : 'transparent',
+    border: 'none',
+    color: isActive ? 'var(--accent-orange)' : 'var(--text-primary)',
+    fontSize: '13px',
+    fontWeight: isActive ? '700' : '500',
+    cursor: 'pointer',
+    textAlign: 'left',
+    transition: 'background 120ms ease',
+  });
+
+  return (
+    <div style={{ ...styles.topControls, position: 'relative', alignItems: 'center' }} ref={ref}>
+      <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', marginRight: 'auto' }}>{tfLabel}</span>
+      <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden' }}>
+        <button
+          style={{
+            ...toggleBtnBase,
+            ...(isMonthMode ? activeStyle : inactiveStyle),
+            borderRadius: '8px 0 0 8px',
+            borderRight: 'none',
+          }}
+          onClick={() => {
+            if (isMonthMode) {
+              setOpenPanel(openPanel === 'month' ? null : 'month');
+            } else {
+              const m = format(startOfToday(), 'yyyy-MM');
+              setViewMonth(m);
+              setOpenPanel(null);
+            }
+          }}
+        >
+          Month {isMonthMode ? '▾' : ''}
+        </button>
+        <button
+          style={{
+            ...toggleBtnBase,
+            ...(!isMonthMode ? activeStyle : inactiveStyle),
+            borderRadius: '0 8px 8px 0',
+          }}
+          onClick={() => {
+            if (!isMonthMode) {
+              setOpenPanel(openPanel === 'forecast' ? null : 'forecast');
+            } else {
+              setViewMonth(null);
+              setOpenPanel(null);
+            }
+          }}
+        >
+          Forecast {!isMonthMode ? '▾' : ''}
+        </button>
+      </div>
+
+      {/* Month dropdown */}
+      {openPanel === 'month' && (
+        <div style={dropdownStyle}>
+          {monthOptions.map((opt) => (
+            <button
+              key={opt.value}
+              style={optionStyle(viewMonth === opt.value)}
+              onClick={() => { setViewMonth(opt.value); setOpenPanel(null); }}
+              onMouseEnter={(e) => { if (viewMonth !== opt.value) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+              onMouseLeave={(e) => { if (viewMonth !== opt.value) e.currentTarget.style.background = 'transparent'; }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Forecast dropdown */}
+      {openPanel === 'forecast' && (
+        <div style={dropdownStyle}>
+          {forecastOptions.map((opt) => (
+            <button
+              key={opt.value}
+              style={optionStyle(!viewMonth && timeframe === opt.value)}
+              onClick={() => { setTimeframe(opt.value); setViewMonth(null); setOpenPanel(null); }}
+              onMouseEnter={(e) => { if (viewMonth || timeframe !== opt.value) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+              onMouseLeave={(e) => { if (viewMonth || timeframe !== opt.value) e.currentTarget.style.background = 'transparent'; }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Chart line color based on runway status
 function getChartLineColor(status) {
   switch (status) {
@@ -219,6 +378,7 @@ function App() {
     settings, updateSettings,
     updateBalance, addTransaction, updateTransaction, deleteTransaction,
     getCategories, addCustomCategory,
+    syncStatus, userId, loadFromSupabase,
   } = useStore();
 
   // ── Tab state ───────────────────────────────────────────────────────
@@ -255,10 +415,47 @@ function App() {
   // ── Onboarding ────────────────────────────────────────────────────
   const showWelcome = !settings.hasCompletedOnboarding;
 
+  // ── Android back button integration ────────────────────────────────
+  useBackButton(drawerOpen, closeDrawer);
+  useBackButton(checkInOpen, useCallback(() => setCheckInOpen(false), []));
+  useBackButton(settingsOpen, useCallback(() => setSettingsOpen(false), []));
+
   // ── Apply theme ───────────────────────────────────────────────────
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', settings.theme || 'dark');
   }, [settings.theme]);
+
+  // ── Periodic sync health check (every 60s) ─────────────────────────
+  useEffect(() => {
+    if (!userId) return;
+    const interval = setInterval(() => {
+      loadFromSupabase();
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [userId, loadFromSupabase]);
+
+  // ── Apply default view on mount ────────────────────────────────────
+  const defaultViewApplied = useRef(false);
+  useEffect(() => {
+    if (defaultViewApplied.current) return;
+    const dv = settings.defaultView || 'rolling-30';
+    if (dv === 'current-month') {
+      setViewMonth(format(startOfToday(), 'yyyy-MM'));
+    } else {
+      const days = parseInt(dv.replace('rolling-', ''), 10);
+      if (days) setTimeframe(days);
+    }
+    defaultViewApplied.current = true;
+  }, [settings.defaultView]);
+
+  // ── Mobile detection ──────────────────────────────────────────────
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   // ── Swipe between tabs (mobile) ──────────────────────────────────
   const touchStart = useRef(null);
@@ -447,7 +644,7 @@ function App() {
           setActiveTab('Snapshot');
           break;
         case '2':
-          setActiveTab('Flow');
+          setActiveTab('Spending');
           break;
         case '3':
           setActiveTab('Cash Calendar');
@@ -503,6 +700,20 @@ function App() {
             }}>Never Look Back</div>
           </div>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }} className="nlb-header-actions">
+            {/* Sync indicator */}
+            {userId && (
+              <div
+                title={syncStatus === 'synced' ? 'Synced' : syncStatus === 'syncing' ? 'Syncing...' : 'Sync error — tap to retry'}
+                onClick={() => { if (syncStatus === 'error') loadFromSupabase(); }}
+                style={{
+                  width: '8px', height: '8px', borderRadius: '50%',
+                  background: syncStatus === 'synced' ? 'var(--safe-green)' : syncStatus === 'syncing' ? 'var(--caution-amber)' : 'var(--critical-red)',
+                  cursor: syncStatus === 'error' ? 'pointer' : 'default',
+                  transition: 'background 300ms ease',
+                  ...(syncStatus === 'syncing' ? { animation: 'pulse 1.5s ease-in-out infinite' } : {}),
+                }}
+              />
+            )}
             <button
               style={{
                 background: 'transparent',
@@ -577,10 +788,11 @@ function App() {
           {TABS.map((tab) => (
             <button
               key={tab}
-              className={`nlb-tab-btn${tab === 'Cash Calendar' ? ' nlb-tab-calendar' : ''}${tab === 'Flow' ? ' nlb-tab-flow' : ''}`}
+              className={`nlb-tab-btn${tab === 'Cash Calendar' ? ' nlb-tab-calendar' : ''}${tab === 'Spending' ? ' nlb-tab-spending' : ''}`}
               style={{
                 ...styles.tab,
-                ...(activeTab === tab ? styles.activeTab : {}),
+                color: activeTab === tab ? 'var(--accent-orange)' : 'var(--text-tertiary)',
+                borderBottomColor: activeTab === tab ? 'var(--accent-orange)' : 'transparent',
               }}
               onClick={() => setActiveTab(tab)}
             >
@@ -602,11 +814,19 @@ function App() {
         fontSize: '14px',
         borderBottom: '1px solid var(--border-subtle)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', borderRadius: '6px', padding: '4px 8px', margin: '-4px -8px', transition: 'background 150ms ease' }}
+          onClick={() => setCheckInOpen(true)}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+        >
           <span style={{ color: 'var(--text-tertiary)' }}>Balance:</span>
           <span style={{ color: 'var(--text-primary)', fontWeight: '700' }}>
             ${account.currentBalance.toLocaleString()}
           </span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}>
+            <path d="M17 3a2.85 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5z"/>
+          </svg>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <span style={{ color: 'var(--text-tertiary)' }}>
@@ -623,50 +843,15 @@ function App() {
 
       {/* MAIN CONTENT */}
       <main style={styles.mainContent} className="nlb-main-content" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-        {/* VIEW SELECTOR — Snapshot & Flow only */}
-        {(activeTab === 'Snapshot' || activeTab === 'Flow') && (
-          <div style={styles.topControls}>
-            <select
-              className="nlb-view-select"
-              style={{
-                height: '36px',
-                background: 'var(--bg-card)',
-                border: '1px solid var(--border-subtle)',
-                borderRadius: '6px',
-                color: 'var(--text-primary)',
-                fontSize: '14px',
-                fontWeight: '600',
-                padding: '0 12px',
-                cursor: 'pointer',
-                outline: 'none',
-                minWidth: '160px',
-              }}
-              value={viewMonth || String(timeframe)}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (['30', '60', '90', '365'].includes(val)) {
-                  setTimeframe(Number(val));
-                } else {
-                  setViewMonth(val);
-                }
-              }}
-            >
-              <optgroup label="Rolling Forecast">
-                <option value="30">Next 30 days</option>
-                <option value="60">Next 60 days</option>
-                <option value="90">Next 90 days</option>
-                <option value="365">Next 1 year</option>
-              </optgroup>
-              <optgroup label="By Month">
-                {Array.from({ length: 4 }, (_, i) => {
-                  const d = addMonthsFn(startOfToday(), i);
-                  const val = format(d, 'yyyy-MM');
-                  const label = format(d, 'MMMM yyyy');
-                  return <option key={val} value={val}>{label}</option>;
-                })}
-              </optgroup>
-            </select>
-          </div>
+        {/* VIEW SELECTOR — Month / Forecast toggle */}
+        {(activeTab === 'Snapshot' || activeTab === 'Spending') && (
+          <ViewToggle
+            viewMonth={viewMonth}
+            timeframe={timeframe}
+            setViewMonth={setViewMonth}
+            setTimeframe={setTimeframe}
+            tfLabel={tfLabel}
+          />
         )}
 
         {/* ── SNAPSHOT TAB ─────────────────────────────────────── */}
@@ -685,7 +870,6 @@ function App() {
                 <div className="kpi-card-value" style={{ ...styles.cardValue, fontSize: '36px' }}>
                   ${totalIncome.toLocaleString()}
                 </div>
-                <div style={styles.cardMeta}>Next {tfLabel}</div>
               </div>
 
               {/* EXPENSES */}
@@ -699,7 +883,6 @@ function App() {
                 <div className="kpi-card-value" style={{ ...styles.cardValue, fontSize: '36px' }}>
                   ${totalExpenses.toLocaleString()}
                 </div>
-                <div style={styles.cardMeta}>Next {tfLabel}</div>
               </div>
 
               {/* SURPLUS / DEFICIT */}
@@ -708,7 +891,6 @@ function App() {
                 <div className="kpi-card-value" style={{ ...styles.cardValue, fontSize: '36px', color: changeColor }}>
                   {change > 0 ? '\u2191' : change < 0 ? '\u2193' : '\u2192'} ${Math.abs(change).toLocaleString()}
                 </div>
-                <div style={styles.cardMeta}>Next {tfLabel}</div>
               </div>
 
               {/* BALANCE — primary KPI, tapping opens Check In */}
@@ -720,11 +902,14 @@ function App() {
                 onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'var(--shadow-card)'; }}
               >
                 <div style={{ ...styles.cardLabel, color: getBalanceBorderColor(account.currentBalance, settings.cautionThreshold) }}>Balance</div>
-                <div className="kpi-card-value" style={{ ...styles.cardValue, fontSize: '36px' }}>
+                <div className="kpi-card-value" style={{ ...styles.cardValue, fontSize: '36px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   ${account.currentBalance.toLocaleString()}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6, flexShrink: 0 }}>
+                    <path d="M17 3a2.85 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5z"/>
+                  </svg>
                 </div>
-                <div style={styles.cardMeta}>
-                  {runway.runwayDays === Infinity ? '>365' : runway.runwayDays} days runway
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                  Cash Available Today
                 </div>
               </div>
             </div>
@@ -773,6 +958,7 @@ function App() {
                     />
                     <Tooltip
                       content={({ active, payload }) => {
+                        if (isMobile) return null;
                         if (pinnedDay) return null;
                         if (!active || !payload || !payload.length) return null;
                         const d = payload[0].payload;
@@ -830,7 +1016,7 @@ function App() {
                       strokeWidth={2.5}
                       fill="url(#balanceGradient)"
                       dot={false}
-                      activeDot={(props) => {
+                      activeDot={isMobile ? { r: 4, fill: lineColor, stroke: 'var(--bg-card)', strokeWidth: 2 } : (props) => {
                         const { cx, cy, payload } = props;
                         const hasTxns = payload.dayTxns && payload.dayTxns.length > 0;
                         return (
@@ -851,8 +1037,8 @@ function App() {
                 </ResponsiveContainer>
               </div>
 
-              {/* CHART POPOVER */}
-              {pinnedDay && (
+              {/* CHART POPOVER — desktop only */}
+              {pinnedDay && !isMobile && (
                 <ChartPopover
                   ref={popoverRef}
                   pinnedDay={pinnedDay}
@@ -871,14 +1057,16 @@ function App() {
           </>
         )}
 
-        {/* ── FLOW TAB ─────────────────────────────────────────── */}
-        {activeTab === 'Flow' && (
-          <FlowTab
+        {/* ── SPENDING TAB ─────────────────────────────────────── */}
+        {activeTab === 'Spending' && (
+          <SpendingTab
             transactions={transactions}
             timeframe={timeframe}
             viewMonth={viewMonth}
             currentBalance={account.currentBalance}
-            onCategoryClick={(category) => openDrawer('category', category)}
+            updateTransaction={updateTransaction}
+            deleteTransaction={deleteTransaction}
+            addTransaction={addTransaction}
           />
         )}
 
@@ -938,6 +1126,8 @@ function App() {
         onClose={() => setCheckInOpen(false)}
         currentBalance={account.currentBalance}
         onUpdate={updateBalance}
+        addTransaction={addTransaction}
+        getCategories={getCategories}
       />
 
       {/* SETTINGS MODAL */}
@@ -1259,7 +1449,6 @@ function PopoverEditForm({ txn, occurrenceDate, onCancel, onSave, onSaveThisOne,
 // ── Threshold Reference Line Label ────────────────────────────────────
 
 function ThresholdLabel({ viewBox, threshold, onUpdate }) {
-  const [hovered, setHovered] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
 
@@ -1270,69 +1459,40 @@ function ThresholdLabel({ viewBox, threshold, onUpdate }) {
     const v = Math.round(parseFloat(draft));
     if (!isNaN(v) && v >= 0) onUpdate(v);
     setEditing(false);
-    setHovered(false);
   };
 
   const labelText = `$${threshold.toLocaleString()}`;
 
-  // Outside the plot area — sits in the right margin, aligned with $0
-  const labelX = x + width + 6;
-  const labelY = y - 3;
-
-  // Edit box: right-aligned inside the chart
-  const editW = 120;
-  const editX = x + width - editW;
-
-  // Tooltip: right-aligned inside the chart, appears on hover of the outside label
-  const tooltipW = 176;
-  const tooltipX = x + width - tooltipW;
+  // Position pill completely off the graph area, to the right
+  const pillX = x + width + 8;
+  const pillY = y - 14;
 
   return (
     <g>
-      {/* Label sits outside the plot area in the right margin */}
-      {!editing && (
-        <text
-          x={labelX}
-          y={labelY}
-          textAnchor="start"
-          dominantBaseline="auto"
-          fill="var(--caution-amber)"
-          fontSize={11}
-          fontWeight={700}
-          style={{ cursor: 'pointer' }}
-          onMouseEnter={() => setHovered(true)}
-          onMouseLeave={() => { if (!editing) setHovered(false); }}
-          onClick={() => { setDraft(String(threshold)); setEditing(true); setHovered(false); }}
-        >
-          {labelText}
-        </text>
-      )}
-
-      {/* Hover tooltip — right-aligned, above the line */}
-      {hovered && !editing && (
-        <g style={{ pointerEvents: 'none' }}>
-          <rect
-            x={tooltipX}
-            y={y - 60}
-            width={tooltipW}
-            height={40}
-            rx={5}
-            fill="var(--bg-panel)"
-            stroke="var(--caution-amber)"
-            strokeWidth={1}
-          />
-          <text x={tooltipX + 8} y={y - 45} textAnchor="start" fill="var(--caution-amber)" fontSize={11} fontWeight={700}>
-            Caution threshold: {labelText}
-          </text>
-          <text x={tooltipX + 8} y={y - 30} textAnchor="start" fill="var(--text-tertiary)" fontSize={10}>
-            Click to edit
-          </text>
-        </g>
-      )}
-
-      {/* Inline edit — narrow box, right-aligned, clears the chart */}
-      {editing && (
-        <foreignObject x={editX} y={y - 46} width={editW} height={32}>
+      <foreignObject x={pillX} y={pillY} width="100" height="28" style={{ overflow: 'visible' }}>
+        {!editing ? (
+          <div
+            onClick={() => { setDraft(String(threshold)); setEditing(true); }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              background: 'rgba(255,167,38,0.18)',
+              border: '1px solid var(--caution-amber)',
+              borderRadius: '14px',
+              padding: '3px 10px',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: '700',
+              color: 'var(--caution-amber)',
+              whiteSpace: 'nowrap',
+              zIndex: 10,
+              position: 'relative',
+            }}
+          >
+            {labelText}
+          </div>
+        ) : (
           <input
             type="number"
             autoFocus
@@ -1341,24 +1501,26 @@ function ThresholdLabel({ viewBox, threshold, onUpdate }) {
             onBlur={commit}
             onKeyDown={(e) => {
               if (e.key === 'Enter') { e.preventDefault(); commit(); }
-              if (e.key === 'Escape') { setEditing(false); setHovered(false); }
+              if (e.key === 'Escape') setEditing(false);
             }}
             style={{
-              width: '100%',
-              height: '32px',
+              width: '90px',
+              height: '26px',
               background: 'var(--bg-panel)',
-              border: '1px solid var(--caution-amber)',
-              borderRadius: '4px',
+              border: '2px solid var(--caution-amber)',
+              borderRadius: '14px',
               color: 'var(--caution-amber)',
-              fontSize: '13px',
+              fontSize: '12px',
               fontWeight: '700',
               padding: '0 10px',
               outline: 'none',
               boxSizing: 'border-box',
+              zIndex: 10,
+              position: 'relative',
             }}
           />
-        </foreignObject>
-      )}
+        )}
+      </foreignObject>
     </g>
   );
 }

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '../lib/supabase';
-import { defaultAccount, defaultIncomeCategories, defaultExpenseCategories } from '../data/demoData';
+import { defaultAccount, defaultIncomeCategories, defaultExpenseCategories, defaultCategoryClassification, defaultCategoryHierarchy } from '../data/demoData';
 
 // ── Supabase helpers — map between JS camelCase and DB snake_case ───
 
@@ -11,6 +11,7 @@ function txnToRow(txn, userId) {
     user_id: userId,
     type: txn.type,
     category: txn.category,
+    subcategory: txn.subcategory || null,
     description: txn.description || '',
     amount: txn.amount,
     frequency: txn.frequency,
@@ -28,6 +29,7 @@ function rowToTxn(row) {
     id: row.id,
     type: row.type,
     category: row.category,
+    subcategory: row.subcategory || null,
     description: row.description || '',
     amount: Number(row.amount),
     frequency: row.frequency,
@@ -51,6 +53,9 @@ function settingsToRow(settings, userId) {
     custom_income_categories: settings.customIncomeCategories || [],
     custom_expense_categories: settings.customExpenseCategories || [],
     has_completed_onboarding: settings.hasCompletedOnboarding,
+    default_view: settings.defaultView || 'rolling-30',
+    category_hierarchy: settings.categoryHierarchy || {},
+    category_classification: settings.categoryClassification || defaultCategoryClassification,
   };
 }
 
@@ -64,6 +69,9 @@ function rowToSettings(row) {
     customIncomeCategories: row.custom_income_categories || [],
     customExpenseCategories: row.custom_expense_categories || [],
     hasCompletedOnboarding: row.has_completed_onboarding,
+    defaultView: row.default_view || 'rolling-30',
+    categoryHierarchy: row.category_hierarchy || {},
+    categoryClassification: row.category_classification || defaultCategoryClassification,
   };
 }
 
@@ -78,6 +86,9 @@ const defaultSettings = {
   customIncomeCategories: [],
   customExpenseCategories: [],
   hasCompletedOnboarding: false,
+  defaultView: 'rolling-30',
+  categoryHierarchy: {},
+  categoryClassification: { ...defaultCategoryClassification },
 };
 
 // ── Store ───────────────────────────────────────────────────────────
@@ -95,6 +106,7 @@ const useStore = create(
       // ── Auth state ─────────────────────────────────────
       userId: null,
       syncing: false,
+      syncStatus: 'synced', // 'synced' | 'syncing' | 'error'
 
       setUserId: (uid) => set({ userId: uid }),
 
@@ -102,7 +114,7 @@ const useStore = create(
       loadFromSupabase: async () => {
         const uid = get().userId;
         if (!uid) return;
-        set({ syncing: true });
+        set({ syncing: true, syncStatus: 'syncing' });
 
         const [accountRes, txnRes, settingsRes] = await Promise.all([
           supabase.from('accounts').select('*').eq('user_id', uid).single(),
@@ -153,6 +165,7 @@ const useStore = create(
         }
 
         updates.syncing = false;
+        updates.syncStatus = 'synced';
         set(updates);
       },
 
@@ -198,6 +211,7 @@ const useStore = create(
         if (uid) {
           const row = {};
           if (updates.category !== undefined) row.category = updates.category;
+          if (updates.subcategory !== undefined) row.subcategory = updates.subcategory;
           if (updates.description !== undefined) row.description = updates.description;
           if (updates.amount !== undefined) row.amount = updates.amount;
           if (updates.frequency !== undefined) row.frequency = updates.frequency;
@@ -238,6 +252,9 @@ const useStore = create(
           if (updates.customIncomeCategories !== undefined) row.custom_income_categories = updates.customIncomeCategories;
           if (updates.customExpenseCategories !== undefined) row.custom_expense_categories = updates.customExpenseCategories;
           if (updates.hasCompletedOnboarding !== undefined) row.has_completed_onboarding = updates.hasCompletedOnboarding;
+          if (updates.defaultView !== undefined) row.default_view = updates.defaultView;
+          if (updates.categoryHierarchy !== undefined) row.category_hierarchy = updates.categoryHierarchy;
+          if (updates.categoryClassification !== undefined) row.category_classification = updates.categoryClassification;
           await supabase.from('settings').update(row).eq('user_id', uid);
         }
       },
@@ -282,6 +299,26 @@ const useStore = create(
         if (uid) {
           const dbKey = type === 'income' ? 'hidden_income_categories' : 'hidden_expense_categories';
           await supabase.from('settings').update({ [dbKey]: hidden }).eq('user_id', uid);
+        }
+      },
+
+      updateCategoryHierarchy: async (hierarchy) => {
+        const state = get();
+        const newSettings = { ...state.settings, categoryHierarchy: hierarchy };
+        set({ settings: newSettings });
+        const uid = state.userId;
+        if (uid) {
+          await supabase.from('settings').update({ category_hierarchy: hierarchy }).eq('user_id', uid);
+        }
+      },
+
+      updateCategoryClassification: async (classification) => {
+        const state = get();
+        const newSettings = { ...state.settings, categoryClassification: classification };
+        set({ settings: newSettings });
+        const uid = state.userId;
+        if (uid) {
+          await supabase.from('settings').update({ category_classification: classification }).eq('user_id', uid);
         }
       },
 

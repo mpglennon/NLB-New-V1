@@ -76,6 +76,39 @@ create policy "Users can insert own settings"
 create policy "Users can update own settings"
   on public.settings for update using (auth.uid() = user_id);
 
+-- ── MIGRATION: Subcategory + Classification + Default View ──────
+-- Run these ALTERs on existing databases. Safe to re-run (IF NOT EXISTS).
+
+-- Add subcategory to transactions
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS subcategory text DEFAULT NULL;
+
+-- Add exclude_dates to transactions (may already exist from prior migration)
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS exclude_dates text[] DEFAULT '{}';
+
+-- Add category hierarchy and classification to settings
+ALTER TABLE public.settings ADD COLUMN IF NOT EXISTS category_hierarchy jsonb DEFAULT '{}'::jsonb;
+ALTER TABLE public.settings ADD COLUMN IF NOT EXISTS category_classification jsonb DEFAULT '{
+  "Rent": "non-negotiable",
+  "Rent/Mortgage": "non-negotiable",
+  "Car Payment": "non-negotiable",
+  "Insurance": "non-negotiable",
+  "Utilities": "non-negotiable",
+  "Phone Bill": "non-negotiable",
+  "Loan Payments": "non-negotiable",
+  "Groceries": "non-negotiable",
+  "Childcare": "non-negotiable",
+  "Dining Out": "flex",
+  "Shopping": "flex",
+  "Entertainment": "flex",
+  "Gas": "flex",
+  "Personal Care": "flex",
+  "Travel": "flex",
+  "Subscriptions": "flex"
+}'::jsonb;
+
+-- Add default view preference
+ALTER TABLE public.settings ADD COLUMN IF NOT EXISTS default_view text DEFAULT 'rolling-30';
+
 -- ── REALTIME ────────────────────────────────────────────────
 -- Enable realtime for cross-device sync
 alter publication supabase_realtime add table public.accounts;

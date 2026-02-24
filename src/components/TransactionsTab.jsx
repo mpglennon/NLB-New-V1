@@ -279,22 +279,28 @@ export default function TransactionsTab({
     }
   };
 
-  const filtered = transactions.filter((t) => {
-    if (filter === 'All') return true;
-    if (filter === 'Recurring') return t.frequency !== 'one-time';
-    return t.frequency === 'one-time';
-  });
+  const { income, expenses, incomeTotal, expenseTotal } = useMemo(() => {
+    const filtered = transactions.filter((t) => {
+      if (filter === 'All') return true;
+      if (filter === 'Recurring') return t.frequency !== 'one-time';
+      return t.frequency === 'one-time';
+    });
 
-  const dir = sortDir === 'asc' ? 1 : -1;
-  const sortFn = sortBy === 'amount'
-    ? (a, b) => (a.amount - b.amount) * dir
-    : (a, b) => ((a.startDate || '').localeCompare(b.startDate || '')) * dir;
+    const dir = sortDir === 'asc' ? 1 : -1;
+    const sortFn = sortBy === 'amount'
+      ? (a, b) => (a.amount - b.amount) * dir
+      : (a, b) => ((a.startDate || '').localeCompare(b.startDate || '')) * dir;
 
-  const income = filtered.filter((t) => t.type === 'income').sort(sortFn);
-  const expenses = filtered.filter((t) => t.type === 'expense').sort(sortFn);
+    const inc = filtered.filter((t) => t.type === 'income').sort(sortFn);
+    const exp = filtered.filter((t) => t.type === 'expense').sort(sortFn);
 
-  const incomeTotal = income.reduce((sum, t) => sum + t.amount, 0);
-  const expenseTotal = expenses.reduce((sum, t) => sum + t.amount, 0);
+    return {
+      income: inc,
+      expenses: exp,
+      incomeTotal: inc.reduce((sum, t) => sum + t.amount, 0),
+      expenseTotal: exp.reduce((sum, t) => sum + t.amount, 0),
+    };
+  }, [transactions, filter, sortBy, sortDir]);
 
   // True 30-day outlook — computed from ALL active transactions regardless of filter
   const { outlook30Income, outlook30Expenses } = useMemo(() => {

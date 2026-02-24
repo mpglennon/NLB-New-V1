@@ -210,6 +210,29 @@ export const defaultExpenseCategories = [
   'Dining Out',
 ];
 
+/** Default classification: which column each expense category belongs to */
+export const defaultCategoryClassification = {
+  'Rent': 'non-negotiable',
+  'Rent/Mortgage': 'non-negotiable',
+  'Car Payment': 'non-negotiable',
+  'Insurance': 'non-negotiable',
+  'Utilities': 'non-negotiable',
+  'Phone Bill': 'non-negotiable',
+  'Loan Payments': 'non-negotiable',
+  'Groceries': 'non-negotiable',
+  'Childcare': 'non-negotiable',
+  'Dining Out': 'flex',
+  'Shopping': 'flex',
+  'Entertainment': 'flex',
+  'Gas': 'flex',
+  'Personal Care': 'flex',
+  'Travel': 'flex',
+  'Subscriptions': 'flex',
+};
+
+/** Default subcategory hierarchy (parent → children) */
+export const defaultCategoryHierarchy = {};
+
 // Legacy exports for backwards compat
 export const incomeCategories = defaultIncomeCategories;
 export const expenseCategories = defaultExpenseCategories;

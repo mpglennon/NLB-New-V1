@@ -202,11 +202,14 @@ const s = {
 export default function SettingsModal({ isOpen, onClose }) {
   const {
     settings, updateSettings, addCustomCategory, removeCategory, restoreCategory, getCategories,
+    updateCategoryHierarchy, updateCategoryClassification,
     resetAll, signOut,
   } = useStore();
 
   const [threshold, setThreshold] = useState(String(settings.cautionThreshold));
   const [newIncomeCat, setNewIncomeCat] = useState('');
+  const [expandedExpenseCat, setExpandedExpenseCat] = useState(null);
+  const [newSubcategory, setNewSubcategory] = useState('');
   const [newExpenseCat, setNewExpenseCat] = useState('');
   const [resetConfirm, setResetConfirm] = useState('');
   const [showReset, setShowReset] = useState(false);
@@ -274,12 +277,15 @@ export default function SettingsModal({ isOpen, onClose }) {
       >
         <div style={s.header}>
           <h2 style={s.title}>Settings</h2>
-          <button
-            style={s.closeBtn}
-            onClick={onClose}
-            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-tertiary)'; e.currentTarget.style.background = 'transparent'; }}
-          >✕</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontStyle: 'italic' }}>All data saved</span>
+            <button
+              style={s.closeBtn}
+              onClick={onClose}
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-tertiary)'; e.currentTarget.style.background = 'transparent'; }}
+            >✕</button>
+          </div>
         </div>
 
         {/* Appearance */}
@@ -314,32 +320,6 @@ export default function SettingsModal({ isOpen, onClose }) {
               ))}
             </div>
           </div>
-          {settings.hasCompletedOnboarding && (
-            <div style={s.row}>
-              <div>
-                <div style={s.label}>Replay welcome tour</div>
-                <div style={s.sublabel}>Walk through the setup flow again</div>
-              </div>
-              <button
-                style={{
-                  background: 'transparent',
-                  border: '1px solid var(--accent-orange)',
-                  color: 'var(--accent-orange)',
-                  padding: '6px 14px',
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                }}
-                onClick={() => {
-                  updateSettings({ hasCompletedOnboarding: false });
-                  onClose();
-                }}
-              >
-                Replay
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Preferences */}
@@ -371,6 +351,23 @@ export default function SettingsModal({ isOpen, onClose }) {
             >
               <option value={1}>Monday</option>
               <option value={0}>Sunday</option>
+            </select>
+          </div>
+          <div style={s.row}>
+            <div>
+              <div style={s.label}>Default view</div>
+              <div style={s.sublabel}>What to show when you open the app</div>
+            </div>
+            <select
+              style={s.select}
+              value={settings.defaultView || 'rolling-30'}
+              onChange={(e) => updateSettings({ defaultView: e.target.value })}
+            >
+              <option value="rolling-30">Next 30 days</option>
+              <option value="rolling-60">Next 60 days</option>
+              <option value="rolling-90">Next 90 days</option>
+              <option value="rolling-365">Next 1 year</option>
+              <option value="current-month">Current month</option>
             </select>
           </div>
         </div>
@@ -443,6 +440,125 @@ export default function SettingsModal({ isOpen, onClose }) {
           </div>
         </div>
 
+        {/* Spending Classification + Subcategories */}
+        <div style={s.section}>
+          <div style={s.sectionTitle}>Spending Classification</div>
+          <div style={s.sublabel}>Assign expense categories to Non-Negotiable or Flex Spending columns</div>
+          <div style={{ marginTop: '8px' }}>
+            {activeExpense.map((cat) => {
+              const cls = (settings.categoryClassification || {})[cat] || 'flex';
+              const hierarchy = settings.categoryHierarchy || {};
+              const subs = hierarchy[cat] || [];
+              const isExpanded = expandedExpenseCat === cat;
+
+              return (
+                <div key={cat} style={{ marginBottom: '6px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {/* Expand/collapse chevron */}
+                    <button
+                      style={{
+                        background: 'transparent', border: 'none', color: 'var(--text-tertiary)',
+                        fontSize: '14px', cursor: 'pointer', padding: '2px 4px',
+                        transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                        transition: 'transform 150ms ease',
+                      }}
+                      onClick={() => setExpandedExpenseCat(isExpanded ? null : cat)}
+                    >›</button>
+
+                    {/* Category name */}
+                    <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)', flex: 1 }}>{cat}</span>
+
+                    {/* Classification toggle */}
+                    <div style={{
+                      display: 'flex', borderRadius: '4px', overflow: 'hidden',
+                      border: '1px solid var(--border-subtle)', fontSize: '10px',
+                    }}>
+                      <button
+                        style={{
+                          padding: '3px 8px', border: 'none', cursor: 'pointer',
+                          background: cls === 'non-negotiable' ? 'var(--accent-rose)' : 'transparent',
+                          color: cls === 'non-negotiable' ? '#FFF' : 'var(--text-tertiary)',
+                          fontWeight: '700', fontSize: '10px',
+                        }}
+                        onClick={() => {
+                          const updated = { ...(settings.categoryClassification || {}), [cat]: 'non-negotiable' };
+                          updateCategoryClassification(updated);
+                        }}
+                      >Essential</button>
+                      <button
+                        style={{
+                          padding: '3px 8px', border: 'none', cursor: 'pointer',
+                          background: cls === 'flex' ? 'var(--caution-amber)' : 'transparent',
+                          color: cls === 'flex' ? '#FFF' : 'var(--text-tertiary)',
+                          fontWeight: '700', fontSize: '10px',
+                        }}
+                        onClick={() => {
+                          const updated = { ...(settings.categoryClassification || {}), [cat]: 'flex' };
+                          updateCategoryClassification(updated);
+                        }}
+                      >Flex</button>
+                    </div>
+                  </div>
+
+                  {/* Expanded subcategory management */}
+                  {isExpanded && (
+                    <div style={{ paddingLeft: '28px', marginTop: '6px' }}>
+                      {subs.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '6px' }}>
+                          {subs.map((sub) => (
+                            <div key={sub} style={{
+                              ...s.catChip, fontSize: '11px', padding: '2px 8px',
+                            }}>
+                              <span>{sub}</span>
+                              <button
+                                style={s.catRemove}
+                                onClick={() => {
+                                  const updated = { ...hierarchy, [cat]: subs.filter((s) => s !== sub) };
+                                  updateCategoryHierarchy(updated);
+                                }}
+                              >✕</button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <input
+                          type="text"
+                          style={{ ...s.addInput, height: '26px', fontSize: '11px' }}
+                          value={expandedExpenseCat === cat ? newSubcategory : ''}
+                          onChange={(e) => setNewSubcategory(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              const name = newSubcategory.trim();
+                              if (name && !subs.includes(name)) {
+                                const updated = { ...hierarchy, [cat]: [...subs, name] };
+                                updateCategoryHierarchy(updated);
+                                setNewSubcategory('');
+                              }
+                            }
+                          }}
+                          placeholder="Add subcategory..."
+                        />
+                        <button
+                          style={{ ...s.addBtn, height: '26px', fontSize: '10px', padding: '0 10px' }}
+                          onClick={() => {
+                            const name = newSubcategory.trim();
+                            if (name && !subs.includes(name)) {
+                              const updated = { ...hierarchy, [cat]: [...subs, name] };
+                              updateCategoryHierarchy(updated);
+                              setNewSubcategory('');
+                            }
+                          }}
+                        >Add</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Account */}
         <div style={s.section}>
           <div style={s.sectionTitle}>Account</div>
@@ -466,6 +582,7 @@ export default function SettingsModal({ isOpen, onClose }) {
             >
               Sign Out
             </button>
+            <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontStyle: 'italic', marginLeft: '8px' }}>Your data is saved</span>
           </div>
         </div>
 

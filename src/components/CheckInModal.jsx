@@ -129,14 +129,20 @@ const s = {
   },
 };
 
-export default function CheckInModal({ isOpen, onClose, currentBalance, onUpdate }) {
+export default function CheckInModal({ isOpen, onClose, currentBalance, onUpdate, addTransaction, getCategories }) {
   const [balance, setBalance] = useState('');
+  const [showExplain, setShowExplain] = useState(false);
+  const [explainCategory, setExplainCategory] = useState('');
+  const [explainNote, setExplainNote] = useState('');
   const inputRef = useRef(null);
 
   // Reset & focus on open
   useEffect(() => {
     if (isOpen) {
       setBalance(String(currentBalance));
+      setShowExplain(false);
+      setExplainCategory('');
+      setExplainNote('');
       setTimeout(() => {
         if (inputRef.current) {
           inputRef.current.focus();
@@ -162,10 +168,27 @@ export default function CheckInModal({ isOpen, onClose, currentBalance, onUpdate
 
   const numericBalance = parseFloat(balance) || 0;
   const delta = numericBalance - currentBalance;
+  const absDelta = Math.abs(delta);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (isNaN(parseFloat(balance))) return;
+
+    // If user explained the difference, log it as a one-time transaction
+    if (showExplain && explainCategory && absDelta > 0 && addTransaction) {
+      const today = new Date().toISOString().split('T')[0];
+      addTransaction({
+        type: delta > 0 ? 'income' : 'expense',
+        category: explainCategory,
+        description: explainNote || '',
+        amount: absDelta,
+        frequency: 'one-time',
+        startDate: today,
+        endDate: today,
+        isActive: true,
+      });
+    }
+
     onUpdate(numericBalance);
     onClose();
   };
@@ -177,6 +200,8 @@ export default function CheckInModal({ isOpen, onClose, currentBalance, onUpdate
       : delta < 0
         ? `-$${Math.abs(delta).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
         : '$0.00';
+
+  const categories = getCategories ? getCategories(delta > 0 ? 'income' : 'expense') : [];
 
   return (
     <div
@@ -193,9 +218,24 @@ export default function CheckInModal({ isOpen, onClose, currentBalance, onUpdate
         aria-label="Check In"
         style={{ ...s.modal, ...(isOpen ? s.modalOpen : {}) }}
       >
-        <h2 style={s.title}>Check In</h2>
-        <p style={s.subtitle}>Match your bank balance in 10 seconds</p>
-        <p style={{ fontSize: '13px', fontStyle: 'italic', color: 'var(--text-tertiary)', marginTop: '-16px', marginBottom: '20px' }}>No judgment. Just accuracy.</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <h2 style={s.title}>Check In</h2>
+            <p style={s.subtitle}>Match your bank balance in 10 seconds</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              background: 'transparent', border: 'none', color: 'var(--text-tertiary)',
+              fontSize: '18px', cursor: 'pointer', padding: '4px 8px', borderRadius: '50%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'color 200ms ease, background 200ms ease', flexShrink: 0,
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-tertiary)'; e.currentTarget.style.background = 'transparent'; }}
+          >✕</button>
+        </div>
 
         <form onSubmit={handleSubmit}>
           <div style={s.fieldGroup}>
@@ -218,6 +258,78 @@ export default function CheckInModal({ isOpen, onClose, currentBalance, onUpdate
             Change from last check-in:{' '}
             <span style={{ color: deltaColor, fontWeight: '700' }}>{deltaText}</span>
           </div>
+
+          {/* Explain the difference — optional, shows when there's a delta */}
+          {delta !== 0 && addTransaction && (
+            <div style={{ marginTop: '12px', marginBottom: '8px' }}>
+              {!showExplain ? (
+                <button
+                  type="button"
+                  onClick={() => setShowExplain(true)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-tertiary)',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    padding: '4px 0',
+                    textDecoration: 'underline',
+                    textDecorationStyle: 'dotted',
+                    textUnderlineOffset: '3px',
+                  }}
+                >
+                  Explain the difference? (optional)
+                </button>
+              ) : (
+                <div style={{
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '8px',
+                  padding: '12px',
+                }}>
+                  <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                    Log {delta < 0 ? 'a spend' : 'income'} of{' '}
+                    <span style={{ color: deltaColor, fontWeight: '700' }}>${absDelta.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                  </div>
+                  <select
+                    value={explainCategory}
+                    onChange={(e) => setExplainCategory(e.target.value)}
+                    style={{
+                      width: '100%', height: '36px', background: 'var(--bg-input)',
+                      border: '1px solid var(--border-subtle)', borderRadius: '6px',
+                      padding: '0 10px', color: 'var(--text-primary)', fontSize: '13px',
+                      outline: 'none', boxSizing: 'border-box', marginBottom: '8px',
+                    }}
+                  >
+                    <option value="">Pick a category...</option>
+                    {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="Quick note (optional)"
+                    value={explainNote}
+                    onChange={(e) => setExplainNote(e.target.value)}
+                    style={{
+                      width: '100%', height: '36px', background: 'var(--bg-input)',
+                      border: '1px solid var(--border-subtle)', borderRadius: '6px',
+                      padding: '0 10px', color: 'var(--text-primary)', fontSize: '13px',
+                      outline: 'none', boxSizing: 'border-box',
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => { setShowExplain(false); setExplainCategory(''); setExplainNote(''); }}
+                    style={{
+                      background: 'transparent', border: 'none', color: 'var(--text-tertiary)',
+                      fontSize: '11px', cursor: 'pointer', padding: '6px 0 0', textDecoration: 'underline',
+                    }}
+                  >
+                    Skip — just update balance
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           <div style={s.actions}>
             <button type="submit" style={s.btnPrimary}>Check In</button>
