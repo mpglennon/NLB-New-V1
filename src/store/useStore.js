@@ -151,7 +151,25 @@ const useStore = create(
         }
 
         if (txnRes.data) {
-          updates.transactions = txnRes.data.map(rowToTxn);
+          // Merge server and local transactions instead of replacing.
+          // Local-only transactions (not yet on server) are preserved
+          // and pushed to Supabase so they survive future reloads.
+          const serverTxns = txnRes.data.map(rowToTxn);
+          const serverIds = new Set(serverTxns.map((t) => t.id));
+          const localTxns = get().transactions;
+          const localOnly = localTxns.filter((t) => !serverIds.has(t.id));
+
+          // Use server version for anything on the server (source of truth),
+          // keep local-only transactions appended at the end.
+          updates.transactions = [...serverTxns, ...localOnly];
+
+          // Push any local-only transactions to Supabase so they persist
+          if (localOnly.length > 0) {
+            supabase.from('transactions').insert(localOnly.map((t) => txnToRow(t, uid)))
+              .then(({ error }) => {
+                if (error) console.error('Sync local-only transactions failed:', error);
+              });
+          }
         }
 
         if (settingsRes.data) {
