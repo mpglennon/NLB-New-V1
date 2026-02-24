@@ -182,6 +182,7 @@ const FREQUENCIES = ['one-time', 'weekly', 'bi-weekly', 'monthly', 'quarterly', 
 function ViewToggle({ viewMonth, timeframe, setViewMonth, setTimeframe, tfLabel }) {
   const [openPanel, setOpenPanel] = useState(null); // 'month' | 'forecast' | null
   const ref = useRef(null);
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
   // Close on outside click
   useEffect(() => {
@@ -295,22 +296,24 @@ function ViewToggle({ viewMonth, timeframe, setViewMonth, setTimeframe, tfLabel 
   const arrowHoverOut = (e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'var(--bg-card)'; e.currentTarget.style.borderColor = 'var(--border-subtle)'; };
 
   return (
-    <div style={{ ...styles.topControls, position: 'relative', alignItems: 'center' }} ref={ref}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: 'auto' }}>
-        <button
-          style={arrowBtn}
-          onClick={() => isMonthMode ? goMonth(-1) : goForecast(-1)}
-          onMouseEnter={arrowHoverIn}
-          onMouseLeave={arrowHoverOut}
-        >‹</button>
-        <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', minWidth: '140px', textAlign: 'center' }}>{tfLabel}</span>
-        <button
-          style={arrowBtn}
-          onClick={() => isMonthMode ? goMonth(1) : goForecast(1)}
-          onMouseEnter={arrowHoverIn}
-          onMouseLeave={arrowHoverOut}
-        >›</button>
-      </div>
+    <div style={{ ...styles.topControls, position: 'relative', alignItems: 'center', ...(isMobile ? { justifyContent: 'center' } : {}) }} ref={ref}>
+      {!isMobile && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: 'auto' }}>
+          <button
+            style={arrowBtn}
+            onClick={() => isMonthMode ? goMonth(-1) : goForecast(-1)}
+            onMouseEnter={arrowHoverIn}
+            onMouseLeave={arrowHoverOut}
+          >‹</button>
+          <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', minWidth: '140px', textAlign: 'center' }}>{tfLabel}</span>
+          <button
+            style={arrowBtn}
+            onClick={() => isMonthMode ? goMonth(1) : goForecast(1)}
+            onMouseEnter={arrowHoverIn}
+            onMouseLeave={arrowHoverOut}
+          >›</button>
+        </div>
+      )}
       <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden' }}>
         <button
           style={{

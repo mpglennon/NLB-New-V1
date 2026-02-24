@@ -233,7 +233,7 @@ const defaultForm = {
   description: '',
 };
 
-const FILTERS = ['All', 'Recurring', 'One-Time'];
+const FILTERS = ['All', 'Recurring', 'One Time'];
 
 export default function TransactionsTab({
   transactions,
@@ -605,14 +605,18 @@ export default function TransactionsTab({
   return (
     <div>
       {/* Filter toggles + Sort */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <div style={{ display: 'flex', gap: '4px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '0' }}>
+        <div style={{ display: 'flex', flex: 1, gap: '0' }}>
           {FILTERS.map((f) => (
             <button
               key={f}
               style={{
                 ...s.filterBtn,
                 ...(filter === f ? s.filterActive : {}),
+                padding: isMobile ? '8px 0' : '10px 20px',
+                fontSize: isMobile ? '13px' : '15px',
+                flex: isMobile ? 1 : undefined,
+                textAlign: 'center',
               }}
               onClick={() => setFilter(f)}
             >
@@ -626,10 +630,11 @@ export default function TransactionsTab({
             color: 'var(--text-primary)',
             border: 'none',
             borderRadius: '4px',
-            padding: '4px 12px',
+            padding: isMobile ? '6px 10px' : '4px 12px',
             fontSize: '13px',
             fontWeight: '600',
             cursor: 'pointer',
+            flexShrink: 0,
           }}
           onClick={() => toggleSort('date')}
         >
