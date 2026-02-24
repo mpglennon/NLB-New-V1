@@ -225,6 +225,7 @@ const s = {
 const defaultForm = {
   category: '',
   customCategory: '',
+  subcategory: '',
   amount: '',
   frequency: 'monthly',
   startDate: '',
@@ -262,6 +263,10 @@ export default function TransactionsTab({
   }, [scrollToType, onScrollHandled]);
   const getCategories = useStore((s) => s.getCategories);
   const addCustomCategory = useStore((s) => s.addCustomCategory);
+  const updateCategoryClassification = useStore((s) => s.updateCategoryClassification);
+  const settings = useStore((s) => s.settings);
+  const hierarchy = settings.categoryHierarchy || {};
+  const classification = settings.categoryClassification || {};
   const [editingId, setEditingId] = useState(null);
   const [addingType, setAddingType] = useState(null); // 'income' | 'expense' | null
   const [form, setForm] = useState(defaultForm);
@@ -336,6 +341,7 @@ export default function TransactionsTab({
     setForm({
       category: isCustom ? '__custom__' : txn.category,
       customCategory: isCustom ? txn.category : '',
+      subcategory: txn.subcategory || '',
       amount: String(txn.amount),
       frequency: txn.frequency,
       startDate: txn.startDate,
@@ -364,6 +370,7 @@ export default function TransactionsTab({
     if (editingId) {
       updateTransaction(editingId, {
         category,
+        subcategory: form.subcategory || null,
         amount,
         frequency: form.frequency,
         startDate: form.startDate,
@@ -374,6 +381,7 @@ export default function TransactionsTab({
       addTransaction({
         type,
         category,
+        subcategory: form.subcategory || null,
         amount,
         frequency: form.frequency,
         startDate: form.startDate,
@@ -407,7 +415,7 @@ export default function TransactionsTab({
             <select
               style={s.formSelect}
               value={form.category}
-              onChange={(e) => setForm({ ...form, category: e.target.value, customCategory: '' })}
+              onChange={(e) => setForm({ ...form, category: e.target.value, customCategory: '', subcategory: '' })}
             >
               <option value="">Select...</option>
               {categories.map((c) => (
@@ -416,7 +424,7 @@ export default function TransactionsTab({
               <option value="__custom__">Custom...</option>
             </select>
           </div>
-          {form.category === '__custom__' ? (
+          {form.category === '__custom__' && (
             <div style={s.formField}>
               <label style={s.formLabel}>Custom Name</label>
               <input
@@ -428,32 +436,33 @@ export default function TransactionsTab({
                 autoFocus
               />
             </div>
-          ) : (
+          )}
+          {form.category && form.category !== '__custom__' && (hierarchy[form.category] || []).length > 0 && (
             <div style={s.formField}>
-              <label style={s.formLabel}>Amount</label>
-              <input
-                type="number"
-                step="0.01"
-                style={s.formInput}
-                value={form.amount}
-                onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                placeholder="0.00"
-              />
+              <label style={s.formLabel}>Subcategory</label>
+              <select
+                style={s.formSelect}
+                value={form.subcategory || ''}
+                onChange={(e) => setForm({ ...form, subcategory: e.target.value })}
+              >
+                <option value="">None</option>
+                {(hierarchy[form.category] || []).map((sub) => (
+                  <option key={sub} value={sub}>{sub}</option>
+                ))}
+              </select>
             </div>
           )}
-          {form.category === '__custom__' && (
-            <div style={s.formField}>
-              <label style={s.formLabel}>Amount</label>
-              <input
-                type="number"
-                step="0.01"
-                style={s.formInput}
-                value={form.amount}
-                onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                placeholder="0.00"
-              />
-            </div>
-          )}
+          <div style={s.formField}>
+            <label style={s.formLabel}>Amount</label>
+            <input
+              type="number"
+              step="0.01"
+              style={s.formInput}
+              value={form.amount}
+              onChange={(e) => setForm({ ...form, amount: e.target.value })}
+              placeholder="0.00"
+            />
+          </div>
           <div style={s.formField}>
             <label style={s.formLabel}>Frequency</label>
             <select
@@ -488,6 +497,31 @@ export default function TransactionsTab({
               placeholder="Optional note..."
             />
           </div>
+          {type === 'expense' && form.category && form.category !== '__custom__' && (() => {
+            const catName = form.category;
+            const cls = classification[catName] || 'flex';
+            return (
+              <div style={{ ...s.formFieldFull, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <label style={{ ...s.formLabel, marginBottom: 0 }}>Type</label>
+                <div style={{ display: 'flex', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
+                  <button type="button" style={{
+                    padding: '3px 10px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: '700',
+                    background: cls === 'non-negotiable' ? 'var(--accent-rose)' : 'transparent',
+                    color: cls === 'non-negotiable' ? '#FFF' : 'var(--text-tertiary)',
+                  }} onClick={() => {
+                    updateCategoryClassification({ ...classification, [catName]: 'non-negotiable' });
+                  }}>Fixed</button>
+                  <button type="button" style={{
+                    padding: '3px 10px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: '700',
+                    background: cls === 'flex' ? 'var(--caution-amber)' : 'transparent',
+                    color: cls === 'flex' ? '#FFF' : 'var(--text-tertiary)',
+                  }} onClick={() => {
+                    updateCategoryClassification({ ...classification, [catName]: 'flex' });
+                  }}>Flex</button>
+                </div>
+              </div>
+            );
+          })()}
           <div style={s.formActions}>
             <button style={s.formSave} onClick={() => handleSave(type)}>Save</button>
             <button style={s.formCancel} onClick={cancel}>Cancel</button>
@@ -528,7 +562,7 @@ export default function TransactionsTab({
         onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-subtle)'; e.currentTarget.style.borderLeftColor = accentColor; e.currentTarget.style.transform = 'translateX(0)'; e.currentTarget.style.background = 'var(--bg-card)'; }}
       >
         <div style={s.itemRow}>
-          <span style={s.itemCategory}>{txn.category}</span>
+          <span style={s.itemCategory}>{txn.category}{txn.subcategory ? ` · ${txn.subcategory}` : ''}</span>
           <span style={{ ...s.itemAmount, color: isIncome ? 'var(--accent-cyan)' : 'var(--accent-rose)' }}>
             {isIncome ? '+' : '-'}${txn.amount.toLocaleString()}
           </span>

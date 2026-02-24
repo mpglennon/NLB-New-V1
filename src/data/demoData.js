@@ -231,7 +231,14 @@ export const defaultCategoryClassification = {
 };
 
 /** Default subcategory hierarchy (parent → children) */
-export const defaultCategoryHierarchy = {};
+export const defaultCategoryHierarchy = {
+  'Groceries': ['Walmart', 'Costco', 'Trader Joe\'s', 'Other'],
+  'Dining Out': ['Restaurants', 'Fast Food', 'Coffee', 'Delivery'],
+  'Subscriptions': ['Streaming', 'Software', 'Gym', 'Other'],
+  'Insurance': ['Auto', 'Health', 'Home', 'Life'],
+  'Utilities': ['Electric', 'Water', 'Internet', 'Gas'],
+  'Gas': ['Commute', 'Road Trip'],
+};
 
 // Legacy exports for backwards compat
 export const incomeCategories = defaultIncomeCategories;

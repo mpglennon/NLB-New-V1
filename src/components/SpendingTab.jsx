@@ -75,6 +75,7 @@ export default function SpendingTab({
   const settings = useStore((s) => s.settings);
   const getCategories = useStore((s) => s.getCategories);
   const addCustomCategory = useStore((s) => s.addCustomCategory);
+  const updateCategoryClassification = useStore((s) => s.updateCategoryClassification);
   const classification = settings.categoryClassification || defaultCategoryClassification;
   const hierarchy = settings.categoryHierarchy || {};
 
@@ -130,6 +131,7 @@ export default function SpendingTab({
       setEditForm({
         category: isCustom ? '__custom__' : match.category,
         customCategory: isCustom ? match.category : '',
+        subcategory: match.subcategory || '',
         amount: String(match.amount),
         frequency: match.frequency,
         startDate: match.startDate,
@@ -150,6 +152,7 @@ export default function SpendingTab({
       setEditForm({
         category: isCustom ? '__custom__' : match.category,
         customCategory: isCustom ? match.category : '',
+        subcategory: match.subcategory || '',
         amount: String(match.amount),
         frequency: match.frequency,
         startDate: match.startDate,
@@ -170,6 +173,7 @@ export default function SpendingTab({
     }
     updateTransaction(editingTxn.id, {
       category,
+      subcategory: editForm.subcategory || null,
       amount,
       frequency: editForm.frequency,
       startDate: editForm.startDate,
@@ -262,7 +266,7 @@ export default function SpendingTab({
                 })}
                 {g.subcategories.length === 0 && (
                   <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', padding: '8px 0 4px 16px', fontStyle: 'italic' }}>
-                    No subcategories yet — add them in Settings
+                    No subcategories yet — manage them in Settings → Expense Categories
                   </div>
                 )}
               </div>
@@ -285,15 +289,15 @@ export default function SpendingTab({
       {/* Two-column layout */}
       <div style={s.columns}>
         {renderColumn(
-          'Non-Negotiable',
-          'Bills and essentials — these keep the lights on',
+          'Fixed',
+          'The non-negotiables — bills that keep the lights on',
           nonNegotiable,
           totalNonNeg,
           'var(--accent-rose)',
         )}
         {renderColumn(
-          'Flex Spending',
-          'The stuff you control — where adjustments happen',
+          'Flex',
+          'Where you have wiggle room',
           flexSpending,
           totalFlex,
           'var(--caution-amber)',
@@ -315,7 +319,7 @@ export default function SpendingTab({
               <select
                 style={s.editSelect}
                 value={editForm.category || ''}
-                onChange={(e) => setEditForm({ ...editForm, category: e.target.value, customCategory: '' })}
+                onChange={(e) => setEditForm({ ...editForm, category: e.target.value, customCategory: '', subcategory: '' })}
               >
                 <option value="">Select...</option>
                 {getCategories('expense').map((c) => (
@@ -335,6 +339,21 @@ export default function SpendingTab({
                   placeholder="Enter category name..."
                   autoFocus
                 />
+              </div>
+            )}
+            {editForm.category && editForm.category !== '__custom__' && (hierarchy[editForm.category] || []).length > 0 && (
+              <div style={s.editField}>
+                <label style={s.editLabel}>Subcategory</label>
+                <select
+                  style={s.editSelect}
+                  value={editForm.subcategory || ''}
+                  onChange={(e) => setEditForm({ ...editForm, subcategory: e.target.value })}
+                >
+                  <option value="">None</option>
+                  {(hierarchy[editForm.category] || []).map((sub) => (
+                    <option key={sub} value={sub}>{sub}</option>
+                  ))}
+                </select>
               </div>
             )}
             <div style={s.editField}>
@@ -379,6 +398,31 @@ export default function SpendingTab({
                 placeholder="Optional..."
               />
             </div>
+            {editForm.category && editForm.category !== '__custom__' && (() => {
+              const catName = editForm.category;
+              const cls = classification[catName] || 'flex';
+              return (
+                <div style={{ ...s.editField, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <label style={{ ...s.editLabel, marginBottom: 0 }}>Type</label>
+                  <div style={{ display: 'flex', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
+                    <button type="button" style={{
+                      padding: '3px 10px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: '700',
+                      background: cls === 'non-negotiable' ? 'var(--accent-rose)' : 'transparent',
+                      color: cls === 'non-negotiable' ? '#FFF' : 'var(--text-tertiary)',
+                    }} onClick={() => {
+                      updateCategoryClassification({ ...classification, [catName]: 'non-negotiable' });
+                    }}>Fixed</button>
+                    <button type="button" style={{
+                      padding: '3px 10px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: '700',
+                      background: cls === 'flex' ? 'var(--caution-amber)' : 'transparent',
+                      color: cls === 'flex' ? '#FFF' : 'var(--text-tertiary)',
+                    }} onClick={() => {
+                      updateCategoryClassification({ ...classification, [catName]: 'flex' });
+                    }}>Flex</button>
+                  </div>
+                </div>
+              );
+            })()}
             <div style={s.editActions}>
               <button style={s.editSave} onClick={handleEditSave}>Save</button>
               <button style={s.editCancel} onClick={() => setEditingTxn(null)}>Cancel</button>

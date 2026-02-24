@@ -70,7 +70,7 @@ function rowToSettings(row) {
     customExpenseCategories: row.custom_expense_categories || [],
     hasCompletedOnboarding: row.has_completed_onboarding,
     defaultView: row.default_view || 'rolling-30',
-    categoryHierarchy: row.category_hierarchy || {},
+    categoryHierarchy: (row.category_hierarchy && Object.keys(row.category_hierarchy).length > 0) ? row.category_hierarchy : { ...defaultCategoryHierarchy },
     categoryClassification: row.category_classification || defaultCategoryClassification,
   };
 }
@@ -87,7 +87,7 @@ const defaultSettings = {
   customExpenseCategories: [],
   hasCompletedOnboarding: false,
   defaultView: 'rolling-30',
-  categoryHierarchy: {},
+  categoryHierarchy: { ...defaultCategoryHierarchy },
   categoryClassification: { ...defaultCategoryClassification },
 };
 
@@ -427,6 +427,14 @@ const useStore = create(
         settings: state.settings,
         userId: state.userId,
       }),
+      merge: (persisted, current) => {
+        const merged = { ...current, ...persisted };
+        // Seed default subcategories for existing users with empty hierarchy
+        if (merged.settings && (!merged.settings.categoryHierarchy || Object.keys(merged.settings.categoryHierarchy).length === 0)) {
+          merged.settings = { ...merged.settings, categoryHierarchy: { ...defaultCategoryHierarchy } };
+        }
+        return merged;
+      },
     }
   )
 );

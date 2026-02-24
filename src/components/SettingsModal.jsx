@@ -406,55 +406,19 @@ export default function SettingsModal({ isOpen, onClose }) {
           </div>
         </div>
 
-        {/* Expense Categories */}
+        {/* Expense Categories + Subcategories */}
         <div style={s.section}>
           <div style={s.sectionTitle}>Expense Categories</div>
-          <div style={s.catList}>
-            {activeExpense.map((cat) => (
-              <div key={cat} style={s.catChip}>
-                <span>{cat}</span>
-                <button style={s.catRemove} onClick={() => removeCategory('expense', cat)}>✕</button>
-              </div>
-            ))}
-          </div>
-          {hiddenExpense.length > 0 && (
-            <div style={{ ...s.catList, marginTop: '6px' }}>
-              {hiddenExpense.map((cat) => (
-                <div key={cat} style={s.hiddenChip}>
-                  <span>{cat}</span>
-                  <button style={s.restoreBtn} onClick={() => restoreCategory('expense', cat)}>restore</button>
-                </div>
-              ))}
-            </div>
-          )}
-          <div style={s.addRow}>
-            <input
-              type="text"
-              style={s.addInput}
-              value={newExpenseCat}
-              onChange={(e) => setNewExpenseCat(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleAddExpense(); }}
-              placeholder="Add custom category..."
-            />
-            <button style={s.addBtn} onClick={handleAddExpense}>Add</button>
-          </div>
-        </div>
-
-        {/* Spending Classification + Subcategories */}
-        <div style={s.section}>
-          <div style={s.sectionTitle}>Spending Classification</div>
-          <div style={s.sublabel}>Assign expense categories to Non-Negotiable or Flex Spending columns</div>
-          <div style={{ marginTop: '8px' }}>
+          <div style={{ marginBottom: '8px' }}>
             {activeExpense.map((cat) => {
-              const cls = (settings.categoryClassification || {})[cat] || 'flex';
               const hierarchy = settings.categoryHierarchy || {};
               const subs = hierarchy[cat] || [];
               const isExpanded = expandedExpenseCat === cat;
 
               return (
-                <div key={cat} style={{ marginBottom: '6px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {/* Expand/collapse chevron */}
+                <div key={cat} style={{ marginBottom: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {/* Expand/collapse chevron for subcategories */}
                     <button
                       style={{
                         background: 'transparent', border: 'none', color: 'var(--text-tertiary)',
@@ -464,45 +428,18 @@ export default function SettingsModal({ isOpen, onClose }) {
                       }}
                       onClick={() => setExpandedExpenseCat(isExpanded ? null : cat)}
                     >›</button>
-
-                    {/* Category name */}
-                    <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)', flex: 1 }}>{cat}</span>
-
-                    {/* Classification toggle */}
-                    <div style={{
-                      display: 'flex', borderRadius: '4px', overflow: 'hidden',
-                      border: '1px solid var(--border-subtle)', fontSize: '10px',
-                    }}>
-                      <button
-                        style={{
-                          padding: '3px 8px', border: 'none', cursor: 'pointer',
-                          background: cls === 'non-negotiable' ? 'var(--accent-rose)' : 'transparent',
-                          color: cls === 'non-negotiable' ? '#FFF' : 'var(--text-tertiary)',
-                          fontWeight: '700', fontSize: '10px',
-                        }}
-                        onClick={() => {
-                          const updated = { ...(settings.categoryClassification || {}), [cat]: 'non-negotiable' };
-                          updateCategoryClassification(updated);
-                        }}
-                      >Essential</button>
-                      <button
-                        style={{
-                          padding: '3px 8px', border: 'none', cursor: 'pointer',
-                          background: cls === 'flex' ? 'var(--caution-amber)' : 'transparent',
-                          color: cls === 'flex' ? '#FFF' : 'var(--text-tertiary)',
-                          fontWeight: '700', fontSize: '10px',
-                        }}
-                        onClick={() => {
-                          const updated = { ...(settings.categoryClassification || {}), [cat]: 'flex' };
-                          updateCategoryClassification(updated);
-                        }}
-                      >Flex</button>
+                    <div style={s.catChip}>
+                      <span>{cat}</span>
+                      <button style={s.catRemove} onClick={() => removeCategory('expense', cat)}>✕</button>
                     </div>
+                    {subs.length > 0 && (
+                      <span style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>{subs.length} sub</span>
+                    )}
                   </div>
 
                   {/* Expanded subcategory management */}
                   {isExpanded && (
-                    <div style={{ paddingLeft: '28px', marginTop: '6px' }}>
+                    <div style={{ paddingLeft: '28px', marginTop: '6px', marginBottom: '6px' }}>
                       {subs.length > 0 && (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '6px' }}>
                           {subs.map((sub) => (
@@ -513,7 +450,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                               <button
                                 style={s.catRemove}
                                 onClick={() => {
-                                  const updated = { ...hierarchy, [cat]: subs.filter((s) => s !== sub) };
+                                  const updated = { ...hierarchy, [cat]: subs.filter((sc) => sc !== sub) };
                                   updateCategoryHierarchy(updated);
                                 }}
                               >✕</button>
@@ -557,32 +494,53 @@ export default function SettingsModal({ isOpen, onClose }) {
               );
             })}
           </div>
+          {hiddenExpense.length > 0 && (
+            <div style={{ ...s.catList, marginTop: '6px' }}>
+              {hiddenExpense.map((cat) => (
+                <div key={cat} style={s.hiddenChip}>
+                  <span>{cat}</span>
+                  <button style={s.restoreBtn} onClick={() => restoreCategory('expense', cat)}>restore</button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div style={s.addRow}>
+            <input
+              type="text"
+              style={s.addInput}
+              value={newExpenseCat}
+              onChange={(e) => setNewExpenseCat(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleAddExpense(); }}
+              placeholder="Add custom category..."
+            />
+            <button style={s.addBtn} onClick={handleAddExpense}>Add</button>
+          </div>
         </div>
 
         {/* Account */}
         <div style={s.section}>
           <div style={s.sectionTitle}>Account</div>
-          <div style={s.row}>
-            <div>
-              <div style={s.label}>Sign out</div>
-              <div style={s.sublabel}>Your data is saved and will sync when you sign back in</div>
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 0' }}>
             <button
               style={{
+                width: '100%',
                 background: 'transparent',
                 border: '1px solid var(--border-subtle)',
-                color: 'var(--text-tertiary)',
-                padding: '6px 14px',
+                color: 'var(--text-primary)',
+                padding: '10px 0',
                 borderRadius: '6px',
-                fontSize: '12px',
+                fontSize: '13px',
                 fontWeight: '700',
                 cursor: 'pointer',
+                transition: 'border-color 200ms ease',
               }}
               onClick={() => { signOut(); onClose(); }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--text-tertiary)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}
             >
               Sign Out
             </button>
-            <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontStyle: 'italic', marginLeft: '8px' }}>Your data is saved</span>
+            <span style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontStyle: 'italic', marginTop: '8px' }}>Your data is auto saved</span>
           </div>
         </div>
 

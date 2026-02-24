@@ -378,7 +378,7 @@ function App() {
     settings, updateSettings,
     updateBalance, addTransaction, updateTransaction, deleteTransaction,
     getCategories, addCustomCategory,
-    syncStatus, userId, loadFromSupabase,
+    syncStatus, userId, loadFromSupabase, signOut,
   } = useStore();
 
   // ── Tab state ───────────────────────────────────────────────────────
@@ -748,6 +748,26 @@ function App() {
                 </svg>
               )}
             </button>
+            {userId && (
+              <button
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-tertiary)',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  padding: '6px 8px',
+                  transition: 'color 200ms ease',
+                }}
+                onClick={signOut}
+                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-tertiary)'; }}
+                title="Sign Out"
+              >
+                Sign Out
+              </button>
+            )}
             <button
               style={{
                 background: 'transparent',
@@ -1284,6 +1304,7 @@ const ChartPopover = React.forwardRef(function ChartPopover(
                 addTransaction({
                   type: originalTxn.type,
                   category: updates.category || originalTxn.category,
+                  subcategory: updates.subcategory ?? originalTxn.subcategory ?? null,
                   amount: updates.amount || originalTxn.amount,
                   description: updates.description ?? originalTxn.description,
                   frequency: 'one-time',
@@ -1326,9 +1347,14 @@ function PopoverEditForm({ txn, occurrenceDate, onCancel, onSave, onSaveThisOne,
   const categories = getCategories(txn.type);
   const isCustom = !categories.includes(txn.category);
   const isRecurring = txn.frequency !== 'one-time';
+  const settings = useStore((s) => s.settings);
+  const updateCategoryClassification = useStore((s) => s.updateCategoryClassification);
+  const hierarchy = settings.categoryHierarchy || {};
+  const classification = settings.categoryClassification || {};
   const [form, setForm] = useState({
     category: isCustom ? '__custom__' : txn.category,
     customCategory: isCustom ? txn.category : '',
+    subcategory: txn.subcategory || '',
     amount: String(txn.amount),
     frequency: txn.frequency,
     startDate: txn.startDate,
@@ -1345,7 +1371,7 @@ function PopoverEditForm({ txn, occurrenceDate, onCancel, onSave, onSaveThisOne,
       addCustomCategory(txn.type, category);
     }
     return {
-      category, amount, frequency: form.frequency,
+      category, subcategory: form.subcategory || null, amount, frequency: form.frequency,
       startDate: form.startDate, description: form.description,
       endDate: form.frequency === 'one-time' ? form.startDate : null,
     };
@@ -1368,7 +1394,7 @@ function PopoverEditForm({ txn, occurrenceDate, onCancel, onSave, onSaveThisOne,
         <select
           style={popoverStyles.editSelect}
           value={form.category || ''}
-          onChange={(e) => setForm({ ...form, category: e.target.value, customCategory: '' })}
+          onChange={(e) => setForm({ ...form, category: e.target.value, customCategory: '', subcategory: '' })}
         >
           <option value="">Select...</option>
           {categories.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -1386,6 +1412,21 @@ function PopoverEditForm({ txn, occurrenceDate, onCancel, onSave, onSaveThisOne,
             placeholder="Enter category name..."
             autoFocus
           />
+        </div>
+      )}
+      {form.category && form.category !== '__custom__' && (hierarchy[form.category] || []).length > 0 && (
+        <div style={popoverStyles.editField}>
+          <label style={popoverStyles.editLabel}>Subcategory</label>
+          <select
+            style={popoverStyles.editSelect}
+            value={form.subcategory || ''}
+            onChange={(e) => setForm({ ...form, subcategory: e.target.value })}
+          >
+            <option value="">None</option>
+            {(hierarchy[form.category] || []).map((sub) => (
+              <option key={sub} value={sub}>{sub}</option>
+            ))}
+          </select>
         </div>
       )}
       <div style={popoverStyles.editField}>
@@ -1430,6 +1471,31 @@ function PopoverEditForm({ txn, occurrenceDate, onCancel, onSave, onSaveThisOne,
           placeholder="Optional..."
         />
       </div>
+      {txn.type === 'expense' && form.category && form.category !== '__custom__' && (() => {
+        const catName = form.category;
+        const cls = classification[catName] || 'flex';
+        return (
+          <div style={{ ...popoverStyles.editField, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <label style={{ ...popoverStyles.editLabel, marginBottom: 0 }}>Type</label>
+            <div style={{ display: 'flex', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
+              <button type="button" style={{
+                padding: '3px 10px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: '700',
+                background: cls === 'non-negotiable' ? 'var(--accent-rose)' : 'transparent',
+                color: cls === 'non-negotiable' ? '#FFF' : 'var(--text-tertiary)',
+              }} onClick={() => {
+                updateCategoryClassification({ ...classification, [catName]: 'non-negotiable' });
+              }}>Fixed</button>
+              <button type="button" style={{
+                padding: '3px 10px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: '700',
+                background: cls === 'flex' ? 'var(--caution-amber)' : 'transparent',
+                color: cls === 'flex' ? '#FFF' : 'var(--text-tertiary)',
+              }} onClick={() => {
+                updateCategoryClassification({ ...classification, [catName]: 'flex' });
+              }}>Flex</button>
+            </div>
+          </div>
+        );
+      })()}
       <div style={popoverStyles.editActions}>
         {isRecurring ? (
           <>
