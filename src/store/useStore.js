@@ -183,11 +183,13 @@ const useStore = create(
             }
           }
 
-          // Add local-only transactions (not on server at all)
-          const localOnly = localTxns.filter((t) => !serverIds.has(t.id) && !pendingDel.has(t.id));
+          // Add local-only transactions ONLY if they're dirty (created/edited on this device
+          // but not yet confirmed on server). Non-dirty local transactions missing from server
+          // were deleted by another device — don't resurrect them.
+          const localOnly = localTxns.filter((t) => !serverIds.has(t.id) && !pendingDel.has(t.id) && dirty.has(t.id));
           updates.transactions = [...merged, ...localOnly];
 
-          // Push local-only adds to Supabase
+          // Push dirty local-only adds to Supabase
           if (localOnly.length > 0) {
             supabase.from('transactions').insert(localOnly.map((t) => txnToRow(t, uid)))
               .then(({ error }) => {
