@@ -1412,10 +1412,13 @@ function PopoverEditForm({ txn, occurrenceDate, onCancel, onSave, onSaveThisOne,
   const updateCategoryClassification = useStore((s) => s.updateCategoryClassification);
   const hierarchy = settings.categoryHierarchy || {};
   const classification = settings.categoryClassification || {};
+  const subs = hierarchy[txn.category] || [];
+  const isCustomSub = txn.subcategory && !subs.includes(txn.subcategory);
   const [form, setForm] = useState({
     category: isCustom ? '__custom__' : txn.category,
     customCategory: isCustom ? txn.category : '',
-    subcategory: txn.subcategory || '',
+    subcategory: isCustomSub ? '__custom_sub__' : (txn.subcategory || ''),
+    customSubcategory: isCustomSub ? txn.subcategory : '',
     amount: String(txn.amount),
     frequency: txn.frequency,
     startDate: txn.startDate,
@@ -1432,7 +1435,11 @@ function PopoverEditForm({ txn, occurrenceDate, onCancel, onSave, onSaveThisOne,
       addCustomCategory(txn.type, category);
     }
     return {
-      category, subcategory: form.subcategory || null, amount, frequency: form.frequency,
+      category,
+      subcategory: form.subcategory === '__custom_sub__'
+        ? (form.customSubcategory || '').trim() || null
+        : form.subcategory || null,
+      amount, frequency: form.frequency,
       startDate: form.startDate, description: form.description,
       endDate: form.frequency === 'one-time' ? form.startDate : null,
     };
@@ -1475,19 +1482,30 @@ function PopoverEditForm({ txn, occurrenceDate, onCancel, onSave, onSaveThisOne,
           />
         </div>
       )}
-      {form.category && form.category !== '__custom__' && (hierarchy[form.category] || []).length > 0 && (
+      {form.category && form.category !== '__custom__' && (
         <div style={popoverStyles.editField}>
           <label style={popoverStyles.editLabel}>Subcategory</label>
           <select
             style={popoverStyles.editSelect}
             value={form.subcategory || ''}
-            onChange={(e) => setForm({ ...form, subcategory: e.target.value })}
+            onChange={(e) => setForm({ ...form, subcategory: e.target.value, customSubcategory: '' })}
           >
             <option value="">None</option>
             {(hierarchy[form.category] || []).map((sub) => (
               <option key={sub} value={sub}>{sub}</option>
             ))}
+            <option value="__custom_sub__">Custom...</option>
           </select>
+          {form.subcategory === '__custom_sub__' && (
+            <input
+              type="text"
+              style={{ ...popoverStyles.editInput, marginTop: '4px' }}
+              placeholder="Enter subcategory name"
+              value={form.customSubcategory || ''}
+              onChange={(e) => setForm({ ...form, customSubcategory: e.target.value })}
+              autoFocus
+            />
+          )}
         </div>
       )}
       <div style={popoverStyles.editField}>

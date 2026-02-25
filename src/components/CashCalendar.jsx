@@ -335,6 +335,7 @@ export default function CashCalendar({
 }) {
   const cautionThreshold = settings.cautionThreshold || 1000;
   const weekStartsOn = settings.weekStartsOn ?? 1;
+  const hierarchy = settings.categoryHierarchy || {};
   const DAY_NAMES = weekStartsOn === 0 ? DAY_NAMES_SUN : DAY_NAMES_MON;
   const getCategories = useStore((s) => s.getCategories);
   const addCustomCategory = useStore((s) => s.addCustomCategory);
@@ -528,9 +529,13 @@ export default function CashCalendar({
     const cats = getCategories(txn.type);
     const isCustom = !cats.includes(txn.category);
     setEditTxn({ txn, x, y });
+    const subs = hierarchy[txn.category] || [];
+    const isCustomSub = txn.subcategory && !subs.includes(txn.subcategory);
     setEditForm({
       category: isCustom ? '__custom__' : txn.category,
       customCategory: isCustom ? txn.category : '',
+      subcategory: isCustomSub ? '__custom_sub__' : (txn.subcategory || ''),
+      customSubcategory: isCustomSub ? txn.subcategory : '',
       amount: String(txn.amount),
       frequency: txn.frequency,
       startDate: txn.startDate,
@@ -551,8 +556,13 @@ export default function CashCalendar({
       addCustomCategory(editTxn.txn.type, category);
     }
 
+    const subcategory = editForm.subcategory === '__custom_sub__'
+      ? (editForm.customSubcategory || '').trim() || null
+      : editForm.subcategory || null;
+
     updateTransaction(editTxn.txn.id, {
       category,
+      subcategory,
       amount,
       frequency: editForm.frequency,
       startDate: editForm.startDate,
@@ -905,6 +915,32 @@ export default function CashCalendar({
                   placeholder="Enter category name..."
                   autoFocus
                 />
+              </div>
+            )}
+            {editForm.category && editForm.category !== '__custom__' && (
+              <div style={s.editField}>
+                <label style={s.editLabel}>Subcategory</label>
+                <select
+                  style={s.editSelect}
+                  value={editForm.subcategory || ''}
+                  onChange={(e) => setEditForm({ ...editForm, subcategory: e.target.value, customSubcategory: '' })}
+                >
+                  <option value="">None</option>
+                  {(hierarchy[editForm.category] || []).map((sub) => (
+                    <option key={sub} value={sub}>{sub}</option>
+                  ))}
+                  <option value="__custom_sub__">Custom...</option>
+                </select>
+                {editForm.subcategory === '__custom_sub__' && (
+                  <input
+                    type="text"
+                    style={{ ...s.editInput, marginTop: '4px' }}
+                    placeholder="Enter subcategory name"
+                    value={editForm.customSubcategory || ''}
+                    onChange={(e) => setEditForm({ ...editForm, customSubcategory: e.target.value })}
+                    autoFocus
+                  />
+                )}
               </div>
             )}
             <div style={s.editField}>
