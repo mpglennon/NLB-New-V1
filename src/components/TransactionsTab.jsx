@@ -893,6 +893,39 @@ export default function TransactionsTab({
       </button>
     )}
 
+    {/* Desktop FAB — floating add expense button */}
+    {!isMobile && showBackToTop && !addingType && !editingId && (
+      <button
+        onClick={() => startAdd('expense')}
+        style={{
+          position: 'fixed',
+          bottom: '80px',
+          right: '32px',
+          height: '38px',
+          borderRadius: '20px',
+          border: '2px solid var(--accent-rose)',
+          background: 'var(--bg-card)',
+          color: 'var(--accent-rose)',
+          fontSize: '13px',
+          fontWeight: '700',
+          lineHeight: '1',
+          cursor: 'pointer',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '0 16px',
+          gap: '4px',
+          transition: 'background 200ms ease, color 200ms ease',
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--accent-rose)'; e.currentTarget.style.color = '#FFF'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bg-card)'; e.currentTarget.style.color = 'var(--accent-rose)'; }}
+      >
+        + Add Expense
+      </button>
+    )}
+
     {/* "Back to top" button */}
     {showBackToTop && (
       <button
