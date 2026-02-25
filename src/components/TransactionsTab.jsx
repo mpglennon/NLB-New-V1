@@ -893,66 +893,83 @@ export default function TransactionsTab({
       </button>
     )}
 
-    {/* Desktop FAB — floating add expense button */}
-    {!isMobile && showBackToTop && !addingType && !editingId && (
-      <button
-        onClick={() => startAdd('expense')}
-        style={{
-          position: 'fixed',
-          bottom: '56px',
-          right: '32px',
-          height: '36px',
-          borderRadius: '20px',
-          border: '2px solid var(--accent-rose)',
-          background: 'var(--bg-card)',
-          color: 'var(--accent-rose)',
-          fontSize: '13px',
-          fontWeight: '700',
-          lineHeight: '1',
-          cursor: 'pointer',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-          zIndex: 1000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '0 16px',
-          gap: '4px',
-          transition: 'background 200ms ease, color 200ms ease',
-        }}
-        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--accent-rose)'; e.currentTarget.style.color = '#FFF'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bg-card)'; e.currentTarget.style.color = 'var(--accent-rose)'; }}
-      >
-        + Add Expense
-      </button>
+    {/* Desktop floating controls — stacked and right-aligned */}
+    {!isMobile && showBackToTop && (
+      <div style={{
+        position: 'fixed',
+        bottom: '32px',
+        right: '32px',
+        zIndex: 1000,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-end',
+        gap: '8px',
+      }}>
+        {!addingType && !editingId && (
+          <button
+            onClick={() => startAdd('expense')}
+            style={{
+              height: '36px',
+              borderRadius: '20px',
+              border: '2px solid var(--accent-rose)',
+              background: 'var(--bg-card)',
+              color: 'var(--accent-rose)',
+              fontSize: '13px',
+              fontWeight: '700',
+              lineHeight: '1',
+              cursor: 'pointer',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0 16px',
+              transition: 'background 200ms ease, color 200ms ease',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--accent-rose)'; e.currentTarget.style.color = '#FFF'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bg-card)'; e.currentTarget.style.color = 'var(--accent-rose)'; }}
+          >
+            + Add Expense
+          </button>
+        )}
+        <button
+          onClick={scrollToTop}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'var(--text-tertiary)',
+            fontSize: '12px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            padding: '4px 0',
+            transition: 'color 150ms ease',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-tertiary)'; }}
+        >
+          ↑ Back to Top
+        </button>
+      </div>
     )}
 
-    {/* "Back to top" link */}
-    {showBackToTop && (
+    {/* Mobile floating controls */}
+    {isMobile && showBackToTop && (
       <button
         onClick={scrollToTop}
         style={{
           position: 'fixed',
-          bottom: isMobile ? '24px' : '32px',
-          left: isMobile ? '20px' : undefined,
-          right: isMobile ? undefined : '32px',
-          background: 'none',
-          border: 'none',
+          bottom: '24px',
+          left: '20px',
+          background: 'var(--bg-card)',
+          borderRadius: '16px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+          border: '1px solid var(--border-subtle)',
           color: 'var(--text-tertiary)',
           fontSize: '12px',
           fontWeight: '600',
           cursor: 'pointer',
-          padding: isMobile ? '8px 12px' : '4px 0',
+          padding: '8px 12px',
           zIndex: 1000,
-          transition: 'color 150ms ease',
-          ...(isMobile ? {
-            background: 'var(--bg-card)',
-            borderRadius: '16px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-            border: '1px solid var(--border-subtle)',
-          } : {}),
         }}
-        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-tertiary)'; }}
       >
         ↑ Back to Top
       </button>
