@@ -419,7 +419,7 @@ export default function TransactionsTab({
   useEffect(() => {
     const onScroll = () => {
       // Show once user has scrolled enough that the top controls are off-screen
-      setShowBackToTop(window.scrollY > 250);
+      setShowBackToTop(window.scrollY > 120);
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll(); // check initial position
