@@ -318,13 +318,15 @@ export default function SpendingTab({
   return (
     <div style={s.wrapper}>
       {/* Header */}
-      <div style={s.header}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+      <div style={{ ...s.header, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '8px' }}>
+        <div>
           <h3 style={{ ...s.title, margin: 0 }}>Spending</h3>
-          <span style={s.subtitle}>Next {tfLabel}</span>
-          <span style={s.totalLabel}>Total: {fmt(totalExpenses)}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px' }}>
+            <span style={s.subtitle}>Next {tfLabel}</span>
+            <span style={s.totalLabel}>Total: {fmt(totalExpenses)}</span>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: '4px', marginTop: '8px' }}>
+        <div style={{ display: 'flex', gap: '4px' }}>
           {[
             { key: 'amount', label: 'Amount' },
             { key: 'name', label: 'Name' },
