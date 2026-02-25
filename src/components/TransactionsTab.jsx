@@ -899,9 +899,9 @@ export default function TransactionsTab({
         onClick={() => startAdd('expense')}
         style={{
           position: 'fixed',
-          bottom: '80px',
+          bottom: '56px',
           right: '32px',
-          height: '38px',
+          height: '36px',
           borderRadius: '20px',
           border: '2px solid var(--accent-rose)',
           background: 'var(--bg-card)',
@@ -926,7 +926,7 @@ export default function TransactionsTab({
       </button>
     )}
 
-    {/* "Back to top" button */}
+    {/* "Back to top" link */}
     {showBackToTop && (
       <button
         onClick={scrollToTop}
@@ -935,26 +935,24 @@ export default function TransactionsTab({
           bottom: isMobile ? '24px' : '32px',
           left: isMobile ? '20px' : undefined,
           right: isMobile ? undefined : '32px',
-          height: isMobile ? '36px' : '38px',
-          borderRadius: '20px',
-          border: '2px solid var(--accent-orange)',
-          background: 'var(--bg-card)',
-          color: 'var(--accent-orange)',
-          fontSize: isMobile ? '13px' : '13px',
-          fontWeight: '700',
-          lineHeight: '1',
+          background: 'none',
+          border: 'none',
+          color: 'var(--text-tertiary)',
+          fontSize: '12px',
+          fontWeight: '600',
           cursor: 'pointer',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+          padding: isMobile ? '8px 12px' : '4px 0',
           zIndex: 1000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '4px',
-          padding: '0 16px',
-          transition: 'background 200ms ease, transform 150ms ease',
+          transition: 'color 150ms ease',
+          ...(isMobile ? {
+            background: 'var(--bg-card)',
+            borderRadius: '16px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+            border: '1px solid var(--border-subtle)',
+          } : {}),
         }}
-        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--accent-orange)'; e.currentTarget.style.color = '#FFF'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bg-card)'; e.currentTarget.style.color = 'var(--accent-orange)'; }}
+        onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-tertiary)'; }}
       >
         ↑ Back to Top
       </button>
