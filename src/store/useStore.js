@@ -103,6 +103,12 @@ const useStore = create(
       viewMonth: null, // null = rolling, "YYYY-MM" = discrete month
       settings: { ...defaultSettings },
 
+      // ── Sync tracking ────────────────────────────────────
+      // dirtyIds: transactions modified locally but not yet confirmed on server
+      // pendingDeletes: IDs deleted locally but not yet confirmed on server
+      dirtyIds: [],
+      pendingDeletes: [],
+
       // ── Auth state ─────────────────────────────────────
       userId: null,
       syncing: false,
@@ -152,23 +158,68 @@ const useStore = create(
         }
 
         if (txnRes.data) {
-          // Merge server and local transactions instead of replacing.
-          // Local-only transactions (not yet on server) are preserved
-          // and pushed to Supabase so they survive future reloads.
+          // Smart merge: respect local edits, pending deletes, and local-only adds.
           const serverTxns = txnRes.data.map(rowToTxn);
-          const serverIds = new Set(serverTxns.map((t) => t.id));
           const localTxns = get().transactions;
-          const localOnly = localTxns.filter((t) => !serverIds.has(t.id));
+          const dirty = new Set(get().dirtyIds || []);
+          const pendingDel = new Set(get().pendingDeletes || []);
 
-          // Use server version for anything on the server (source of truth),
-          // keep local-only transactions appended at the end.
-          updates.transactions = [...serverTxns, ...localOnly];
+          // Build local lookup by ID
+          const localById = new Map(localTxns.map((t) => [t.id, t]));
 
-          // Push any local-only transactions to Supabase so they persist
+          // For each server transaction: use local version if it's dirty (newer),
+          // skip if it's pending deletion
+          const merged = [];
+          const serverIds = new Set();
+          for (const st of serverTxns) {
+            serverIds.add(st.id);
+            if (pendingDel.has(st.id)) continue; // locally deleted, skip
+            const local = localById.get(st.id);
+            if (local && dirty.has(st.id)) {
+              // Local edit not yet synced — keep local version
+              merged.push(local);
+            } else {
+              merged.push(st);
+            }
+          }
+
+          // Add local-only transactions (not on server at all)
+          const localOnly = localTxns.filter((t) => !serverIds.has(t.id) && !pendingDel.has(t.id));
+          updates.transactions = [...merged, ...localOnly];
+
+          // Push local-only adds to Supabase
           if (localOnly.length > 0) {
             supabase.from('transactions').insert(localOnly.map((t) => txnToRow(t, uid)))
               .then(({ error }) => {
                 if (error) console.error('Sync local-only transactions failed:', error);
+              });
+          }
+
+          // Retry dirty edits
+          const dirtyEdits = [...dirty].filter((id) => serverIds.has(id));
+          for (const id of dirtyEdits) {
+            const local = localById.get(id);
+            if (local) {
+              supabase.from('transactions').update(txnToRow(local, uid)).eq('id', id).eq('user_id', uid)
+                .then(({ error }) => {
+                  if (!error) {
+                    set((s) => ({ dirtyIds: s.dirtyIds.filter((d) => d !== id) }));
+                  } else {
+                    console.error('Retry dirty edit failed:', id, error);
+                  }
+                });
+            }
+          }
+
+          // Retry pending deletes
+          for (const id of pendingDel) {
+            supabase.from('transactions').delete().eq('id', id).eq('user_id', uid)
+              .then(({ error }) => {
+                if (!error) {
+                  set((s) => ({ pendingDeletes: s.pendingDeletes.filter((d) => d !== id) }));
+                } else {
+                  console.error('Retry pending delete failed:', id, error);
+                }
               });
           }
         }
@@ -212,7 +263,10 @@ const useStore = create(
           createdAt: now,
           updatedAt: now,
         };
-        set((state) => ({ transactions: [...state.transactions, newTxn] }));
+        set((state) => ({
+          transactions: [...state.transactions, newTxn],
+          dirtyIds: [...state.dirtyIds, newTxn.id],
+        }));
         const uid = get().userId;
         if (uid) {
           const row = txnToRow(newTxn, uid);
@@ -226,9 +280,18 @@ const useStore = create(
               if (retryErr) {
                 console.error('addTransaction retry failed:', retryErr);
               } else {
-                set({ syncStatus: 'synced', lastSyncError: null });
+                set((s) => ({
+                  syncStatus: 'synced',
+                  lastSyncError: null,
+                  dirtyIds: s.dirtyIds.filter((d) => d !== newTxn.id),
+                }));
               }
             }, 2000);
+          } else {
+            // Success — clear dirty flag
+            set((s) => ({
+              dirtyIds: s.dirtyIds.filter((d) => d !== newTxn.id),
+            }));
           }
         }
       },
@@ -239,6 +302,7 @@ const useStore = create(
           transactions: state.transactions.map((t) =>
             t.id === id ? { ...t, ...updates, updatedAt: now } : t
           ),
+          dirtyIds: state.dirtyIds.includes(id) ? state.dirtyIds : [...state.dirtyIds, id],
         }));
         const uid = get().userId;
         if (uid) {
@@ -256,7 +320,24 @@ const useStore = create(
           const { error } = await supabase.from('transactions').update(row).eq('id', id).eq('user_id', uid);
           if (error) {
             console.error('updateTransaction sync failed:', error);
-            set({ syncStatus: 'error' });
+            set({ syncStatus: 'error', lastSyncError: `Edit failed: ${error.message} (${error.code})` });
+            // Retry once
+            setTimeout(async () => {
+              const { error: retryErr } = await supabase.from('transactions').update(row).eq('id', id).eq('user_id', uid);
+              if (retryErr) {
+                console.error('updateTransaction retry failed:', retryErr);
+              } else {
+                set((s) => ({
+                  syncStatus: 'synced',
+                  lastSyncError: null,
+                  dirtyIds: s.dirtyIds.filter((d) => d !== id),
+                }));
+              }
+            }, 2000);
+          } else {
+            set((s) => ({
+              dirtyIds: s.dirtyIds.filter((d) => d !== id),
+            }));
           }
         }
       },
@@ -264,13 +345,33 @@ const useStore = create(
       deleteTransaction: async (id) => {
         set((state) => ({
           transactions: state.transactions.filter((t) => t.id !== id),
+          pendingDeletes: [...state.pendingDeletes, id],
+          dirtyIds: state.dirtyIds.filter((d) => d !== id),
         }));
         const uid = get().userId;
         if (uid) {
           const { error } = await supabase.from('transactions').delete().eq('id', id).eq('user_id', uid);
           if (error) {
             console.error('deleteTransaction sync failed:', error);
-            set({ syncStatus: 'error' });
+            set({ syncStatus: 'error', lastSyncError: `Delete failed: ${error.message} (${error.code})` });
+            // Retry once
+            setTimeout(async () => {
+              const { error: retryErr } = await supabase.from('transactions').delete().eq('id', id).eq('user_id', uid);
+              if (retryErr) {
+                console.error('deleteTransaction retry failed:', retryErr);
+              } else {
+                set((s) => ({
+                  syncStatus: 'synced',
+                  lastSyncError: null,
+                  pendingDeletes: s.pendingDeletes.filter((d) => d !== id),
+                }));
+              }
+            }, 2000);
+          } else {
+            // Success — clear pending delete
+            set((s) => ({
+              pendingDeletes: s.pendingDeletes.filter((d) => d !== id),
+            }));
           }
         }
       },
@@ -455,6 +556,8 @@ const useStore = create(
           account: { ...defaultAccount, currentBalance: 0 },
           transactions: [],
           settings: { ...defaultSettings },
+          dirtyIds: [],
+          pendingDeletes: [],
         });
         localStorage.removeItem('nlb_store');
       },
@@ -466,6 +569,8 @@ const useStore = create(
         transactions: state.transactions,
         settings: state.settings,
         userId: state.userId,
+        dirtyIds: state.dirtyIds,
+        pendingDeletes: state.pendingDeletes,
       }),
       merge: (persisted, current) => {
         const merged = { ...current, ...persisted };
