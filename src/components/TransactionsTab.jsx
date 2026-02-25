@@ -272,6 +272,7 @@ export default function TransactionsTab({
   const [addingType, setAddingType] = useState(null); // 'income' | 'expense' | null
   const [form, setForm] = useState(defaultForm);
   const [filter, setFilter] = useState('All');
+  const [mobileColumn, setMobileColumn] = useState('expenses'); // 'income' | 'expenses'
 
   const [sortBy, setSortBy] = useState('date'); // 'date' | 'amount'
   const [sortDir, setSortDir] = useState('asc'); // 'asc' | 'desc'
@@ -558,11 +559,24 @@ export default function TransactionsTab({
     );
   };
 
+  // Scroll edit form into view when it appears
+  const editFormRef = useRef(null);
+  useEffect(() => {
+    if ((editingId || addingType) && editFormRef.current) {
+      // Small delay to let the DOM render the form
+      requestAnimationFrame(() => {
+        if (editFormRef.current) {
+          editFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      });
+    }
+  }, [editingId, addingType]);
+
   const renderItem = (txn) => {
     const isIncome = txn.type === 'income';
     if (editingId === txn.id) {
       return (
-        <div key={txn.id}>
+        <div key={txn.id} ref={editFormRef}>
           {renderForm(txn.type)}
         </div>
       );
@@ -571,14 +585,13 @@ export default function TransactionsTab({
     return (
       <div
         key={txn.id}
+        className="nlb-txn-item"
         style={{
           ...s.item,
           borderLeft: `3px solid ${accentColor}`,
           ...(txn.isActive ? {} : { opacity: 0.5 }),
         }}
         onClick={() => startEdit(txn)}
-        onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--border-focus)'; e.currentTarget.style.borderLeftColor = accentColor; e.currentTarget.style.transform = 'translateX(4px)'; e.currentTarget.style.background = 'var(--bg-hover, var(--bg-panel))'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-subtle)'; e.currentTarget.style.borderLeftColor = accentColor; e.currentTarget.style.transform = 'translateX(0)'; e.currentTarget.style.background = 'var(--bg-card)'; }}
       >
         <div style={s.itemRow}>
           <span style={s.itemCategory}>{txn.category}{txn.subcategory ? ` · ${txn.subcategory}` : ''}</span>
@@ -602,10 +615,13 @@ export default function TransactionsTab({
     );
   };
 
+  const showIncome = !isMobile || mobileColumn === 'income';
+  const showExpenses = !isMobile || mobileColumn === 'expenses';
+
   return (
-    <div>
+    <div style={{ paddingBottom: isMobile ? '80px' : 0 }}>
       {/* Filter toggles + Sort */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '0' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? '12px' : '24px', gap: '0' }}>
         <div style={{ display: 'flex', flex: 1, gap: '0' }}>
           {FILTERS.map((f) => (
             <button
@@ -641,6 +657,42 @@ export default function TransactionsTab({
           Date {sortDir === 'asc' ? '\u2191' : '\u2193'}
         </button>
       </div>
+
+    {/* Mobile Income | Expenses toggle */}
+    {isMobile && (
+      <div style={{
+        display: 'flex',
+        marginBottom: '16px',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        border: '1px solid var(--border-subtle)',
+        background: 'var(--bg-card)',
+      }}>
+        {[
+          { key: 'expenses', label: 'Expenses', count: expenses.length, color: 'var(--accent-rose)' },
+          { key: 'income', label: 'Income', count: income.length, color: 'var(--accent-cyan)' },
+        ].map((col) => (
+          <button
+            key={col.key}
+            style={{
+              flex: 1,
+              padding: '10px 0',
+              border: 'none',
+              fontSize: '14px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              transition: 'all 200ms ease',
+              background: mobileColumn === col.key ? col.color : 'transparent',
+              color: mobileColumn === col.key ? '#FFF' : 'var(--text-tertiary)',
+            }}
+            onClick={() => { setMobileColumn(col.key); cancel(); }}
+          >
+            {col.label} ({col.count})
+          </button>
+        ))}
+      </div>
+    )}
+
     {/* 30-Day Outlook strip */}
     {(outlook30Income > 0 || outlook30Expenses > 0) && (
       <div style={s.netStrip}>
@@ -657,9 +709,10 @@ export default function TransactionsTab({
     )}
     <div style={{
       ...s.wrapper,
-      ...(isMobile ? { gridTemplateColumns: '1fr', gap: '32px' } : {}),
+      ...(isMobile ? { gridTemplateColumns: '1fr', gap: '16px' } : {}),
     }}>
       {/* INCOME COLUMN */}
+      {showIncome && (
       <div ref={incomeRef} style={{ ...s.column, ...(isMobile ? {} : s.divider) }}>
         <div style={s.columnHeader}>
           <h3 style={s.columnTitle}>Income</h3>
@@ -678,7 +731,7 @@ export default function TransactionsTab({
           </div>
         )}
         <div style={s.list}>
-          {addingType === 'income' && renderForm('income')}
+          {addingType === 'income' && <div ref={editFormRef}>{renderForm('income')}</div>}
           {income.length === 0 && !addingType ? (
             <div style={s.empty}>
               <div style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>No income yet. What's coming in?</div>
@@ -687,10 +740,36 @@ export default function TransactionsTab({
           ) : (
             income.map(renderItem)
           )}
+          {/* Persistent add button at bottom of list */}
+          {income.length >= 3 && !addingType && (
+            <button
+              style={{
+                width: '100%',
+                padding: '10px',
+                marginTop: '4px',
+                background: 'transparent',
+                border: '1px dashed var(--accent-cyan)',
+                borderRadius: '6px',
+                color: 'var(--accent-cyan)',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                opacity: 0.7,
+                transition: 'opacity 200ms ease',
+              }}
+              onClick={() => startAdd('income')}
+              onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7'; }}
+            >
+              + Add Income
+            </button>
+          )}
         </div>
       </div>
+      )}
 
       {/* EXPENSES COLUMN */}
+      {showExpenses && (
       <div ref={expenseRef} style={s.column}>
         <div style={s.columnHeader}>
           <h3 style={s.columnTitle}>Expenses</h3>
@@ -709,7 +788,7 @@ export default function TransactionsTab({
           </div>
         )}
         <div style={s.list}>
-          {addingType === 'expense' && renderForm('expense')}
+          {addingType === 'expense' && <div ref={editFormRef}>{renderForm('expense')}</div>}
           {expenses.length === 0 && !addingType ? (
             <div style={s.empty}>
               <div style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>No expenses yet. Focus on the big levers.</div>
@@ -718,9 +797,66 @@ export default function TransactionsTab({
           ) : (
             expenses.map(renderItem)
           )}
+          {/* Persistent add button at bottom of list */}
+          {expenses.length >= 3 && !addingType && (
+            <button
+              style={{
+                width: '100%',
+                padding: '10px',
+                marginTop: '4px',
+                background: 'transparent',
+                border: '1px dashed var(--accent-rose)',
+                borderRadius: '6px',
+                color: 'var(--accent-rose)',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                opacity: 0.7,
+                transition: 'opacity 200ms ease',
+              }}
+              onClick={() => startAdd('expense')}
+              onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.7'; }}
+            >
+              + Add Expense
+            </button>
+          )}
         </div>
       </div>
+      )}
     </div>
+
+    {/* Mobile FAB — floating add button */}
+    {isMobile && !addingType && !editingId && (
+      <button
+        onClick={() => startAdd(mobileColumn === 'income' ? 'income' : 'expense')}
+        style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '20px',
+          width: '56px',
+          height: '56px',
+          borderRadius: '50%',
+          border: 'none',
+          background: mobileColumn === 'income' ? 'var(--accent-cyan)' : 'var(--accent-rose)',
+          color: '#FFF',
+          fontSize: '28px',
+          fontWeight: '300',
+          lineHeight: '1',
+          cursor: 'pointer',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'background 200ms ease, transform 150ms ease',
+        }}
+        onTouchStart={(e) => { e.currentTarget.style.transform = 'scale(0.92)'; }}
+        onTouchEnd={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+      >
+        +
+      </button>
+    )}
     </div>
   );
 }

@@ -82,6 +82,8 @@ export default function SpendingTab({
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [editingTxn, setEditingTxn] = useState(null);
   const [editForm, setEditForm] = useState({});
+  const [hoveredCategory, setHoveredCategory] = useState(null);
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
 
   const vr = buildViewRange(timeframe, viewMonth);
   const tfLabel = vr.label;
@@ -197,6 +199,21 @@ export default function SpendingTab({
     setEditingTxn(null);
   }, [editingTxn, deleteTransaction]);
 
+  // ── Hover tooltip helpers ────────────────────────────────────────
+  const handleBarMouseEnter = useCallback((e, g) => {
+    if (g.subcategories.length === 0) return;
+    setTooltipPos({ x: e.clientX + 12, y: e.clientY - 10 });
+    setHoveredCategory(g);
+  }, []);
+
+  const handleBarMouseMove = useCallback((e) => {
+    setTooltipPos({ x: e.clientX + 12, y: e.clientY - 10 });
+  }, []);
+
+  const handleBarMouseLeave = useCallback(() => {
+    setHoveredCategory(null);
+  }, []);
+
   // ── Empty state ──────────────────────────────────────────────────
   if (nonNegotiable.length === 0 && flexSpending.length === 0) {
     return (
@@ -231,6 +248,9 @@ export default function SpendingTab({
             <div
               style={s.barRow}
               onClick={() => hasSubs ? handleBarClick(g.category) : handleLeafClick(g.category)}
+              onMouseEnter={(e) => !isExpanded && handleBarMouseEnter(e, g)}
+              onMouseMove={hoveredCategory && !isExpanded ? handleBarMouseMove : undefined}
+              onMouseLeave={handleBarMouseLeave}
             >
               <div style={s.barLabel}>
                 <span style={s.barCategory}>{g.category}</span>
@@ -311,6 +331,38 @@ export default function SpendingTab({
           'var(--caution-amber)',
         )}
       </div>
+
+      {/* Hover tooltip */}
+      {hoveredCategory && (
+        <div style={{
+          position: 'fixed',
+          left: Math.min(tooltipPos.x, window.innerWidth - 220),
+          top: tooltipPos.y,
+          background: 'var(--bg-panel)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: '8px',
+          padding: '10px 14px',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+          zIndex: 1500,
+          minWidth: '160px',
+          maxWidth: '240px',
+          pointerEvents: 'none',
+        }}>
+          <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '6px' }}>
+            {hoveredCategory.category}
+          </div>
+          {hoveredCategory.subcategories.map((sub) => (
+            <div key={sub.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{sub.name}</span>
+              <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-primary)', marginLeft: '12px' }}>{fmt(sub.amount)}</span>
+            </div>
+          ))}
+          <div style={{ borderTop: '1px solid var(--border-subtle)', marginTop: '6px', paddingTop: '4px', display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>Total</span>
+            <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>{fmt(hoveredCategory.amount)}</span>
+          </div>
+        </div>
+      )}
 
       {/* Inline edit card */}
       {editingTxn && (

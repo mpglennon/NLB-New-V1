@@ -707,6 +707,8 @@ function App() {
 
   return (
     <div style={styles.app}>
+      {/* STICKY HEADER + NAV */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 900, backgroundColor: 'var(--bg-page)' }}>
       {/* HEADER */}
       <div style={styles.headerWrapper}>
         <header style={styles.header} className="nlb-header-inner">
@@ -873,6 +875,7 @@ function App() {
           ))}
         </nav>
       </div>
+      </div>{/* end sticky header + nav */}
 
       {/* PERSISTENT BALANCE BAR */}
       <div className="nlb-balance-bar" style={{
@@ -1310,16 +1313,22 @@ const ChartPopover = React.forwardRef(function ChartPopover(
   const { data, x, y } = pinnedDay;
   const txns = data.dayTxns || [];
 
-  // Smart positioning: clamp to stay inside chart container
+  // Smart positioning: clamp to stay inside chart container AND viewport
   const containerEl = containerRef?.current;
   const cw = containerEl ? containerEl.offsetWidth : 800;
   const ch = containerEl ? containerEl.offsetHeight : 400;
+  const containerRect = containerEl ? containerEl.getBoundingClientRect() : { top: 0, left: 0 };
   const popW = 300;
   const popH = 420;
   let left = x + 12;
   let top = y - 20;
   if (left + popW > cw) left = x - popW - 12;
   if (left < 0) left = 8;
+  // Clamp vertically: prefer within container, but also check viewport
+  const absoluteBottom = containerRect.top + top + popH;
+  if (absoluteBottom > window.innerHeight - 10) {
+    top = y - popH + 20; // flip above the click point
+  }
   if (top + popH > ch) top = ch - popH - 8;
   if (top < 0) top = 8;
 

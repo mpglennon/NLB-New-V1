@@ -195,3 +195,13 @@ input[type="date"] {
     padding: 14px !important;
   }
 }
+
+/* ── Transaction item hover (GPU-composited, no layout shift) ── */
+.nlb-txn-item {
+  transition: border-color 150ms ease, background 150ms ease;
+  will-change: background;
+}
+.nlb-txn-item:hover {
+  border-color: var(--border-focus) !important;
+  background: var(--bg-hover, var(--bg-panel)) !important;
+}

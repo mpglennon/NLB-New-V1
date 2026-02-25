@@ -513,12 +513,16 @@ export default function CashCalendar({
     e.stopPropagation();
     if (isDragging) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    // Position edit card near the badge
+    // Position edit card near the badge — prefer right, flip left if needed
+    const cardW = 300;
+    const cardH = 420;
     let x = rect.right + 8;
     let y = rect.top - 20;
-    // Keep within viewport
-    if (x + 270 > window.innerWidth) x = rect.left - 270;
-    if (y + 300 > window.innerHeight) y = window.innerHeight - 310;
+    // Flip horizontally if overflows right
+    if (x + cardW > window.innerWidth) x = rect.left - cardW - 8;
+    if (x < 8) x = 8;
+    // Flip upward if overflows bottom
+    if (y + cardH > window.innerHeight) y = rect.bottom - cardH;
     if (y < 10) y = 10;
 
     const cats = getCategories(txn.type);

@@ -11,6 +11,9 @@ export default function WelcomeModal({ isOpen, onSkip }) {
   // Multiple entries
   const [incomeList, setIncomeList] = useState([]);
   const [expenseList, setExpenseList] = useState([]);
+  const [savedFlash, setSavedFlash] = useState(null); // 'income' | 'expense' | null
+  const [showIncomeForm, setShowIncomeForm] = useState(true);
+  const [showExpenseForm, setShowExpenseForm] = useState(true);
 
   // Current form being filled
   const [incomeDraft, setIncomeDraft] = useState({ ...emptyForm });
@@ -87,6 +90,8 @@ export default function WelcomeModal({ isOpen, onSkip }) {
     if (!isDraftValid(incomeDraft)) return;
     setIncomeList([...incomeList, finalizeDraft(incomeDraft)]);
     setIncomeDraft({ ...emptyForm });
+    setShowIncomeForm(false);
+    setSavedFlash('income');
   };
 
   // Add current expense draft to the list
@@ -94,6 +99,8 @@ export default function WelcomeModal({ isOpen, onSkip }) {
     if (!isDraftValid(expenseDraft)) return;
     setExpenseList([...expenseList, finalizeDraft(expenseDraft)]);
     setExpenseDraft({ ...emptyForm });
+    setShowExpenseForm(false);
+    setSavedFlash('expense');
   };
 
   // Remove from list
@@ -106,6 +113,8 @@ export default function WelcomeModal({ isOpen, onSkip }) {
       setIncomeList([...incomeList, finalizeDraft(incomeDraft)]);
       setIncomeDraft({ ...emptyForm });
     }
+    setSavedFlash(null);
+    setShowExpenseForm(true);
     setStep(3);
   };
 
@@ -114,6 +123,7 @@ export default function WelcomeModal({ isOpen, onSkip }) {
       setExpenseList([...expenseList, finalizeDraft(expenseDraft)]);
       setExpenseDraft({ ...emptyForm });
     }
+    setSavedFlash(null);
     setStep(4);
   };
 
@@ -179,7 +189,8 @@ export default function WelcomeModal({ isOpen, onSkip }) {
         {step === 2 && (
           <div style={s.stepContent}>
             <div style={s.stepLabel}>Step 2 of 3</div>
-            <h2 style={s.headline}>Let's start with what's coming in.</h2>
+            <h2 style={s.headline}>Add Your Income</h2>
+            <p style={s.hintSmall}>Paycheck, pension, side hustle — start with your main sources.</p>
 
             {/* Already-added entries */}
             {incomeList.length > 0 && (
@@ -195,113 +206,138 @@ export default function WelcomeModal({ isOpen, onSkip }) {
               </div>
             )}
 
-            {/* Form for next entry */}
-            <div style={s.formGrid}>
-              <div style={s.fieldGroup}>
-                <label style={s.label}>Category</label>
-                <select
-                  style={s.select}
-                  value={incomeDraft.category}
-                  onChange={(e) => setIncomeDraft({ ...incomeDraft, category: e.target.value, customCategory: '', subcategory: '', customSubcategory: '' })}
+            {/* Saved confirmation + Add Another */}
+            {!showIncomeForm && savedFlash === 'income' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px' }}>
+                <div style={s.savedFlash}>Income saved.</div>
+                <button
+                  style={s.btnAddAnother}
+                  onClick={() => { setShowIncomeForm(true); setSavedFlash(null); }}
                 >
-                  <option value="">Select...</option>
-                  {getCategories('income').map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                  <option value="Custom">Custom...</option>
-                </select>
-                {incomeDraft.category === 'Custom' && (
-                  <input
-                    type="text"
-                    style={{ ...s.input, marginTop: '6px' }}
-                    placeholder="Enter category name"
-                    value={incomeDraft.customCategory}
-                    onChange={(e) => setIncomeDraft({ ...incomeDraft, customCategory: e.target.value })}
-                  />
-                )}
+                  + Add Another Income
+                </button>
               </div>
-              {incomeDraft.category && incomeDraft.category !== 'Custom' && (
-                <div style={s.fieldGroup}>
-                  <label style={s.label}>Subcategory</label>
-                  <select
-                    style={s.select}
-                    value={incomeDraft.subcategory || ''}
-                    onChange={(e) => setIncomeDraft({ ...incomeDraft, subcategory: e.target.value, customSubcategory: '' })}
-                  >
-                    <option value="">None</option>
-                    {(hierarchy[incomeDraft.category] || []).map((sub) => (
-                      <option key={sub} value={sub}>{sub}</option>
-                    ))}
-                    <option value="__custom_sub__">Custom...</option>
-                  </select>
-                  {incomeDraft.subcategory === '__custom_sub__' && (
+            )}
+
+            {/* Form for next entry */}
+            {showIncomeForm && (
+              <>
+                <div style={s.formGrid}>
+                  <div style={s.fieldGroup}>
+                    <label style={s.label}>Category</label>
+                    <select
+                      style={s.select}
+                      value={incomeDraft.category}
+                      onChange={(e) => setIncomeDraft({ ...incomeDraft, category: e.target.value, customCategory: '', subcategory: '', customSubcategory: '' })}
+                    >
+                      <option value="">Select...</option>
+                      {getCategories('income').map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                      <option value="Custom">Custom...</option>
+                    </select>
+                    {incomeDraft.category === 'Custom' && (
+                      <input
+                        type="text"
+                        style={{ ...s.input, marginTop: '6px' }}
+                        placeholder="Enter category name"
+                        value={incomeDraft.customCategory}
+                        onChange={(e) => setIncomeDraft({ ...incomeDraft, customCategory: e.target.value })}
+                      />
+                    )}
+                  </div>
+                  {incomeDraft.category && incomeDraft.category !== 'Custom' && (
+                    <div style={s.fieldGroup}>
+                      <label style={s.label}>Subcategory</label>
+                      <select
+                        style={s.select}
+                        value={incomeDraft.subcategory || ''}
+                        onChange={(e) => setIncomeDraft({ ...incomeDraft, subcategory: e.target.value, customSubcategory: '' })}
+                      >
+                        <option value="">None</option>
+                        {(hierarchy[incomeDraft.category] || []).map((sub) => (
+                          <option key={sub} value={sub}>{sub}</option>
+                        ))}
+                        <option value="__custom_sub__">Custom...</option>
+                      </select>
+                      {incomeDraft.subcategory === '__custom_sub__' && (
+                        <input
+                          type="text"
+                          style={{ ...s.input, marginTop: '6px' }}
+                          placeholder="Enter subcategory name"
+                          value={incomeDraft.customSubcategory || ''}
+                          onChange={(e) => setIncomeDraft({ ...incomeDraft, customSubcategory: e.target.value })}
+                        />
+                      )}
+                    </div>
+                  )}
+                  <div style={s.fieldGroup}>
+                    <label style={s.label}>Amount</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      style={s.input}
+                      value={incomeDraft.amount}
+                      onChange={(e) => setIncomeDraft({ ...incomeDraft, amount: e.target.value })}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div style={s.fieldGroup}>
+                    <label style={s.label}>Frequency</label>
+                    <select
+                      style={s.select}
+                      value={incomeDraft.frequency}
+                      onChange={(e) => setIncomeDraft({ ...incomeDraft, frequency: e.target.value })}
+                    >
+                      {FREQUENCIES.map((f) => (
+                        <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={s.fieldGroup}>
+                    <label style={s.label}>Start Date</label>
+                    <input
+                      type="date"
+                      style={{ ...s.input, cursor: 'pointer' }}
+                      value={incomeDraft.startDate || today}
+                      onChange={(e) => setIncomeDraft({ ...incomeDraft, startDate: e.target.value })}
+                      onClick={(e) => { try { e.target.showPicker(); } catch {} }}
+                    />
+                  </div>
+                  <div style={{ ...s.fieldGroup, gridColumn: '1 / -1' }}>
+                    <label style={s.label}>Note (optional)</label>
                     <input
                       type="text"
-                      style={{ ...s.input, marginTop: '6px' }}
-                      placeholder="Enter subcategory name"
-                      value={incomeDraft.customSubcategory || ''}
-                      onChange={(e) => setIncomeDraft({ ...incomeDraft, customSubcategory: e.target.value })}
+                      style={s.input}
+                      value={incomeDraft.description || ''}
+                      onChange={(e) => setIncomeDraft({ ...incomeDraft, description: e.target.value })}
+                      placeholder="Optional note..."
                     />
-                  )}
+                  </div>
                 </div>
-              )}
-              <div style={s.fieldGroup}>
-                <label style={s.label}>Amount</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  style={s.input}
-                  value={incomeDraft.amount}
-                  onChange={(e) => setIncomeDraft({ ...incomeDraft, amount: e.target.value })}
-                  placeholder="0.00"
-                />
-              </div>
-              <div style={s.fieldGroup}>
-                <label style={s.label}>Frequency</label>
-                <select
-                  style={s.select}
-                  value={incomeDraft.frequency}
-                  onChange={(e) => setIncomeDraft({ ...incomeDraft, frequency: e.target.value })}
+
+                <button
+                  style={{ ...s.btnSaveGreen, opacity: isDraftValid(incomeDraft) ? 1 : 0.4 }}
+                  disabled={!isDraftValid(incomeDraft)}
+                  onClick={addIncome}
                 >
-                  {FREQUENCIES.map((f) => (
-                    <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>
-                  ))}
-                </select>
-              </div>
-              <div style={s.fieldGroup}>
-                <label style={s.label}>Start Date</label>
-                <input
-                  type="date"
-                  style={{ ...s.input, cursor: 'pointer' }}
-                  value={incomeDraft.startDate || today}
-                  onChange={(e) => setIncomeDraft({ ...incomeDraft, startDate: e.target.value })}
-                  onClick={(e) => { try { e.target.showPicker(); } catch {} }}
-                />
-              </div>
-              <div style={{ ...s.fieldGroup, gridColumn: '1 / -1' }}>
-                <label style={s.label}>Note (optional)</label>
-                <input
-                  type="text"
-                  style={s.input}
-                  value={incomeDraft.description || ''}
-                  onChange={(e) => setIncomeDraft({ ...incomeDraft, description: e.target.value })}
-                  placeholder="Optional note..."
-                />
-              </div>
-            </div>
+                  Save Income
+                </button>
+              </>
+            )}
 
-            {/* Save button — adds entry and clears form */}
-            <button
-              style={{ ...s.btnSave, opacity: isDraftValid(incomeDraft) ? 1 : 0.4 }}
-              disabled={!isDraftValid(incomeDraft)}
-              onClick={addIncome}
-            >
-              Save
-            </button>
-
-            <p style={s.hint}>Start with the big ones — your main sources of income: paycheck, pension, severance. Add side hustle, bonus, etc. now or later.</p>
-            <div style={s.navRow}>
-              <button style={s.btnPrimary} onClick={advanceFromIncome}>Next</button>
+            <div style={{ ...s.navRow, marginTop: '16px' }}>
+              <button
+                style={{
+                  ...s.btnPrimary,
+                  ...(incomeList.length > 0
+                    ? {}
+                    : { background: 'transparent', border: '1px solid var(--border-subtle)', color: 'var(--text-tertiary)', fontSize: '13px', height: '40px', padding: '0 20px' }),
+                }}
+                onClick={advanceFromIncome}
+              >
+                {incomeList.length > 0 ? 'Next: Add Expenses' : 'Skip to Expenses'}
+              </button>
               <button style={s.btnBack} onClick={() => setStep(1)}>Back</button>
             </div>
           </div>
@@ -311,7 +347,8 @@ export default function WelcomeModal({ isOpen, onSkip }) {
         {step === 3 && (
           <div style={s.stepContent}>
             <div style={s.stepLabel}>Step 3 of 3</div>
-            <h2 style={s.headline}>Now the big levers.</h2>
+            <h2 style={s.headline}>Add Your Expenses</h2>
+            <p style={s.hintSmall}>Rent, car, groceries, insurance — the ones that matter most.</p>
 
             {/* Already-added entries */}
             {expenseList.length > 0 && (
@@ -327,136 +364,159 @@ export default function WelcomeModal({ isOpen, onSkip }) {
               </div>
             )}
 
-            {/* Form for next entry */}
-            <div style={s.formGrid}>
-              <div style={s.fieldGroup}>
-                <label style={s.label}>Category</label>
-                <select
-                  style={s.select}
-                  value={expenseDraft.category}
-                  onChange={(e) => setExpenseDraft({ ...expenseDraft, category: e.target.value, customCategory: '', subcategory: '', customSubcategory: '' })}
+            {/* Saved confirmation + Add Another */}
+            {!showExpenseForm && savedFlash === 'expense' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px' }}>
+                <div style={s.savedFlash}>Expense saved.</div>
+                <button
+                  style={s.btnAddAnother}
+                  onClick={() => { setShowExpenseForm(true); setSavedFlash(null); }}
                 >
-                  <option value="">Select...</option>
-                  {getCategories('expense').map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                  <option value="Custom">Custom...</option>
-                </select>
-                {expenseDraft.category === 'Custom' && (
-                  <input
-                    type="text"
-                    style={{ ...s.input, marginTop: '6px' }}
-                    placeholder="Enter category name"
-                    value={expenseDraft.customCategory}
-                    onChange={(e) => setExpenseDraft({ ...expenseDraft, customCategory: e.target.value })}
-                  />
-                )}
+                  + Add Another Expense
+                </button>
               </div>
-              {expenseDraft.category && expenseDraft.category !== 'Custom' && (
-                <div style={s.fieldGroup}>
-                  <label style={s.label}>Subcategory</label>
-                  <select
-                    style={s.select}
-                    value={expenseDraft.subcategory || ''}
-                    onChange={(e) => setExpenseDraft({ ...expenseDraft, subcategory: e.target.value, customSubcategory: '' })}
-                  >
-                    <option value="">None</option>
-                    {(hierarchy[expenseDraft.category] || []).map((sub) => (
-                      <option key={sub} value={sub}>{sub}</option>
-                    ))}
-                    <option value="__custom_sub__">Custom...</option>
-                  </select>
-                  {expenseDraft.subcategory === '__custom_sub__' && (
+            )}
+
+            {/* Form for next entry */}
+            {showExpenseForm && (
+              <>
+                <div style={s.formGrid}>
+                  <div style={s.fieldGroup}>
+                    <label style={s.label}>Category</label>
+                    <select
+                      style={s.select}
+                      value={expenseDraft.category}
+                      onChange={(e) => setExpenseDraft({ ...expenseDraft, category: e.target.value, customCategory: '', subcategory: '', customSubcategory: '' })}
+                    >
+                      <option value="">Select...</option>
+                      {getCategories('expense').map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                      <option value="Custom">Custom...</option>
+                    </select>
+                    {expenseDraft.category === 'Custom' && (
+                      <input
+                        type="text"
+                        style={{ ...s.input, marginTop: '6px' }}
+                        placeholder="Enter category name"
+                        value={expenseDraft.customCategory}
+                        onChange={(e) => setExpenseDraft({ ...expenseDraft, customCategory: e.target.value })}
+                      />
+                    )}
+                  </div>
+                  {expenseDraft.category && expenseDraft.category !== 'Custom' && (
+                    <div style={s.fieldGroup}>
+                      <label style={s.label}>Subcategory</label>
+                      <select
+                        style={s.select}
+                        value={expenseDraft.subcategory || ''}
+                        onChange={(e) => setExpenseDraft({ ...expenseDraft, subcategory: e.target.value, customSubcategory: '' })}
+                      >
+                        <option value="">None</option>
+                        {(hierarchy[expenseDraft.category] || []).map((sub) => (
+                          <option key={sub} value={sub}>{sub}</option>
+                        ))}
+                        <option value="__custom_sub__">Custom...</option>
+                      </select>
+                      {expenseDraft.subcategory === '__custom_sub__' && (
+                        <input
+                          type="text"
+                          style={{ ...s.input, marginTop: '6px' }}
+                          placeholder="Enter subcategory name"
+                          value={expenseDraft.customSubcategory || ''}
+                          onChange={(e) => setExpenseDraft({ ...expenseDraft, customSubcategory: e.target.value })}
+                        />
+                      )}
+                    </div>
+                  )}
+                  <div style={s.fieldGroup}>
+                    <label style={s.label}>Amount</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      style={s.input}
+                      value={expenseDraft.amount}
+                      onChange={(e) => setExpenseDraft({ ...expenseDraft, amount: e.target.value })}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div style={s.fieldGroup}>
+                    <label style={s.label}>Frequency</label>
+                    <select
+                      style={s.select}
+                      value={expenseDraft.frequency}
+                      onChange={(e) => setExpenseDraft({ ...expenseDraft, frequency: e.target.value })}
+                    >
+                      {FREQUENCIES.map((f) => (
+                        <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={s.fieldGroup}>
+                    <label style={s.label}>Start Date</label>
+                    <input
+                      type="date"
+                      style={{ ...s.input, cursor: 'pointer' }}
+                      value={expenseDraft.startDate || today}
+                      onChange={(e) => setExpenseDraft({ ...expenseDraft, startDate: e.target.value })}
+                      onClick={(e) => { try { e.target.showPicker(); } catch {} }}
+                    />
+                  </div>
+                  <div style={{ ...s.fieldGroup, gridColumn: '1 / -1' }}>
+                    <label style={s.label}>Note (optional)</label>
                     <input
                       type="text"
-                      style={{ ...s.input, marginTop: '6px' }}
-                      placeholder="Enter subcategory name"
-                      value={expenseDraft.customSubcategory || ''}
-                      onChange={(e) => setExpenseDraft({ ...expenseDraft, customSubcategory: e.target.value })}
+                      style={s.input}
+                      value={expenseDraft.description || ''}
+                      onChange={(e) => setExpenseDraft({ ...expenseDraft, description: e.target.value })}
+                      placeholder="Optional note..."
                     />
-                  )}
-                </div>
-              )}
-              <div style={s.fieldGroup}>
-                <label style={s.label}>Amount</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  style={s.input}
-                  value={expenseDraft.amount}
-                  onChange={(e) => setExpenseDraft({ ...expenseDraft, amount: e.target.value })}
-                  placeholder="0.00"
-                />
-              </div>
-              <div style={s.fieldGroup}>
-                <label style={s.label}>Frequency</label>
-                <select
-                  style={s.select}
-                  value={expenseDraft.frequency}
-                  onChange={(e) => setExpenseDraft({ ...expenseDraft, frequency: e.target.value })}
-                >
-                  {FREQUENCIES.map((f) => (
-                    <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>
-                  ))}
-                </select>
-              </div>
-              <div style={s.fieldGroup}>
-                <label style={s.label}>Start Date</label>
-                <input
-                  type="date"
-                  style={{ ...s.input, cursor: 'pointer' }}
-                  value={expenseDraft.startDate || today}
-                  onChange={(e) => setExpenseDraft({ ...expenseDraft, startDate: e.target.value })}
-                  onClick={(e) => { try { e.target.showPicker(); } catch {} }}
-                />
-              </div>
-              <div style={{ ...s.fieldGroup, gridColumn: '1 / -1' }}>
-                <label style={s.label}>Note (optional)</label>
-                <input
-                  type="text"
-                  style={s.input}
-                  value={expenseDraft.description || ''}
-                  onChange={(e) => setExpenseDraft({ ...expenseDraft, description: e.target.value })}
-                  placeholder="Optional note..."
-                />
-              </div>
-              {expenseDraft.category && expenseDraft.category !== 'Custom' && (() => {
-                const catName = expenseDraft.category;
-                const cls = classification[catName] || 'flex';
-                return (
-                  <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <label style={{ ...s.label, marginBottom: 0 }}>Type</label>
-                    <div style={{ display: 'flex', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
-                      <button type="button" style={{
-                        padding: '4px 12px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: '700',
-                        background: cls === 'non-negotiable' ? 'var(--accent-rose)' : 'transparent',
-                        color: cls === 'non-negotiable' ? '#FFF' : 'var(--text-tertiary)',
-                      }} onClick={() => updateCategoryClassification({ ...classification, [catName]: 'non-negotiable' })}>Fixed</button>
-                      <button type="button" style={{
-                        padding: '4px 12px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: '700',
-                        background: cls === 'flex' ? 'var(--caution-amber)' : 'transparent',
-                        color: cls === 'flex' ? '#FFF' : 'var(--text-tertiary)',
-                      }} onClick={() => updateCategoryClassification({ ...classification, [catName]: 'flex' })}>Flex</button>
-                    </div>
                   </div>
-                );
-              })()}
-            </div>
+                  {expenseDraft.category && expenseDraft.category !== 'Custom' && (() => {
+                    const catName = expenseDraft.category;
+                    const cls = classification[catName] || 'flex';
+                    return (
+                      <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <label style={{ ...s.label, marginBottom: 0 }}>Type</label>
+                        <div style={{ display: 'flex', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
+                          <button type="button" style={{
+                            padding: '4px 12px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: '700',
+                            background: cls === 'non-negotiable' ? 'var(--accent-rose)' : 'transparent',
+                            color: cls === 'non-negotiable' ? '#FFF' : 'var(--text-tertiary)',
+                          }} onClick={() => updateCategoryClassification({ ...classification, [catName]: 'non-negotiable' })}>Fixed</button>
+                          <button type="button" style={{
+                            padding: '4px 12px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: '700',
+                            background: cls === 'flex' ? 'var(--caution-amber)' : 'transparent',
+                            color: cls === 'flex' ? '#FFF' : 'var(--text-tertiary)',
+                          }} onClick={() => updateCategoryClassification({ ...classification, [catName]: 'flex' })}>Flex</button>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
 
-            {/* Save button — adds entry and clears form */}
-            <button
-              style={{ ...s.btnSave, opacity: isDraftValid(expenseDraft) ? 1 : 0.4 }}
-              disabled={!isDraftValid(expenseDraft)}
-              onClick={addExpense}
-            >
-              Save
-            </button>
+                <button
+                  style={{ ...s.btnSaveRose, opacity: isDraftValid(expenseDraft) ? 1 : 0.4 }}
+                  disabled={!isDraftValid(expenseDraft)}
+                  onClick={addExpense}
+                >
+                  Save Expense
+                </button>
+              </>
+            )}
 
-            <p style={s.hint}>Rent, car, groceries, insurance — the 80% that matters. Manage the big levers, and the lattes take care of themselves.</p>
-            <div style={s.navRow}>
-              <button style={s.btnPrimary} onClick={advanceFromExpense}>See My Runway</button>
-              <button style={s.linkBtn} onClick={() => setStep(2)}>Back to Income</button>
-              <button style={s.btnBack} onClick={() => setStep(2)}>Back</button>
+            <div style={{ ...s.navRow, marginTop: '16px' }}>
+              <button
+                style={{
+                  ...(expenseList.length > 0 && incomeList.length > 0
+                    ? { ...s.btnPrimary }
+                    : { ...s.btnBack, fontSize: '13px' }),
+                }}
+                onClick={advanceFromExpense}
+              >
+                Confirm My Runway
+              </button>
+              <button style={s.btnBack} onClick={() => { setSavedFlash(null); setShowIncomeForm(true); setStep(2); }}>Back</button>
             </div>
           </div>
         )}
@@ -508,7 +568,7 @@ export default function WelcomeModal({ isOpen, onSkip }) {
                 background: 'transparent',
                 border: '2px solid var(--accent-orange)',
                 color: 'var(--accent-orange)',
-              }} onClick={handleComplete}>View My Runway</button>
+              }} onClick={handleComplete}>Continue to App</button>
             ) : (
               <button style={{
                 ...s.btnPrimary,
@@ -715,16 +775,17 @@ const s = {
   },
   btnAddAnother: {
     background: 'transparent',
-    border: '1px dashed var(--accent-orange)',
+    border: '2px dashed var(--accent-orange)',
     color: 'var(--accent-orange)',
     borderRadius: '8px',
-    padding: '10px 0',
-    fontSize: '14px',
-    fontWeight: '600',
+    padding: '14px 0',
+    fontSize: '15px',
+    fontWeight: '700',
     cursor: 'pointer',
     width: '100%',
     marginTop: '4px',
-    transition: 'opacity 200ms ease',
+    transition: 'all 200ms ease',
+    letterSpacing: '0.02em',
   },
   btnSave: {
     background: 'var(--accent-orange)',
@@ -733,6 +794,34 @@ const s = {
     borderRadius: '8px',
     padding: '10px 0',
     fontSize: '14px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    width: '100%',
+    marginTop: '4px',
+    transition: 'opacity 200ms ease',
+    letterSpacing: '0.02em',
+  },
+  btnSaveGreen: {
+    background: 'var(--safe-green)',
+    color: '#FFFFFF',
+    border: 'none',
+    borderRadius: '8px',
+    padding: '12px 0',
+    fontSize: '15px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    width: '100%',
+    marginTop: '4px',
+    transition: 'opacity 200ms ease',
+    letterSpacing: '0.02em',
+  },
+  btnSaveRose: {
+    background: 'var(--accent-rose)',
+    color: '#FFFFFF',
+    border: 'none',
+    borderRadius: '8px',
+    padding: '12px 0',
+    fontSize: '15px',
     fontWeight: '700',
     cursor: 'pointer',
     width: '100%',
@@ -805,5 +894,16 @@ const s = {
     fontSize: '15px',
     fontWeight: '700',
     color: 'var(--text-primary)',
+  },
+  savedFlash: {
+    textAlign: 'center',
+    fontSize: '13px',
+    fontWeight: '600',
+    color: 'var(--safe-green)',
+    background: 'rgba(76,175,80,0.1)',
+    border: '1px solid rgba(76,175,80,0.3)',
+    borderRadius: '6px',
+    padding: '8px 12px',
+    marginTop: '4px',
   },
 };
