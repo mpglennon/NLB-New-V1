@@ -31,7 +31,21 @@ export default function AppShell() {
       }
     });
 
-    return () => subscription.unsubscribe();
+    // Re-sync from Supabase when the tab/app regains focus.
+    // Covers cross-device sync: if another device made changes,
+    // this device picks them up when the user switches back to it.
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        const uid = useStore.getState().userId;
+        if (uid) loadFromSupabase();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, []);
 
   // Loading state

@@ -322,7 +322,7 @@ export default function SpendingTab({
         <div>
           <h3 style={{ ...s.title, margin: 0 }}>Spending</h3>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px' }}>
-            <span style={s.subtitle}>Next {tfLabel}</span>
+            <span style={s.subtitle}>{vr.isMonth ? tfLabel : `Next ${tfLabel}`}</span>
             <span style={s.totalLabel}>Total: {fmt(totalExpenses)}</span>
           </div>
         </div>
