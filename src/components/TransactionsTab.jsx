@@ -909,24 +909,17 @@ export default function TransactionsTab({
           <button
             onClick={() => startAdd('expense')}
             style={{
-              height: '36px',
-              borderRadius: '20px',
-              border: '2px solid var(--accent-rose)',
-              background: 'var(--bg-card)',
+              background: 'none',
+              border: 'none',
               color: 'var(--accent-rose)',
-              fontSize: '13px',
+              fontSize: '12px',
               fontWeight: '700',
-              lineHeight: '1',
               cursor: 'pointer',
-              boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '0 16px',
-              transition: 'background 200ms ease, color 200ms ease',
+              padding: '4px 0',
+              transition: 'color 150ms ease',
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--accent-rose)'; e.currentTarget.style.color = '#FFF'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bg-card)'; e.currentTarget.style.color = 'var(--accent-rose)'; }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--accent-rose)'; }}
           >
             + Add Expense
           </button>
