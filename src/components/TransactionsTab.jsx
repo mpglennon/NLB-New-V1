@@ -704,8 +704,8 @@ export default function TransactionsTab({
         background: 'var(--bg-card)',
       }}>
         {[
-          { key: 'expenses', label: 'Expenses', count: expenses.length, color: 'var(--accent-rose)' },
           { key: 'income', label: 'Income', count: income.length, color: 'var(--accent-cyan)' },
+          { key: 'expenses', label: 'Expenses', count: expenses.length, color: 'var(--accent-rose)' },
         ].map((col) => (
           <button
             key={col.key}
