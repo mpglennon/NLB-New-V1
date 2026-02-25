@@ -329,7 +329,7 @@ export default function SpendingTab({
         <div style={{ display: 'flex', gap: '4px' }}>
           {[
             { key: 'amount', label: 'Amount' },
-            { key: 'name', label: 'Name' },
+            { key: 'name', label: 'Category' },
           ].map((opt) => (
             <button
               key={opt.key}
