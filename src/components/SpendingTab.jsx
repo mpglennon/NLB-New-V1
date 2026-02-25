@@ -84,6 +84,8 @@ export default function SpendingTab({
   const [editForm, setEditForm] = useState({});
   const [hoveredCategory, setHoveredCategory] = useState(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+  const [spendingSortBy, setSpendingSortBy] = useState('amount'); // 'amount' | 'name'
+  const [spendingSortDir, setSpendingSortDir] = useState('desc');
 
   const vr = buildViewRange(timeframe, viewMonth);
   const tfLabel = vr.label;
@@ -105,13 +107,21 @@ export default function SpendingTab({
       }
     }
 
+    // Apply user sort
+    const dir = spendingSortDir === 'asc' ? 1 : -1;
+    const sortFn = spendingSortBy === 'name'
+      ? (a, b) => a.category.localeCompare(b.category) * dir
+      : (a, b) => (a.amount - b.amount) * dir;
+    nonNeg.sort(sortFn);
+    flex.sort(sortFn);
+
     return {
       nonNegotiable: nonNeg,
       flexSpending: flex,
       totalNonNeg: nonNeg.reduce((s, g) => s + g.amount, 0),
       totalFlex: flex.reduce((s, g) => s + g.amount, 0),
     };
-  }, [transactions, timeframe, viewMonth, classification]);
+  }, [transactions, timeframe, viewMonth, classification, spendingSortBy, spendingSortDir]);
 
   const totalExpenses = totalNonNeg + totalFlex;
 
@@ -309,9 +319,41 @@ export default function SpendingTab({
     <div style={s.wrapper}>
       {/* Header */}
       <div style={s.header}>
-        <h3 style={s.title}>Spending</h3>
-        <span style={s.subtitle}>Next {tfLabel}</span>
-        <span style={s.totalLabel}>Total: {fmt(totalExpenses)}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+          <h3 style={{ ...s.title, margin: 0 }}>Spending</h3>
+          <span style={s.subtitle}>Next {tfLabel}</span>
+          <span style={s.totalLabel}>Total: {fmt(totalExpenses)}</span>
+        </div>
+        <div style={{ display: 'flex', gap: '4px', marginTop: '8px' }}>
+          {[
+            { key: 'amount', label: 'Amount' },
+            { key: 'name', label: 'Name' },
+          ].map((opt) => (
+            <button
+              key={opt.key}
+              style={{
+                background: spendingSortBy === opt.key ? 'var(--accent-orange)' : 'transparent',
+                color: spendingSortBy === opt.key ? 'var(--text-primary)' : 'var(--text-tertiary)',
+                border: spendingSortBy === opt.key ? 'none' : '1px solid var(--border-subtle)',
+                borderRadius: '4px',
+                padding: '4px 12px',
+                fontSize: '13px',
+                fontWeight: '600',
+                cursor: 'pointer',
+              }}
+              onClick={() => {
+                if (spendingSortBy === opt.key) {
+                  setSpendingSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+                } else {
+                  setSpendingSortBy(opt.key);
+                  setSpendingSortDir(opt.key === 'amount' ? 'desc' : 'asc');
+                }
+              }}
+            >
+              {opt.label} {spendingSortBy === opt.key ? (spendingSortDir === 'asc' ? '↑' : '↓') : ''}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Two-column layout */}

@@ -414,14 +414,17 @@ export default function TransactionsTab({
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
-  // "Back to top" visibility — show after scrolling down
+  // "Back to top" visibility — show once user scrolls past ~1 screen height
   const [showBackToTop, setShowBackToTop] = useState(false);
   useEffect(() => {
-    const threshold = isMobile ? 400 : 600;
-    const onScroll = () => setShowBackToTop(window.scrollY > threshold);
+    const onScroll = () => {
+      // Show once user has scrolled enough that the top controls are off-screen
+      setShowBackToTop(window.scrollY > 250);
+    };
     window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll(); // check initial position
     return () => window.removeEventListener('scroll', onScroll);
-  }, [isMobile]);
+  }, []);
 
   const scrollToTop = useCallback(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -654,22 +657,40 @@ export default function TransactionsTab({
             </button>
           ))}
         </div>
-        <button
-          style={{
-            background: 'var(--accent-orange)',
-            color: 'var(--text-primary)',
-            border: 'none',
-            borderRadius: '4px',
-            padding: isMobile ? '6px 10px' : '4px 12px',
-            fontSize: '13px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            flexShrink: 0,
-          }}
-          onClick={() => toggleSort('date')}
-        >
-          Date {sortDir === 'asc' ? '\u2191' : '\u2193'}
-        </button>
+        <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+          <button
+            style={{
+              background: sortBy === 'date' ? 'var(--accent-orange)' : 'transparent',
+              color: sortBy === 'date' ? 'var(--text-primary)' : 'var(--text-tertiary)',
+              border: sortBy === 'date' ? 'none' : '1px solid var(--border-subtle)',
+              borderRadius: '4px',
+              padding: isMobile ? '6px 10px' : '4px 12px',
+              fontSize: '13px',
+              fontWeight: '600',
+              cursor: 'pointer',
+            }}
+            onClick={() => toggleSort('date')}
+          >
+            Date {sortBy === 'date' ? (sortDir === 'asc' ? '\u2191' : '\u2193') : ''}
+          </button>
+          {!isMobile && (
+            <button
+              style={{
+                background: sortBy === 'amount' ? 'var(--accent-orange)' : 'transparent',
+                color: sortBy === 'amount' ? 'var(--text-primary)' : 'var(--text-tertiary)',
+                border: sortBy === 'amount' ? 'none' : '1px solid var(--border-subtle)',
+                borderRadius: '4px',
+                padding: '4px 12px',
+                fontSize: '13px',
+                fontWeight: '600',
+                cursor: 'pointer',
+              }}
+              onClick={() => toggleSort('amount')}
+            >
+              Amount {sortBy === 'amount' ? (sortDir === 'asc' ? '\u2191' : '\u2193') : ''}
+            </button>
+          )}
+        </div>
       </div>
 
     {/* Mobile Income | Expenses toggle */}
@@ -848,13 +869,13 @@ export default function TransactionsTab({
           position: 'fixed',
           bottom: '24px',
           right: '20px',
-          width: '44px',
-          height: '44px',
+          width: '36px',
+          height: '36px',
           borderRadius: '50%',
           border: 'none',
           background: mobileColumn === 'income' ? 'var(--accent-cyan)' : 'var(--accent-rose)',
           color: '#FFF',
-          fontSize: '22px',
+          fontSize: '18px',
           fontWeight: '300',
           lineHeight: '1',
           cursor: 'pointer',
@@ -879,30 +900,30 @@ export default function TransactionsTab({
         style={{
           position: 'fixed',
           bottom: isMobile ? '24px' : '32px',
-          left: isMobile ? '20px' : '32px',
-          height: isMobile ? '44px' : '36px',
-          borderRadius: isMobile ? '50%' : '18px',
-          border: '1px solid var(--border-subtle)',
+          left: isMobile ? '20px' : undefined,
+          right: isMobile ? undefined : '32px',
+          height: isMobile ? '36px' : '38px',
+          borderRadius: '20px',
+          border: '2px solid var(--accent-orange)',
           background: 'var(--bg-card)',
-          color: 'var(--text-tertiary)',
-          fontSize: isMobile ? '18px' : '13px',
-          fontWeight: '600',
+          color: 'var(--accent-orange)',
+          fontSize: isMobile ? '13px' : '13px',
+          fontWeight: '700',
           lineHeight: '1',
           cursor: 'pointer',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
           zIndex: 1000,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           gap: '4px',
-          padding: isMobile ? '0' : '0 14px',
-          width: isMobile ? '44px' : 'auto',
-          transition: 'opacity 200ms ease',
+          padding: '0 16px',
+          transition: 'background 200ms ease, transform 150ms ease',
         }}
-        onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--border-focus)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--accent-orange)'; e.currentTarget.style.color = '#FFF'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bg-card)'; e.currentTarget.style.color = 'var(--accent-orange)'; }}
       >
-        ↑{!isMobile && ' Top'}
+        ↑ Back to Top
       </button>
     )}
     </div>
