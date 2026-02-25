@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { format, parseISO } from 'date-fns';
 import useStore from '../store/useStore';
 import { getOccurrences } from '../utils/runway';
@@ -331,6 +331,7 @@ export default function TransactionsTab({
     setAddingType(type);
     setForm({
       ...defaultForm,
+      frequency: filter === 'One Time' ? 'one-time' : 'monthly',
       startDate: new Date().toISOString().split('T')[0],
     });
   };
@@ -412,6 +413,19 @@ export default function TransactionsTab({
   };
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
+  // "Back to top" visibility — show after scrolling down
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  useEffect(() => {
+    const threshold = isMobile ? 400 : 600;
+    const onScroll = () => setShowBackToTop(window.scrollY > threshold);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [isMobile]);
+
+  const scrollToTop = useCallback(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
   const renderForm = (type) => {
     const categories = getCategories(type);
@@ -834,13 +848,13 @@ export default function TransactionsTab({
           position: 'fixed',
           bottom: '24px',
           right: '20px',
-          width: '56px',
-          height: '56px',
+          width: '44px',
+          height: '44px',
           borderRadius: '50%',
           border: 'none',
           background: mobileColumn === 'income' ? 'var(--accent-cyan)' : 'var(--accent-rose)',
           color: '#FFF',
-          fontSize: '28px',
+          fontSize: '22px',
           fontWeight: '300',
           lineHeight: '1',
           cursor: 'pointer',
@@ -855,6 +869,40 @@ export default function TransactionsTab({
         onTouchEnd={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
       >
         +
+      </button>
+    )}
+
+    {/* "Back to top" button */}
+    {showBackToTop && (
+      <button
+        onClick={scrollToTop}
+        style={{
+          position: 'fixed',
+          bottom: isMobile ? '24px' : '32px',
+          left: isMobile ? '20px' : '32px',
+          height: isMobile ? '44px' : '36px',
+          borderRadius: isMobile ? '50%' : '18px',
+          border: '1px solid var(--border-subtle)',
+          background: 'var(--bg-card)',
+          color: 'var(--text-tertiary)',
+          fontSize: isMobile ? '18px' : '13px',
+          fontWeight: '600',
+          lineHeight: '1',
+          cursor: 'pointer',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '4px',
+          padding: isMobile ? '0' : '0 14px',
+          width: isMobile ? '44px' : 'auto',
+          transition: 'opacity 200ms ease',
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--border-focus)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}
+      >
+        ↑{!isMobile && ' Top'}
       </button>
     )}
     </div>
