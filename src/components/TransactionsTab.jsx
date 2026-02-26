@@ -686,39 +686,6 @@ export default function TransactionsTab({
             tfLabel={viewRange.label}
             compact
           />
-          <div style={{ width: isMobile ? '8px' : '16px' }} />
-          <button
-            style={{
-              background: sortBy === 'date' ? 'var(--accent-orange)' : 'transparent',
-              color: sortBy === 'date' ? 'var(--text-primary)' : 'var(--text-tertiary)',
-              border: sortBy === 'date' ? 'none' : '1px solid var(--border-subtle)',
-              borderRadius: '4px',
-              padding: isMobile ? '6px 10px' : '4px 12px',
-              fontSize: '13px',
-              fontWeight: '600',
-              cursor: 'pointer',
-            }}
-            onClick={() => toggleSort('date')}
-          >
-            Date {sortBy === 'date' ? (sortDir === 'asc' ? '\u2191' : '\u2193') : ''}
-          </button>
-          {!isMobile && (
-            <button
-              style={{
-                background: sortBy === 'amount' ? 'var(--accent-orange)' : 'transparent',
-                color: sortBy === 'amount' ? 'var(--text-primary)' : 'var(--text-tertiary)',
-                border: sortBy === 'amount' ? 'none' : '1px solid var(--border-subtle)',
-                borderRadius: '4px',
-                padding: '4px 12px',
-                fontSize: '13px',
-                fontWeight: '600',
-                cursor: 'pointer',
-              }}
-              onClick={() => toggleSort('amount')}
-            >
-              Amount {sortBy === 'amount' ? (sortDir === 'asc' ? '\u2191' : '\u2193') : ''}
-            </button>
-          )}
         </div>
       </div>
 
@@ -771,6 +738,41 @@ export default function TransactionsTab({
         </span>
       </div>
     )}
+    {/* Sort controls — right-aligned above the list */}
+    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '4px', marginBottom: '12px' }}>
+      <button
+        style={{
+          background: sortBy === 'date' ? 'var(--accent-orange)' : 'transparent',
+          color: sortBy === 'date' ? 'var(--text-primary)' : 'var(--text-tertiary)',
+          border: sortBy === 'date' ? 'none' : '1px solid var(--border-subtle)',
+          borderRadius: '4px',
+          padding: isMobile ? '6px 10px' : '4px 12px',
+          fontSize: '13px',
+          fontWeight: '600',
+          cursor: 'pointer',
+        }}
+        onClick={() => toggleSort('date')}
+      >
+        Date {sortBy === 'date' ? (sortDir === 'asc' ? '\u2191' : '\u2193') : ''}
+      </button>
+      {!isMobile && (
+        <button
+          style={{
+            background: sortBy === 'amount' ? 'var(--accent-orange)' : 'transparent',
+            color: sortBy === 'amount' ? 'var(--text-primary)' : 'var(--text-tertiary)',
+            border: sortBy === 'amount' ? 'none' : '1px solid var(--border-subtle)',
+            borderRadius: '4px',
+            padding: '4px 12px',
+            fontSize: '13px',
+            fontWeight: '600',
+            cursor: 'pointer',
+          }}
+          onClick={() => toggleSort('amount')}
+        >
+          Amount {sortBy === 'amount' ? (sortDir === 'asc' ? '\u2191' : '\u2193') : ''}
+        </button>
+      )}
+    </div>
     <div style={{
       ...s.wrapper,
       ...(isMobile ? { gridTemplateColumns: '1fr', gap: '16px' } : {}),
