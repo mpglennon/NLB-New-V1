@@ -208,7 +208,9 @@ const s = {
   },
   filterBtn: {
     background: 'transparent',
-    border: 'none',
+    borderTop: 'none',
+    borderLeft: 'none',
+    borderRight: 'none',
     borderBottom: '3px solid transparent',
     color: 'var(--text-tertiary)',
     padding: '10px 20px',
@@ -216,11 +218,11 @@ const s = {
     fontWeight: '600',
     cursor: 'pointer',
     marginBottom: '-1px',
-    transition: 'color 150ms ease, border-color 150ms ease',
+    transition: 'color 150ms ease, border-bottom-color 150ms ease',
   },
   filterActive: {
     color: 'var(--accent-orange)',
-    borderBottomColor: 'var(--accent-orange)',
+    borderBottom: '3px solid var(--accent-orange)',
   },
 };
 
