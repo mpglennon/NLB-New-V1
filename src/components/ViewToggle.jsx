@@ -156,7 +156,7 @@ export default function ViewToggle({ viewMonth, timeframe, setViewMonth, setTime
         </button>
       </div>
       {!isMobile && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: compact ? '4px' : '4px', ...(!compact ? { marginLeft: 'auto' } : {}) }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', ...(!compact ? { marginLeft: '8px' } : {}) }}>
           <button
             style={arrowBtn}
             onClick={() => isMonthMode ? goMonth(-1) : goForecast(-1)}
