@@ -215,6 +215,7 @@ const s = {
     fontSize: '15px',
     fontWeight: '600',
     cursor: 'pointer',
+    marginBottom: '-1px',
     transition: 'color 150ms ease, border-color 150ms ease',
   },
   filterActive: {
@@ -659,7 +660,7 @@ export default function TransactionsTab({
     <div style={{ paddingBottom: isMobile ? '80px' : 0 }}>
       {/* Filter toggles + ViewToggle + Sort — single row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? '12px' : '24px', gap: '0' }}>
-        <div style={{ display: 'flex', flex: 1, gap: '0' }}>
+        <div style={{ display: 'flex', flex: 1, gap: '0', borderBottom: '1px solid var(--border-subtle)' }}>
           {FILTERS.map((f) => (
             <button
               key={f}
