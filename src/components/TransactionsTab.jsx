@@ -215,10 +215,10 @@ const s = {
     fontSize: '15px',
     fontWeight: '600',
     cursor: 'pointer',
-    transition: 'all 200ms ease',
+    transition: 'color 150ms ease, border-color 150ms ease',
   },
   filterActive: {
-    color: 'var(--text-primary)',
+    color: 'var(--accent-orange)',
     borderBottomColor: 'var(--accent-orange)',
   },
 };
