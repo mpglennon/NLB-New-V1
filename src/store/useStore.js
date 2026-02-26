@@ -53,7 +53,7 @@ function settingsToRow(settings, userId) {
     custom_income_categories: settings.customIncomeCategories || [],
     custom_expense_categories: settings.customExpenseCategories || [],
     has_completed_onboarding: settings.hasCompletedOnboarding,
-    default_view: settings.defaultView || 'rolling-30',
+    default_view: settings.defaultView || 'current-month',
     category_hierarchy: settings.categoryHierarchy || {},
     category_classification: settings.categoryClassification || defaultCategoryClassification,
   };
@@ -69,7 +69,7 @@ function rowToSettings(row) {
     customIncomeCategories: row.custom_income_categories || [],
     customExpenseCategories: row.custom_expense_categories || [],
     hasCompletedOnboarding: row.has_completed_onboarding,
-    defaultView: row.default_view || 'rolling-30',
+    defaultView: row.default_view || 'current-month',
     categoryHierarchy: (row.category_hierarchy && Object.keys(row.category_hierarchy).length > 0) ? row.category_hierarchy : { ...defaultCategoryHierarchy },
     categoryClassification: row.category_classification || defaultCategoryClassification,
   };
@@ -86,7 +86,7 @@ const defaultSettings = {
   customIncomeCategories: [],
   customExpenseCategories: [],
   hasCompletedOnboarding: false,
-  defaultView: 'rolling-30',
+  defaultView: 'current-month',
   categoryHierarchy: { ...defaultCategoryHierarchy },
   categoryClassification: { ...defaultCategoryClassification },
 };

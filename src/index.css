@@ -24,6 +24,8 @@
   --safe-green:     #4CAF50;
   --caution-amber:  #FFA726;
   --critical-red:   #FF5252;
+  --badge-gold:     #FFD54F;
+  --badge-gold-bg:  rgba(255, 213, 79, 0.15);
 
   /* ── Interactive ────────────────────────────── */
   --income-btn-bg:  #0097A7;
@@ -69,6 +71,8 @@
   --safe-green:     #2E7D32;
   --caution-amber:  #E65100;
   --critical-red:   #C62828;
+  --badge-gold:     #B8860B;
+  --badge-gold-bg:  rgba(184, 134, 11, 0.12);
 
   --income-btn-bg:  #0097A7;
   --expense-btn-bg: #C4555E;

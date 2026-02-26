@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { format, parseISO } from 'date-fns';
 import useStore from '../store/useStore';
-import { getOccurrences } from '../utils/runway';
+import { getOccurrences, getOccurrencesInRange, buildViewRange } from '../utils/runway';
+import ViewToggle from './ViewToggle';
 
 const FREQUENCIES = ['one-time', 'weekly', 'bi-weekly', 'monthly', 'quarterly', 'annually'];
 
@@ -265,6 +266,10 @@ export default function TransactionsTab({
   const getCategories = useStore((s) => s.getCategories);
   const addCustomCategory = useStore((s) => s.addCustomCategory);
   const updateCategoryClassification = useStore((s) => s.updateCategoryClassification);
+  const viewMonth = useStore((s) => s.viewMonth);
+  const setViewMonth = useStore((s) => s.setViewMonth);
+  const timeframe = useStore((s) => s.timeframe);
+  const setTimeframe = useStore((s) => s.setTimeframe);
   const settings = useStore((s) => s.settings);
   const hierarchy = settings.categoryHierarchy || {};
   const classification = settings.categoryClassification || {};
@@ -286,8 +291,19 @@ export default function TransactionsTab({
     }
   };
 
-  const { income, expenses, incomeTotal, expenseTotal } = useMemo(() => {
-    const filtered = transactions.filter((t) => {
+  const { income, expenses, incomeTotal, expenseTotal, viewRange } = useMemo(() => {
+    const vr = buildViewRange(timeframe, viewMonth);
+
+    // Attach occurrence count within the active view range
+    const withOccurrences = transactions.map((t) => {
+      const occs = getOccurrencesInRange(t, vr.start, vr.end);
+      return { ...t, occurrenceCount: occs.length };
+    });
+
+    // Keep transactions that have occurrences in the window OR are paused (always visible)
+    const visible = withOccurrences.filter((t) => t.occurrenceCount > 0 || !t.isActive);
+
+    const filtered = visible.filter((t) => {
       if (filter === 'All') return true;
       if (filter === 'Recurring') return t.frequency !== 'one-time';
       return t.frequency === 'one-time';
@@ -304,27 +320,26 @@ export default function TransactionsTab({
     return {
       income: inc,
       expenses: exp,
-      incomeTotal: inc.reduce((sum, t) => sum + t.amount, 0),
-      expenseTotal: exp.reduce((sum, t) => sum + t.amount, 0),
+      incomeTotal: inc.reduce((sum, t) => sum + (t.isActive ? t.amount * t.occurrenceCount : 0), 0),
+      expenseTotal: exp.reduce((sum, t) => sum + (t.isActive ? t.amount * t.occurrenceCount : 0), 0),
+      viewRange: vr,
     };
-  }, [transactions, filter, sortBy, sortDir]);
+  }, [transactions, filter, sortBy, sortDir, timeframe, viewMonth]);
 
-  // True 30-day outlook — computed from ALL active transactions regardless of filter
-  const { outlook30Income, outlook30Expenses } = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+  // View-range outlook — computed from ALL active transactions regardless of filter
+  const { outlookIncome, outlookExpenses } = useMemo(() => {
+    const vr = buildViewRange(timeframe, viewMonth);
     let inc = 0;
     let exp = 0;
     for (const t of transactions) {
       if (!t.isActive) continue;
-      const occs = getOccurrences(t, 30);
-      const count = occs.filter((d) => d >= today).length;
-      if (t.type === 'income') inc += t.amount * count;
-      else exp += t.amount * count;
+      const occs = getOccurrencesInRange(t, vr.start, vr.end);
+      if (t.type === 'income') inc += t.amount * occs.length;
+      else exp += t.amount * occs.length;
     }
-    return { outlook30Income: Math.round(inc), outlook30Expenses: Math.round(exp) };
-  }, [transactions]);
-  const outlook30Net = outlook30Income - outlook30Expenses;
+    return { outlookIncome: Math.round(inc), outlookExpenses: Math.round(exp) };
+  }, [transactions, timeframe, viewMonth]);
+  const outlookNet = outlookIncome - outlookExpenses;
 
   const startAdd = (type) => {
     setEditingId(null);
@@ -626,6 +641,11 @@ export default function TransactionsTab({
               <span>{txn.description}</span>
             </>
           )}
+          {txn.occurrenceCount > 1 && txn.isActive && (
+            <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--badge-gold)', background: 'var(--badge-gold-bg)', padding: '2px 8px', borderRadius: '4px', letterSpacing: '0.03em' }}>
+              {txn.occurrenceCount}x
+            </span>
+          )}
           {!txn.isActive && <span style={s.pausedBadge}>PAUSED</span>}
         </div>
       </div>
@@ -637,7 +657,7 @@ export default function TransactionsTab({
 
   return (
     <div style={{ paddingBottom: isMobile ? '80px' : 0 }}>
-      {/* Filter toggles + Sort */}
+      {/* Filter toggles + ViewToggle + Sort — single row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? '12px' : '24px', gap: '0' }}>
         <div style={{ display: 'flex', flex: 1, gap: '0' }}>
           {FILTERS.map((f) => (
@@ -657,7 +677,16 @@ export default function TransactionsTab({
             </button>
           ))}
         </div>
-        <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', gap: '4px', flexShrink: 0, alignItems: 'center' }}>
+          <ViewToggle
+            viewMonth={viewMonth}
+            timeframe={timeframe}
+            setViewMonth={setViewMonth}
+            setTimeframe={setTimeframe}
+            tfLabel={viewRange.label}
+            compact
+          />
+          <div style={{ width: isMobile ? '8px' : '16px' }} />
           <button
             style={{
               background: sortBy === 'date' ? 'var(--accent-orange)' : 'transparent',
@@ -728,17 +757,17 @@ export default function TransactionsTab({
       </div>
     )}
 
-    {/* 30-Day Outlook strip */}
-    {(outlook30Income > 0 || outlook30Expenses > 0) && (
+    {/* View-range outlook strip */}
+    {(outlookIncome > 0 || outlookExpenses > 0) && (
       <div style={s.netStrip}>
         <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: '0.08em', textTransform: 'uppercase', marginRight: '12px' }}>
-          30-Day Outlook
+          {viewRange.label} Outlook
         </span>
-        <span style={{ fontSize: '15px', fontWeight: 700, color: outlook30Net >= 0 ? 'var(--safe-green)' : 'var(--critical-red)' }}>
-          Net {outlook30Net >= 0 ? '+' : '-'}${Math.abs(outlook30Net).toLocaleString()}
+        <span style={{ fontSize: '15px', fontWeight: 700, color: outlookNet >= 0 ? 'var(--safe-green)' : 'var(--critical-red)' }}>
+          Net {outlookNet >= 0 ? '+' : '-'}${Math.abs(outlookNet).toLocaleString()}
         </span>
         <span style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginLeft: '12px' }}>
-          ${outlook30Income.toLocaleString()} in · ${outlook30Expenses.toLocaleString()} out
+          ${outlookIncome.toLocaleString()} in · ${outlookExpenses.toLocaleString()} out
         </span>
       </div>
     )}
@@ -750,7 +779,14 @@ export default function TransactionsTab({
       {showIncome && (
       <div ref={incomeRef} style={{ ...s.column, ...(isMobile ? {} : s.divider) }}>
         <div style={s.columnHeader}>
-          <h3 style={s.columnTitle}>Income</h3>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
+            <h3 style={s.columnTitle}>Income</h3>
+            {incomeTotal > 0 && (
+              <span style={{ fontSize: '18px', fontWeight: '700', color: 'var(--accent-cyan)' }}>
+                ${incomeTotal.toLocaleString()}
+              </span>
+            )}
+          </div>
           <button
             style={{ ...s.addBtn, ...s.addIncome }}
             onClick={() => startAdd('income')}
@@ -807,7 +843,14 @@ export default function TransactionsTab({
       {showExpenses && (
       <div ref={expenseRef} style={s.column}>
         <div style={s.columnHeader}>
-          <h3 style={s.columnTitle}>Expenses</h3>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
+            <h3 style={s.columnTitle}>Expenses</h3>
+            {expenseTotal > 0 && (
+              <span style={{ fontSize: '18px', fontWeight: '700', color: 'var(--accent-rose)' }}>
+                ${expenseTotal.toLocaleString()}
+              </span>
+            )}
+          </div>
           <button
             style={{ ...s.addBtn, ...s.addExpense }}
             onClick={() => startAdd('expense')}

@@ -362,7 +362,7 @@ export default function SettingsModal({ isOpen, onClose }) {
             </div>
             <select
               style={s.select}
-              value={settings.defaultView || 'rolling-30'}
+              value={settings.defaultView || 'current-month'}
               onChange={(e) => updateSettings({ defaultView: e.target.value })}
             >
               <option value="rolling-30">Next 30 days</option>
