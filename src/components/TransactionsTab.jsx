@@ -810,8 +810,16 @@ export default function TransactionsTab({
           {addingType === 'income' && <div ref={editFormRef}>{renderForm('income')}</div>}
           {income.length === 0 && !addingType ? (
             <div style={s.empty}>
-              <div style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>No income yet. What's coming in?</div>
-              <div>Paycheck, side gig, freelance — start with the big one.</div>
+              {filter === 'All' ? (
+                <>
+                  <div style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>No income yet. What's coming in?</div>
+                  <div>Paycheck, side gig, freelance — start with the big one.</div>
+                </>
+              ) : (
+                <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>
+                  No {filter.toLowerCase()} income set up yet.
+                </div>
+              )}
             </div>
           ) : (
             income.map(renderItem)
@@ -874,8 +882,16 @@ export default function TransactionsTab({
           {addingType === 'expense' && <div ref={editFormRef}>{renderForm('expense')}</div>}
           {expenses.length === 0 && !addingType ? (
             <div style={s.empty}>
-              <div style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>No expenses yet. Focus on the big levers.</div>
-              <div>Rent, car payment, insurance — the lattes can wait.</div>
+              {filter === 'All' ? (
+                <>
+                  <div style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>No expenses yet. Focus on the big levers.</div>
+                  <div>Rent, car payment, insurance — the lattes can wait.</div>
+                </>
+              ) : (
+                <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>
+                  No {filter.toLowerCase()} expenses set up yet.
+                </div>
+              )}
             </div>
           ) : (
             expenses.map(renderItem)
