@@ -883,17 +883,17 @@ function App() {
                       stroke={lineColor}
                       strokeWidth={2.5}
                       fill="url(#balanceGradient)"
-                      dot={(props) => {
+                      dot={isMobile ? false : (props) => {
                         const { cx, cy, payload } = props;
                         if (!payload.dayTxns || payload.dayTxns.length === 0) return null;
                         const isYearly = vr.days >= 365;
                         const is90 = vr.days >= 90 && !isYearly;
-                        const r = isYearly ? (isMobile ? 2.5 : 3.5) : is90 ? (isMobile ? 4 : 6) : (isMobile ? 5 : 7);
+                        const r = isYearly ? 3.5 : is90 ? 6 : 7;
                         return (
                           <g key={`dot-${payload.isoDate}`}>
                             <circle cx={cx} cy={cy} r={r} fill="#3A3A4E" stroke="var(--bg-card)" strokeWidth={isYearly ? 0.5 : 1.5} />
                             {!isYearly && (
-                              <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central" fill="rgba(255,255,255,0.45)" fontSize={is90 ? (isMobile ? 5 : 6) : (isMobile ? 6 : 7)} fontWeight="600" style={{ pointerEvents: 'none' }}>T</text>
+                              <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central" fill="rgba(255,255,255,0.45)" fontSize={is90 ? 6 : 7} fontWeight="600" style={{ pointerEvents: 'none' }}>T</text>
                             )}
                           </g>
                         );
