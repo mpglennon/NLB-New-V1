@@ -137,16 +137,10 @@ export default function ViewToggle({ viewMonth, timeframe, setViewMonth, setTime
             borderRight: 'none',
           }}
           onClick={() => {
-            if (isMonthMode) {
-              setOpenPanel(openPanel === 'month' ? null : 'month');
-            } else {
-              const m = format(startOfToday(), 'yyyy-MM');
-              setViewMonth(m);
-              setOpenPanel(null);
-            }
+            setOpenPanel(openPanel === 'month' ? null : 'month');
           }}
         >
-          Month {isMonthMode ? '▾' : ''}
+          Month ▾
         </button>
         <button
           style={{
@@ -155,15 +149,10 @@ export default function ViewToggle({ viewMonth, timeframe, setViewMonth, setTime
             borderRadius: '0 8px 8px 0',
           }}
           onClick={() => {
-            if (!isMonthMode) {
-              setOpenPanel(openPanel === 'forecast' ? null : 'forecast');
-            } else {
-              setViewMonth(null);
-              setOpenPanel(null);
-            }
+            setOpenPanel(openPanel === 'forecast' ? null : 'forecast');
           }}
         >
-          Forecast {!isMonthMode ? '▾' : ''}
+          Forecast ▾
         </button>
       </div>
       {!isMobile && (
