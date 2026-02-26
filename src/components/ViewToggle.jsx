@@ -128,23 +128,6 @@ export default function ViewToggle({ viewMonth, timeframe, setViewMonth, setTime
 
   return (
     <div style={wrapperStyle} ref={ref}>
-      {!isMobile && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: compact ? '4px' : '4px', ...(!compact ? { marginRight: 'auto' } : {}) }}>
-          <button
-            style={arrowBtn}
-            onClick={() => isMonthMode ? goMonth(-1) : goForecast(-1)}
-            onMouseEnter={arrowHoverIn}
-            onMouseLeave={arrowHoverOut}
-          >‹</button>
-          <span style={{ fontSize: compact ? '12px' : '14px', fontWeight: '600', color: 'var(--text-primary)', minWidth: compact ? '100px' : '120px', textAlign: 'center' }}>{tfLabel}</span>
-          <button
-            style={arrowBtn}
-            onClick={() => isMonthMode ? goMonth(1) : goForecast(1)}
-            onMouseEnter={arrowHoverIn}
-            onMouseLeave={arrowHoverOut}
-          >›</button>
-        </div>
-      )}
       <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden' }}>
         <button
           style={{
@@ -183,6 +166,23 @@ export default function ViewToggle({ viewMonth, timeframe, setViewMonth, setTime
           Forecast {!isMonthMode ? '▾' : ''}
         </button>
       </div>
+      {!isMobile && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: compact ? '4px' : '4px', ...(!compact ? { marginLeft: 'auto' } : {}) }}>
+          <button
+            style={arrowBtn}
+            onClick={() => isMonthMode ? goMonth(-1) : goForecast(-1)}
+            onMouseEnter={arrowHoverIn}
+            onMouseLeave={arrowHoverOut}
+          >‹</button>
+          <span style={{ fontSize: compact ? '12px' : '14px', fontWeight: '600', color: 'var(--text-primary)', minWidth: compact ? '100px' : '120px', textAlign: 'center' }}>{tfLabel}</span>
+          <button
+            style={arrowBtn}
+            onClick={() => isMonthMode ? goMonth(1) : goForecast(1)}
+            onMouseEnter={arrowHoverIn}
+            onMouseLeave={arrowHoverOut}
+          >›</button>
+        </div>
+      )}
 
       {openPanel === 'month' && (
         <div style={dropdownStyle}>
