@@ -636,12 +636,15 @@ function App() {
               </svg>
               <span style={{ fontSize: '13px', fontWeight: '600', letterSpacing: '0.03em' }}>Settings</span>
             </button>
-            <button
-              style={styles.checkInBtn}
-              onClick={() => setCheckInOpen(true)}
-            >
-              Check In
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <button
+                style={styles.checkInBtn}
+                onClick={() => setCheckInOpen(true)}
+              >
+                Check In
+              </button>
+              <span style={{ fontSize: '10px', color: 'var(--text-tertiary)', marginTop: '2px', letterSpacing: '0.02em' }}>Balance Adjustment</span>
+            </div>
           </div>
         </header>
       </div>
