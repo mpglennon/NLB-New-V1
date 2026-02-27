@@ -164,7 +164,7 @@ export default function WelcomeModal({ isOpen, onSkip }) {
             <p style={{ ...s.body, textAlign: 'center' }}>
               One checking account. No bank linking. Just a clear view of your runway — built by a team that's been on a severance package, on a pension, and on a deadline.
             </p>
-            <p style={s.hint}>30 seconds a day to stay ahead. Let's start with what's in your account right now.</p>
+            <p style={s.hint}>30 seconds a day to stay ahead.<br />Let's start with what's in your account right now.</p>
             <div style={s.fieldGroup}>
               <label style={s.label}>Current Balance</label>
               <input
