@@ -660,9 +660,9 @@ export default function TransactionsTab({
 
   return (
     <div style={{ paddingBottom: isMobile ? '80px' : 0 }}>
-      {/* Filter toggles + ViewToggle — single row */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? '12px' : '24px', gap: '0' }}>
-        {!isMobile && (
+      {/* Filter toggles + ViewToggle */}
+      {!isMobile && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '0' }}>
           <div style={{ display: 'flex', flex: 1, gap: '0', borderBottom: '1px solid var(--border-subtle)' }}>
             {FILTERS.map((f) => (
               <button
@@ -680,8 +680,23 @@ export default function TransactionsTab({
               </button>
             ))}
           </div>
-        )}
-        <div style={{ display: 'flex', gap: '4px', flexShrink: 0, alignItems: 'center', ...(isMobile ? { width: '100%', justifyContent: 'center' } : {}) }}>
+          <div style={{ display: 'flex', gap: '4px', flexShrink: 0, alignItems: 'center' }}>
+            <ViewToggle
+              viewMonth={viewMonth}
+              timeframe={timeframe}
+              setViewMonth={setViewMonth}
+              setTimeframe={setTimeframe}
+              tfLabel={viewRange.label}
+              compact
+            />
+          </div>
+        </div>
+      )}
+
+    {/* Mobile: balanced 2x2 control grid */}
+    {isMobile && (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
           <ViewToggle
             viewMonth={viewMonth}
             timeframe={timeframe}
@@ -689,42 +704,41 @@ export default function TransactionsTab({
             setTimeframe={setTimeframe}
             tfLabel={viewRange.label}
             compact
+            mobileWidth
           />
         </div>
-      </div>
-
-    {/* Mobile Income | Expenses toggle */}
-    {isMobile && (
-      <div style={{
-        display: 'flex',
-        marginBottom: '16px',
-        borderRadius: '8px',
-        overflow: 'hidden',
-        border: '1px solid var(--border-subtle)',
-        background: 'var(--bg-card)',
-      }}>
-        {[
-          { key: 'income', label: 'Income', count: income.length, color: 'var(--safe-green)' },
-          { key: 'expenses', label: 'Expenses', count: expenses.length, color: 'var(--accent-rose)' },
-        ].map((col) => (
-          <button
-            key={col.key}
-            style={{
-              flex: 1,
-              padding: '10px 0',
-              border: 'none',
-              fontSize: '14px',
-              fontWeight: '700',
-              cursor: 'pointer',
-              transition: 'all 200ms ease',
-              background: mobileColumn === col.key ? col.color : 'transparent',
-              color: mobileColumn === col.key ? '#FFF' : 'var(--text-tertiary)',
-            }}
-            onClick={() => { setMobileColumn(col.key); cancel(); }}
-          >
-            {col.label} ({col.count})
-          </button>
-        ))}
+        <div style={{
+          display: 'flex',
+          borderRadius: '8px',
+          overflow: 'hidden',
+          border: '1px solid var(--border-subtle)',
+          background: 'var(--bg-card)',
+          maxWidth: '280px',
+          width: '100%',
+        }}>
+          {[
+            { key: 'income', label: 'Income', count: income.length, color: 'var(--safe-green)' },
+            { key: 'expenses', label: 'Expenses', count: expenses.length, color: 'var(--accent-rose)' },
+          ].map((col) => (
+            <button
+              key={col.key}
+              style={{
+                flex: 1,
+                padding: '8px 0',
+                border: 'none',
+                fontSize: '13px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                transition: 'all 200ms ease',
+                background: mobileColumn === col.key ? col.color : 'transparent',
+                color: mobileColumn === col.key ? '#FFF' : 'var(--text-tertiary)',
+              }}
+              onClick={() => { setMobileColumn(col.key); cancel(); }}
+            >
+              {col.label} ({col.count})
+            </button>
+          ))}
+        </div>
       </div>
     )}
 

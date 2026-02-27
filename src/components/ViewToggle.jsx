@@ -7,7 +7,7 @@ const topControlsStyle = {
   marginBottom: '16px',
 };
 
-export default function ViewToggle({ viewMonth, timeframe, setViewMonth, setTimeframe, tfLabel, compact }) {
+export default function ViewToggle({ viewMonth, timeframe, setViewMonth, setTimeframe, tfLabel, compact, mobileWidth }) {
   const [openPanel, setOpenPanel] = useState(null);
   const ref = useRef(null);
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
@@ -128,13 +128,14 @@ export default function ViewToggle({ viewMonth, timeframe, setViewMonth, setTime
 
   return (
     <div style={wrapperStyle} ref={ref}>
-      <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden', ...(mobileWidth ? { maxWidth: '280px', width: '100%' } : {}) }}>
         <button
           style={{
             ...toggleBtnBase,
             ...(isMonthMode ? activeStyle : inactiveStyle),
             borderRadius: '8px 0 0 8px',
             borderRight: 'none',
+            ...(mobileWidth ? { flex: 1, padding: '8px 0', fontSize: '13px' } : {}),
           }}
           onClick={() => {
             setOpenPanel(openPanel === 'month' ? null : 'month');
@@ -147,6 +148,7 @@ export default function ViewToggle({ viewMonth, timeframe, setViewMonth, setTime
             ...toggleBtnBase,
             ...(!isMonthMode ? activeStyle : inactiveStyle),
             borderRadius: '0 8px 8px 0',
+            ...(mobileWidth ? { flex: 1, padding: '8px 0', fontSize: '13px' } : {}),
           }}
           onClick={() => {
             setOpenPanel(openPanel === 'forecast' ? null : 'forecast');
