@@ -725,6 +725,7 @@ export default function TransactionsTab({
               style={{
                 flex: 1,
                 padding: '8px 0',
+                height: '36px',
                 border: 'none',
                 fontSize: '13px',
                 fontWeight: '700',
