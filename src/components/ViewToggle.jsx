@@ -122,9 +122,11 @@ export default function ViewToggle({ viewMonth, timeframe, setViewMonth, setTime
   const arrowHoverIn = (e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover, var(--bg-panel))'; e.currentTarget.style.borderColor = 'var(--border-focus)'; };
   const arrowHoverOut = (e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'var(--bg-card)'; e.currentTarget.style.borderColor = 'var(--border-subtle)'; };
 
-  const wrapperStyle = compact
-    ? { position: 'relative', display: 'flex', alignItems: 'center', gap: '10px' }
-    : { ...topControlsStyle, position: 'relative', alignItems: 'center', ...(isMobile ? { justifyContent: 'center' } : {}) };
+  const wrapperStyle = mobileWidth
+    ? { position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }
+    : compact
+      ? { position: 'relative', display: 'flex', alignItems: 'center', gap: '10px' }
+      : { ...topControlsStyle, position: 'relative', alignItems: 'center', ...(isMobile ? { justifyContent: 'center' } : {}) };
 
   return (
     <div style={wrapperStyle} ref={ref}>
