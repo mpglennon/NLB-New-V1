@@ -160,7 +160,8 @@ export default function WelcomeModal({ isOpen, onSkip }) {
           <div style={s.stepContent}>
             <div style={s.stepLabel}>Step 1 of 3</div>
             <h2 style={s.headline}>Life, not lattes.</h2>
-            <p style={s.body}>
+            <p style={s.tagline}>Track what actually moves the needle. Have the latte.</p>
+            <p style={{ ...s.body, textAlign: 'center' }}>
               One checking account. No bank linking. Just a clear view of your runway — built by a team that's been on a severance package, on a pension, and on a deadline.
             </p>
             <p style={s.hint}>30 seconds a day to stay ahead. Let's start with what's in your account right now.</p>
@@ -657,6 +658,7 @@ const s = {
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
     marginBottom: '4px',
+    textAlign: 'center',
   },
   headline: {
     fontSize: '22px',
@@ -664,6 +666,15 @@ const s = {
     color: 'var(--text-primary)',
     margin: '0 0 8px 0',
     lineHeight: 1.3,
+    textAlign: 'center',
+  },
+  tagline: {
+    fontSize: '14px',
+    fontWeight: '500',
+    color: 'var(--text-secondary)',
+    fontStyle: 'italic',
+    margin: '0 0 12px 0',
+    lineHeight: 1.4,
   },
   body: {
     fontSize: '15px',
@@ -677,11 +688,13 @@ const s = {
     color: 'var(--text-tertiary)',
     lineHeight: 1.5,
     margin: '8px 0',
+    textAlign: 'center',
   },
   hintSmall: {
     fontSize: '13px',
     color: 'var(--text-tertiary)',
     margin: '0 0 8px 0',
+    textAlign: 'center',
   },
   formGrid: {
     display: 'grid',
