@@ -703,7 +703,6 @@ export default function TransactionsTab({
             setViewMonth={setViewMonth}
             setTimeframe={setTimeframe}
             tfLabel={viewRange.label}
-            compact
             mobileWidth
           />
         </div>
