@@ -481,7 +481,7 @@ export default function TransactionsTab({
               />
             </div>
           )}
-          {form.category && form.category !== '__custom__' && (
+          {(form.category && form.category !== '__custom__' || form.category === '__custom__' && form.customCategory) && (
             <div style={s.formField}>
               <label style={s.formLabel}>Subcategory</label>
               <select
@@ -490,7 +490,7 @@ export default function TransactionsTab({
                 onChange={(e) => setForm({ ...form, subcategory: e.target.value, customSubcategory: '' })}
               >
                 <option value="">None</option>
-                {(hierarchy[form.category] || []).map((sub) => (
+                {(hierarchy[form.category === '__custom__' ? form.customCategory : form.category] || []).map((sub) => (
                   <option key={sub} value={sub}>{sub}</option>
                 ))}
                 <option value="__custom_sub__">Custom...</option>
