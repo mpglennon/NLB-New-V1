@@ -9,6 +9,7 @@ import {
   getDaysInMonth,
   parseISO,
   format,
+  subDays,
 } from 'date-fns';
 
 /**
@@ -137,9 +138,50 @@ export function buildViewRange(timeframe, viewMonth) {
 }
 
 /**
+ * Get past-due occurrences that fell between lastUpdated and yesterday.
+ * Used to prompt the user during Check In to confirm whether these already hit their bank.
+ * @param {import('../types/index.js').Transaction[]} transactions
+ * @param {string|null} lastUpdatedISO - ISO date string of last check-in
+ * @returns {Array<{ transactionId: string, category: string, subcategory: string|null, type: string, amount: number, frequency: string, date: Date, dateKey: string }>}
+ */
+export function getPastDueOccurrences(transactions, lastUpdatedISO) {
+  if (!lastUpdatedISO) return [];
+
+  const today = startOfToday();
+  const since = addDays(parseISO(lastUpdatedISO.split('T')[0]), 1);
+  const yesterday = subDays(today, 1);
+
+  if (since > yesterday) return [];
+
+  const results = [];
+
+  for (const txn of transactions) {
+    if (!txn.isActive) continue;
+
+    const occurrences = getOccurrencesInRange(txn, since, yesterday);
+    for (const date of occurrences) {
+      results.push({
+        transactionId: txn.id,
+        category: txn.category,
+        subcategory: txn.subcategory || null,
+        type: txn.type,
+        amount: txn.amount,
+        frequency: txn.frequency,
+        date,
+        dateKey: format(date, 'yyyy-MM-dd'),
+      });
+    }
+  }
+
+  results.sort((a, b) => a.date - b.date);
+  return results;
+}
+
+/**
  * Generate array of daily net cash flows over a timeframe.
  * Index 0 = today, index 1 = tomorrow, etc.
  * Positive values = net income that day, negative = net expense.
+ * Un-excluded past occurrences collapse to index 0 (today).
  * @param {import('../types/index.js').Transaction[]} transactions
  * @param {number} timeframe
  * @returns {number[]}
@@ -153,8 +195,9 @@ export function generateDailyCashFlow(transactions, timeframe) {
 
     const occurrences = getOccurrences(txn, timeframe);
     for (const date of occurrences) {
-      const dayIndex = differenceInCalendarDays(date, today);
-      if (dayIndex >= 0 && dayIndex < timeframe) {
+      let dayIndex = differenceInCalendarDays(date, today);
+      if (dayIndex < 0) dayIndex = 0;
+      if (dayIndex < timeframe) {
         days[dayIndex] += txn.type === 'income' ? txn.amount : -txn.amount;
       }
     }

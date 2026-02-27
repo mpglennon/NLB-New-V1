@@ -221,7 +221,7 @@ function App() {
     account, transactions, timeframe, setTimeframe, viewMonth, setViewMonth,
     settings, updateSettings,
     updateBalance, addTransaction, updateTransaction, deleteTransaction,
-    getCategories, addCustomCategory,
+    getCategories, addCustomCategory, confirmOccurrences,
     syncStatus, lastSyncError, userId, loadFromSupabase, signOut,
   } = useStore();
 
@@ -503,6 +503,7 @@ function App() {
       <div style={styles.headerWrapper}>
         <header style={styles.header} className="nlb-header-inner">
           <div
+            className="nlb-logo-area"
             style={{ display: 'flex', flexDirection: 'column', cursor: 'pointer' }}
             onClick={() => setActiveTab('Snapshot')}
             role="button"
@@ -613,6 +614,7 @@ function App() {
               </button>
             )}
             <button
+              className="nlb-settings-btn"
               style={{
                 background: 'transparent',
                 border: '2px solid var(--border-subtle)',
@@ -634,16 +636,17 @@ function App() {
                 <circle cx="12" cy="12" r="3"/>
                 <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
               </svg>
-              <span style={{ fontSize: '13px', fontWeight: '600', letterSpacing: '0.03em' }}>Settings</span>
+              <span className="nlb-settings-label" style={{ fontSize: '13px', fontWeight: '600', letterSpacing: '0.03em' }}>Settings</span>
             </button>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div className="nlb-checkin-wrapper" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <button
+                className="nlb-checkin-btn"
                 style={styles.checkInBtn}
                 onClick={() => setCheckInOpen(true)}
               >
                 Check In
               </button>
-              <span style={{ fontSize: '10px', color: 'var(--text-tertiary)', marginTop: '2px', letterSpacing: '0.02em' }}>Balance Adjustment</span>
+              <span className="nlb-checkin-hint" style={{ fontSize: '10px', color: 'var(--text-tertiary)', marginTop: '2px', letterSpacing: '0.02em' }}>Balance Adjustment</span>
             </div>
           </div>
         </header>
@@ -826,11 +829,22 @@ function App() {
                     />
                     <Tooltip
                       content={({ active, payload }) => {
-                        if (isMobile) return null;
                         if (pinnedDay) return null;
                         if (!active || !payload || !payload.length) return null;
                         const d = payload[0].payload;
                         const txns = d.dayTxns || [];
+                        if (isMobile) {
+                          return (
+                            <div style={{
+                              background: 'var(--bg-panel)', border: '1px solid var(--border-subtle)',
+                              borderRadius: '6px', padding: '8px 12px',
+                              boxShadow: 'var(--shadow-hover)',
+                            }}>
+                              <span style={{ color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '500' }}>{d.date}</span>
+                              <span style={{ color: 'var(--text-primary)', fontSize: '13px', fontWeight: '700', marginLeft: '10px' }}>${d.balance.toLocaleString()}</span>
+                            </div>
+                          );
+                        }
                         return (
                           <div style={{
                             background: 'var(--bg-panel)', border: '1px solid var(--border-subtle)',
@@ -1022,6 +1036,9 @@ function App() {
         onUpdate={updateBalance}
         addTransaction={addTransaction}
         getCategories={getCategories}
+        transactions={transactions}
+        lastUpdated={account.lastUpdated}
+        confirmOccurrences={confirmOccurrences}
       />
 
       {/* SETTINGS MODAL */}

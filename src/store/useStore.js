@@ -378,6 +378,20 @@ const useStore = create(
         }
       },
 
+      confirmOccurrences: async (items) => {
+        const state = get();
+        for (const { transactionId, dateKey, confirmed } of items) {
+          if (!confirmed) continue;
+          const txn = state.transactions.find((t) => t.id === transactionId);
+          if (!txn) continue;
+          const existing = txn.excludeDates || [];
+          if (existing.includes(dateKey)) continue;
+          await get().updateTransaction(transactionId, {
+            excludeDates: [...existing, dateKey],
+          });
+        }
+      },
+
       setTimeframe: (days) => set({ timeframe: days, viewMonth: null }),
       setViewMonth: (month) => set({ viewMonth: month }),
 
