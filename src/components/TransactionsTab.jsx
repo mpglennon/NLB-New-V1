@@ -693,19 +693,17 @@ export default function TransactionsTab({
         </div>
       )}
 
-    {/* Mobile: balanced 2x2 control grid */}
+    {/* Mobile: balanced 2x2 control grid — inline Month/Forecast to match Income/Expenses */}
     {isMobile && (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px', alignItems: 'center' }}>
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <ViewToggle
-            viewMonth={viewMonth}
-            timeframe={timeframe}
-            setViewMonth={setViewMonth}
-            setTimeframe={setTimeframe}
-            tfLabel={viewRange.label}
-            mobileWidth
-          />
-        </div>
+        <ViewToggle
+          viewMonth={viewMonth}
+          timeframe={timeframe}
+          setViewMonth={setViewMonth}
+          setTimeframe={setTimeframe}
+          tfLabel={viewRange.label}
+          mobileWidth
+        />
         <div style={{
           display: 'flex',
           borderRadius: '8px',

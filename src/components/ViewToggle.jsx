@@ -132,12 +132,27 @@ export default function ViewToggle({ viewMonth, timeframe, setViewMonth, setTime
     <div style={wrapperStyle} ref={ref}>
       <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden', ...(mobileWidth ? { maxWidth: '280px', width: '100%' } : {}) }}>
         <button
-          style={{
-            ...(mobileWidth ? {} : toggleBtnBase),
+          style={mobileWidth ? {
+            flex: 1,
+            height: '36px',
+            padding: '8px 0',
+            fontSize: '13px',
+            fontWeight: '700',
+            cursor: 'pointer',
+            transition: 'all 150ms ease',
+            letterSpacing: '0.02em',
+            borderRadius: '8px 0 0 8px',
+            borderTop: '1px solid var(--border-subtle)',
+            borderBottom: '1px solid var(--border-subtle)',
+            borderLeft: '1px solid var(--border-subtle)',
+            borderRight: 'none',
+            background: isMonthMode ? 'var(--accent-cyan)' : 'var(--bg-card)',
+            color: isMonthMode ? '#0A0A1A' : 'var(--text-tertiary)',
+          } : {
+            ...toggleBtnBase,
             ...(isMonthMode ? activeStyle : inactiveStyle),
             borderRadius: '8px 0 0 8px',
             borderRight: 'none',
-            ...(mobileWidth ? { flex: 1, padding: '8px 0', fontSize: '13px', fontWeight: '700', height: '36px', border: '1px solid var(--border-subtle)', borderRight: 'none', cursor: 'pointer', transition: 'all 150ms ease', letterSpacing: '0.02em' } : {}),
           }}
           onClick={() => {
             setOpenPanel(openPanel === 'month' ? null : 'month');
@@ -146,11 +161,23 @@ export default function ViewToggle({ viewMonth, timeframe, setViewMonth, setTime
           Month ▾
         </button>
         <button
-          style={{
-            ...(mobileWidth ? {} : toggleBtnBase),
+          style={mobileWidth ? {
+            flex: 1,
+            height: '36px',
+            padding: '8px 0',
+            fontSize: '13px',
+            fontWeight: '700',
+            cursor: 'pointer',
+            transition: 'all 150ms ease',
+            letterSpacing: '0.02em',
+            borderRadius: '0 8px 8px 0',
+            border: '1px solid var(--border-subtle)',
+            background: !isMonthMode ? 'var(--accent-cyan)' : 'var(--bg-card)',
+            color: !isMonthMode ? '#0A0A1A' : 'var(--text-tertiary)',
+          } : {
+            ...toggleBtnBase,
             ...(!isMonthMode ? activeStyle : inactiveStyle),
             borderRadius: '0 8px 8px 0',
-            ...(mobileWidth ? { flex: 1, padding: '8px 0', fontSize: '13px', fontWeight: '700', height: '36px', border: '1px solid var(--border-subtle)', cursor: 'pointer', transition: 'all 150ms ease', letterSpacing: '0.02em' } : {}),
           }}
           onClick={() => {
             setOpenPanel(openPanel === 'forecast' ? null : 'forecast');
