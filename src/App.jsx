@@ -841,7 +841,7 @@ function App() {
                               boxShadow: 'var(--shadow-hover)',
                             }}>
                               <span style={{ color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '500' }}>{d.date}</span>
-                              <span style={{ color: 'var(--text-primary)', fontSize: '13px', fontWeight: '700', marginLeft: '10px' }}>${d.balance.toLocaleString()}</span>
+                              <span style={{ color: 'var(--text-primary)', fontSize: '13px', fontWeight: '700', marginLeft: '10px' }}>Balance ${d.balance.toLocaleString()}</span>
                             </div>
                           );
                         }
@@ -853,7 +853,7 @@ function App() {
                           }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: txns.length ? '10px' : '8px' }}>
                               <span style={{ color: 'var(--text-secondary)', fontSize: '12px', fontWeight: '500' }}>{d.date}</span>
-                              <span style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: '700', marginLeft: '16px' }}>${d.balance.toLocaleString()}</span>
+                              <span style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: '700', marginLeft: '16px' }}>Balance ${d.balance.toLocaleString()}</span>
                             </div>
                             {txns.length > 0 && (
                               <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '8px' }}>

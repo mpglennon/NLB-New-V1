@@ -246,7 +246,7 @@ export default function WelcomeModal({ isOpen, onSkip }) {
                       />
                     )}
                   </div>
-                  {(incomeDraft.category && incomeDraft.category !== 'Custom' || incomeDraft.category === 'Custom' && incomeDraft.customCategory) && (
+                  {incomeDraft.category && (
                     <div style={s.fieldGroup}>
                       <label style={s.label}>Subcategory</label>
                       <select
@@ -255,7 +255,7 @@ export default function WelcomeModal({ isOpen, onSkip }) {
                         onChange={(e) => setIncomeDraft({ ...incomeDraft, subcategory: e.target.value, customSubcategory: '' })}
                       >
                         <option value="">None</option>
-                        {(hierarchy[incomeDraft.category === 'Custom' ? incomeDraft.customCategory : incomeDraft.category] || []).map((sub) => (
+                        {(hierarchy[incomeDraft.category === 'Custom' ? (incomeDraft.customCategory || '') : incomeDraft.category] || []).map((sub) => (
                           <option key={sub} value={sub}>{sub}</option>
                         ))}
                         <option value="__custom_sub__">Custom...</option>
@@ -404,7 +404,7 @@ export default function WelcomeModal({ isOpen, onSkip }) {
                       />
                     )}
                   </div>
-                  {(expenseDraft.category && expenseDraft.category !== 'Custom' || expenseDraft.category === 'Custom' && expenseDraft.customCategory) && (
+                  {expenseDraft.category && (
                     <div style={s.fieldGroup}>
                       <label style={s.label}>Subcategory</label>
                       <select
@@ -413,7 +413,7 @@ export default function WelcomeModal({ isOpen, onSkip }) {
                         onChange={(e) => setExpenseDraft({ ...expenseDraft, subcategory: e.target.value, customSubcategory: '' })}
                       >
                         <option value="">None</option>
-                        {(hierarchy[expenseDraft.category === 'Custom' ? expenseDraft.customCategory : expenseDraft.category] || []).map((sub) => (
+                        {(hierarchy[expenseDraft.category === 'Custom' ? (expenseDraft.customCategory || '') : expenseDraft.category] || []).map((sub) => (
                           <option key={sub} value={sub}>{sub}</option>
                         ))}
                         <option value="__custom_sub__">Custom...</option>
