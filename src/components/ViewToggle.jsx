@@ -45,9 +45,9 @@ export default function ViewToggle({ viewMonth, timeframe, setViewMonth, setTime
   };
 
   const activeStyle = {
-    background: 'var(--accent-orange)',
-    color: '#FFFFFF',
-    borderColor: 'var(--accent-orange)',
+    background: 'var(--accent-cyan)',
+    color: '#0A0A1A',
+    borderColor: 'var(--accent-cyan)',
   };
 
   const inactiveStyle = {
@@ -74,9 +74,9 @@ export default function ViewToggle({ viewMonth, timeframe, setViewMonth, setTime
     display: 'block',
     width: '100%',
     padding: '10px 16px',
-    background: isActive ? 'var(--accent-orange-10, rgba(255,152,0,0.1))' : 'transparent',
+    background: isActive ? 'rgba(0,229,255,0.1)' : 'transparent',
     border: 'none',
-    color: isActive ? 'var(--accent-orange)' : 'var(--text-primary)',
+    color: isActive ? 'var(--accent-cyan)' : 'var(--text-primary)',
     fontSize: '13px',
     fontWeight: isActive ? '700' : '500',
     cursor: 'pointer',

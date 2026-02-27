@@ -144,16 +144,53 @@ input[type="date"] {
     line-height: 1.1 !important;
   }
 
-  /* Header: wrap logo + actions gracefully, touch-friendly */
+  /* Header: single row, no logo on mobile */
+  .nlb-logo-area {
+    display: none !important;
+  }
+
   .nlb-header-inner {
-    flex-wrap: wrap !important;
-    padding: 10px 16px !important;
-    gap: 10px !important;
+    flex-wrap: nowrap !important;
+    padding: 8px 12px !important;
+    gap: 6px !important;
+    justify-content: center !important;
   }
 
   .nlb-header-actions {
-    flex-wrap: wrap !important;
+    flex-wrap: nowrap !important;
     gap: 6px !important;
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* Compact header buttons on mobile */
+  .nlb-header-actions button {
+    min-width: 34px !important;
+    min-height: 34px !important;
+  }
+
+  /* Hide "Settings" text label, keep icon only */
+  .nlb-settings-label {
+    display: none !important;
+  }
+
+  /* Hide "Balance Adjustment" hint under Check In */
+  .nlb-checkin-hint {
+    display: none !important;
+  }
+
+  /* Smaller Check In button on mobile */
+  .nlb-checkin-btn {
+    height: 34px !important;
+    padding: 0 14px !important;
+    font-size: 12px !important;
+  }
+
+  /* Settings button: icon-only, square */
+  .nlb-settings-btn {
+    padding: 0 !important;
+    width: 34px !important;
+    height: 34px !important;
   }
 
   /* Balance bar: hidden on mobile — Balance + Surplus now in KPI cards */
@@ -166,11 +203,13 @@ input[type="date"] {
     overflow-x: visible !important;
   }
 
-  /* Tab buttons: 2 tabs on mobile — more breathing room */
+  /* Tab buttons: 2 tabs on mobile — prominent, bold */
   .nlb-tab-btn {
-    padding: 10px 14px !important;
-    font-size: 13px !important;
+    padding: 10px 16px !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
     white-space: nowrap !important;
+    letter-spacing: 0.02em !important;
   }
 
   /* Cash Calendar: desktop only */

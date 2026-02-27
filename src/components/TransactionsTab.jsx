@@ -660,27 +660,28 @@ export default function TransactionsTab({
 
   return (
     <div style={{ paddingBottom: isMobile ? '80px' : 0 }}>
-      {/* Filter toggles + ViewToggle + Sort — single row */}
+      {/* Filter toggles + ViewToggle — single row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? '12px' : '24px', gap: '0' }}>
-        <div style={{ display: 'flex', flex: 1, gap: '0', borderBottom: '1px solid var(--border-subtle)' }}>
-          {FILTERS.map((f) => (
-            <button
-              key={f}
-              style={{
-                ...s.filterBtn,
-                ...(filter === f ? s.filterActive : {}),
-                padding: isMobile ? '8px 0' : '10px 20px',
-                fontSize: isMobile ? '13px' : '15px',
-                flex: isMobile ? 1 : undefined,
-                textAlign: 'center',
-              }}
-              onClick={() => setFilter(f)}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
-        <div style={{ display: 'flex', gap: '4px', flexShrink: 0, alignItems: 'center' }}>
+        {!isMobile && (
+          <div style={{ display: 'flex', flex: 1, gap: '0', borderBottom: '1px solid var(--border-subtle)' }}>
+            {FILTERS.map((f) => (
+              <button
+                key={f}
+                style={{
+                  ...s.filterBtn,
+                  ...(filter === f ? s.filterActive : {}),
+                  padding: '10px 20px',
+                  fontSize: '15px',
+                  textAlign: 'center',
+                }}
+                onClick={() => setFilter(f)}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+        )}
+        <div style={{ display: 'flex', gap: '4px', flexShrink: 0, alignItems: 'center', ...(isMobile ? { width: '100%', justifyContent: 'center' } : {}) }}>
           <ViewToggle
             viewMonth={viewMonth}
             timeframe={timeframe}
@@ -703,7 +704,7 @@ export default function TransactionsTab({
         background: 'var(--bg-card)',
       }}>
         {[
-          { key: 'income', label: 'Income', count: income.length, color: 'var(--accent-cyan)' },
+          { key: 'income', label: 'Income', count: income.length, color: 'var(--safe-green)' },
           { key: 'expenses', label: 'Expenses', count: expenses.length, color: 'var(--accent-rose)' },
         ].map((col) => (
           <button
@@ -729,19 +730,24 @@ export default function TransactionsTab({
 
     {/* View-range outlook strip */}
     {(outlookIncome > 0 || outlookExpenses > 0) && (
-      <div style={s.netStrip}>
-        <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: '0.08em', textTransform: 'uppercase', marginRight: '12px' }}>
-          {viewRange.label} Outlook
-        </span>
-        <span style={{ fontSize: '15px', fontWeight: 700, color: outlookNet >= 0 ? 'var(--safe-green)' : 'var(--critical-red)' }}>
-          Net {outlookNet >= 0 ? '+' : '-'}${Math.abs(outlookNet).toLocaleString()}
-        </span>
-        <span style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginLeft: '12px' }}>
-          ${outlookIncome.toLocaleString()} in · ${outlookExpenses.toLocaleString()} out
-        </span>
+      <div style={{ ...s.netStrip, ...(isMobile ? { display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' } : {}) }}>
+        <div>
+          <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: '0.08em', textTransform: 'uppercase', marginRight: '12px' }}>
+            {viewRange.label} Outlook
+          </span>
+          <span style={{ fontSize: isMobile ? '18px' : '15px', fontWeight: 700, color: outlookNet >= 0 ? 'var(--safe-green)' : 'var(--critical-red)' }}>
+            Net {outlookNet >= 0 ? '+' : '-'}${Math.abs(outlookNet).toLocaleString()}
+          </span>
+        </div>
+        <div style={{ fontSize: isMobile ? '14px' : '12px', color: 'var(--text-tertiary)', ...(isMobile ? {} : { marginLeft: '12px', display: 'inline' }) }}>
+          <span style={{ color: 'var(--safe-green)', fontWeight: 600 }}>${outlookIncome.toLocaleString()} in</span>
+          <span style={{ margin: '0 6px' }}>·</span>
+          <span style={{ color: 'var(--accent-rose)', fontWeight: 600 }}>${outlookExpenses.toLocaleString()} out</span>
+        </div>
       </div>
     )}
-    {/* Sort controls — right-aligned above the list */}
+    {/* Sort controls — right-aligned above the list (desktop only) */}
+    {!isMobile && (
     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '4px', marginBottom: '12px' }}>
       <button
         style={{
@@ -749,7 +755,7 @@ export default function TransactionsTab({
           color: sortBy === 'date' ? 'var(--text-primary)' : 'var(--text-tertiary)',
           border: sortBy === 'date' ? 'none' : '1px solid var(--border-subtle)',
           borderRadius: '4px',
-          padding: isMobile ? '6px 10px' : '4px 12px',
+          padding: '4px 12px',
           fontSize: '13px',
           fontWeight: '600',
           cursor: 'pointer',
@@ -758,24 +764,23 @@ export default function TransactionsTab({
       >
         Date {sortBy === 'date' ? (sortDir === 'asc' ? '\u2191' : '\u2193') : ''}
       </button>
-      {!isMobile && (
-        <button
-          style={{
-            background: sortBy === 'amount' ? 'var(--accent-orange)' : 'transparent',
-            color: sortBy === 'amount' ? 'var(--text-primary)' : 'var(--text-tertiary)',
-            border: sortBy === 'amount' ? 'none' : '1px solid var(--border-subtle)',
-            borderRadius: '4px',
-            padding: '4px 12px',
-            fontSize: '13px',
-            fontWeight: '600',
-            cursor: 'pointer',
-          }}
-          onClick={() => toggleSort('amount')}
-        >
-          Amount {sortBy === 'amount' ? (sortDir === 'asc' ? '\u2191' : '\u2193') : ''}
-        </button>
-      )}
+      <button
+        style={{
+          background: sortBy === 'amount' ? 'var(--accent-orange)' : 'transparent',
+          color: sortBy === 'amount' ? 'var(--text-primary)' : 'var(--text-tertiary)',
+          border: sortBy === 'amount' ? 'none' : '1px solid var(--border-subtle)',
+          borderRadius: '4px',
+          padding: '4px 12px',
+          fontSize: '13px',
+          fontWeight: '600',
+          cursor: 'pointer',
+        }}
+        onClick={() => toggleSort('amount')}
+      >
+        Amount {sortBy === 'amount' ? (sortDir === 'asc' ? '\u2191' : '\u2193') : ''}
+      </button>
     </div>
+    )}
     <div style={{
       ...s.wrapper,
       ...(isMobile ? { gridTemplateColumns: '1fr', gap: '16px' } : {}),
