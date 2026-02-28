@@ -97,13 +97,24 @@ const s = {
     padding: '2px 8px',
     borderRadius: '4px',
   },
-  // Inline form — compact 2-column grid
+  // Modal overlay + card (matches SpendingTab pattern)
+  editOverlay: {
+    position: 'fixed',
+    inset: 0,
+    zIndex: 2000,
+    background: 'var(--overlay-bg)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   form: {
-    background: 'var(--bg-card)',
+    background: 'var(--bg-panel)',
     border: '2px solid var(--accent-orange)',
-    borderRadius: '6px',
-    padding: '10px 12px',
-    marginBottom: '8px',
+    borderRadius: '12px',
+    padding: '20px',
+    width: '340px',
+    maxWidth: '90vw',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
   },
   formGrid: {
     display: 'flex',
@@ -465,9 +476,16 @@ export default function TransactionsTab({
 
   const renderForm = (type) => {
     const categories = getCategories(type);
-    const borderColor = type === 'income' ? 'var(--accent-cyan)' : 'var(--accent-rose)';
+    const title = editingId
+      ? `Edit ${form.category || (type === 'income' ? 'Income' : 'Expense')}`
+      : `Add ${type === 'income' ? 'Income' : 'Expense'}`;
     return (
-      <div style={{ ...s.form, borderLeft: `3px solid ${borderColor}` }} onKeyDown={(e) => { if (e.key === 'Enter') handleSave(type); }}>
+      <div style={s.editOverlay} onClick={cancel}>
+      <div style={s.form} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => { if (e.key === 'Enter') handleSave(type); }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+          <span style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)' }}>{title}</span>
+          <button onClick={cancel} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: '18px', cursor: 'pointer', padding: '4px 8px' }}>✕</button>
+        </div>
         <div style={s.formGrid}>
           <div style={s.formField}>
             <label style={s.formLabel}>Category</label>
@@ -632,31 +650,13 @@ export default function TransactionsTab({
           </div>
         </div>
       </div>
+      </div>
     );
   };
 
-  // Scroll edit form into view when it appears
-  const editFormRef = useRef(null);
-  useEffect(() => {
-    if ((editingId || addingType) && editFormRef.current) {
-      // Small delay to let the DOM render the form
-      requestAnimationFrame(() => {
-        if (editFormRef.current) {
-          editFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-      });
-    }
-  }, [editingId, addingType]);
 
   const renderItem = (txn) => {
     const isIncome = txn.type === 'income';
-    if (editingId === txn.id) {
-      return (
-        <div key={txn.id} ref={editFormRef}>
-          {renderForm(txn.type)}
-        </div>
-      );
-    }
     const accentColor = isIncome ? 'var(--accent-cyan)' : 'var(--accent-rose)';
     return (
       <div
@@ -865,7 +865,6 @@ export default function TransactionsTab({
           </div>
         )}
         <div style={s.list}>
-          {addingType === 'income' && <div ref={editFormRef}>{renderForm('income')}</div>}
           {income.length === 0 && !addingType ? (
             <div style={s.empty}>
               {filter === 'All' ? (
@@ -937,7 +936,6 @@ export default function TransactionsTab({
           </div>
         )}
         <div style={s.list}>
-          {addingType === 'expense' && <div ref={editFormRef}>{renderForm('expense')}</div>}
           {expenses.length === 0 && !addingType ? (
             <div style={s.empty}>
               {filter === 'All' ? (
@@ -1089,6 +1087,10 @@ export default function TransactionsTab({
         ↑ Back to Top
       </button>
     )}
+
+    {/* Modal overlay form — for editing or adding */}
+    {editingId && renderForm(transactions.find((t) => t.id === editingId)?.type || 'expense')}
+    {addingType && renderForm(addingType)}
     </div>
   );
 }
