@@ -213,6 +213,8 @@ export default function SettingsModal({ isOpen, onClose }) {
   const [newExpenseCat, setNewExpenseCat] = useState('');
   const [resetConfirm, setResetConfirm] = useState('');
   const [showReset, setShowReset] = useState(false);
+  const [canScrollDown, setCanScrollDown] = useState(false);
+  const modalRef = useRef(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -221,6 +223,21 @@ export default function SettingsModal({ isOpen, onClose }) {
       setResetConfirm('');
     }
   }, [isOpen, settings.cautionThreshold]);
+
+  // Scroll indicator — check if content overflows
+  useEffect(() => {
+    if (!isOpen) return;
+    const el = modalRef.current;
+    if (!el) return;
+    const check = () => {
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 20;
+      setCanScrollDown(!atBottom && el.scrollHeight > el.clientHeight);
+    };
+    // Check after render settles
+    const timer = setTimeout(check, 100);
+    el.addEventListener('scroll', check, { passive: true });
+    return () => { clearTimeout(timer); el.removeEventListener('scroll', check); };
+  }, [isOpen]);
 
   // ESC key
   useEffect(() => {
@@ -272,6 +289,7 @@ export default function SettingsModal({ isOpen, onClose }) {
         onClick={onClose}
       />
       <div
+        ref={modalRef}
         style={{ ...s.modal, ...(isOpen ? s.modalOpen : {}) }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -674,6 +692,30 @@ export default function SettingsModal({ isOpen, onClose }) {
             </div>
           )}
         </div>
+
+        {/* Scroll indicator */}
+        {canScrollDown && (
+          <div
+            style={{
+              position: 'sticky',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              display: 'flex',
+              justifyContent: 'center',
+              paddingBottom: '4px',
+              paddingTop: '16px',
+              background: 'linear-gradient(transparent, var(--bg-panel) 60%)',
+              pointerEvents: 'none',
+            }}
+          >
+            <span style={{
+              fontSize: '18px',
+              color: 'var(--text-tertiary)',
+              animation: 'settingsBounce 1.5s ease infinite',
+            }}>&#x25BE;</span>
+          </div>
+        )}
       </div>
     </div>
   );
