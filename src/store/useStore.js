@@ -19,6 +19,7 @@ function txnToRow(txn, userId) {
     end_date: txn.endDate || null,
     is_active: txn.isActive,
     exclude_dates: txn.excludeDates || [],
+    custom_day_interval: txn.customDayInterval || null,
     created_at: txn.createdAt,
     updated_at: txn.updatedAt,
   };
@@ -37,6 +38,7 @@ function rowToTxn(row) {
     endDate: row.end_date || null,
     isActive: row.is_active,
     excludeDates: row.exclude_dates || [],
+    customDayInterval: row.custom_day_interval || null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -318,6 +320,7 @@ const useStore = create(
           if (updates.endDate !== undefined) row.end_date = updates.endDate;
           if (updates.isActive !== undefined) row.is_active = updates.isActive;
           if (updates.excludeDates !== undefined) row.exclude_dates = updates.excludeDates;
+          if (updates.customDayInterval !== undefined) row.custom_day_interval = updates.customDayInterval;
           row.updated_at = now;
           const { error } = await supabase.from('transactions').update(row).eq('id', id).eq('user_id', uid);
           if (error) {

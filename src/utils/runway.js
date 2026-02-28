@@ -59,11 +59,26 @@ export function getOccurrences(transaction, timeframe) {
       case 'monthly':
         current = addMonths(current, 1);
         break;
+      case 'semi-monthly': {
+        // Generate 1st and 15th of each month
+        const curMonth = current.getMonth();
+        const curDay = current.getDate();
+        if (curDay < 15) {
+          current = new Date(current.getFullYear(), curMonth, 15);
+        } else {
+          const nextMonth = addMonths(new Date(current.getFullYear(), curMonth, 1), 1);
+          current = nextMonth; // 1st of next month
+        }
+        break;
+      }
       case 'quarterly':
         current = addMonths(current, 3);
         break;
       case 'annually':
         current = addMonths(current, 12);
+        break;
+      case 'custom-days':
+        current = addDays(current, transaction.customDayInterval || 30);
         break;
       default:
         return dates;
@@ -107,8 +122,19 @@ export function getOccurrencesInRange(transaction, rangeStart, rangeEnd) {
       case 'weekly': current = addWeeks(current, 1); break;
       case 'bi-weekly': current = addWeeks(current, 2); break;
       case 'monthly': current = addMonths(current, 1); break;
+      case 'semi-monthly': {
+        const cm = current.getMonth();
+        const cd = current.getDate();
+        if (cd < 15) {
+          current = new Date(current.getFullYear(), cm, 15);
+        } else {
+          current = addMonths(new Date(current.getFullYear(), cm, 1), 1);
+        }
+        break;
+      }
       case 'quarterly': current = addMonths(current, 3); break;
       case 'annually': current = addMonths(current, 12); break;
+      case 'custom-days': current = addDays(current, transaction.customDayInterval || 30); break;
       default: return dates;
     }
   }

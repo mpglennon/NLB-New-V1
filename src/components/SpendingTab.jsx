@@ -59,7 +59,8 @@ function fmt(n) {
   return '$' + Math.abs(n).toLocaleString();
 }
 
-const FREQUENCIES = ['one-time', 'weekly', 'bi-weekly', 'monthly', 'quarterly', 'annually'];
+const FREQUENCIES = ['one-time', 'weekly', 'bi-weekly', 'semi-monthly', 'monthly', 'quarterly', 'annually', 'custom-days'];
+const FREQ_LABELS = { 'one-time': 'One-time', 'weekly': 'Weekly', 'bi-weekly': 'Bi-weekly', 'semi-monthly': '1st & 15th', 'monthly': 'Monthly', 'quarterly': 'Quarterly', 'annually': 'Annually', 'custom-days': 'Every X days' };
 
 // ── Component ───────────────────────────────────────────────────────
 
@@ -84,6 +85,7 @@ export default function SpendingTab({
   const [editForm, setEditForm] = useState({});
   const [hoveredCategory, setHoveredCategory] = useState(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [spendingSortBy, setSpendingSortBy] = useState('amount'); // 'amount' | 'name'
   const [spendingSortDir, setSpendingSortDir] = useState('desc');
 
@@ -151,6 +153,7 @@ export default function SpendingTab({
         frequency: match.frequency,
         startDate: match.startDate,
         description: match.description || '',
+        customDayInterval: match.customDayInterval ? String(match.customDayInterval) : '',
       });
     }
   }, [transactions, getCategories, hierarchy]);
@@ -174,6 +177,7 @@ export default function SpendingTab({
         frequency: match.frequency,
         startDate: match.startDate,
         description: match.description || '',
+        customDayInterval: match.customDayInterval ? String(match.customDayInterval) : '',
       });
     }
   }, [transactions, getCategories, hierarchy]);
@@ -191,6 +195,8 @@ export default function SpendingTab({
     const subcategory = editForm.subcategory === '__custom_sub__'
       ? (editForm.customSubcategory || '').trim() || null
       : editForm.subcategory || null;
+    const customDayInterval = editForm.frequency === 'custom-days' && editForm.customDayInterval
+      ? parseInt(editForm.customDayInterval, 10) : null;
     updateTransaction(editingTxn.id, {
       category,
       subcategory,
@@ -199,6 +205,7 @@ export default function SpendingTab({
       startDate: editForm.startDate,
       description: editForm.description,
       endDate: editForm.frequency === 'one-time' ? editForm.startDate : null,
+      customDayInterval,
     });
     setEditingTxn(null);
   }, [editingTxn, editForm, updateTransaction, addCustomCategory]);
@@ -206,8 +213,17 @@ export default function SpendingTab({
   const handleEditDelete = useCallback(() => {
     if (!editingTxn) return;
     deleteTransaction(editingTxn.id);
+    setDeleteConfirmId(null);
     setEditingTxn(null);
   }, [editingTxn, deleteTransaction]);
+
+  const handleDeleteJustOne = useCallback(() => {
+    if (!editingTxn) return;
+    const existing = editingTxn.excludeDates || [];
+    updateTransaction(editingTxn.id, { excludeDates: [...existing, editingTxn.startDate] });
+    setDeleteConfirmId(null);
+    setEditingTxn(null);
+  }, [editingTxn, updateTransaction]);
 
   // ── Hover tooltip helpers ────────────────────────────────────────
   const handleBarMouseEnter = useCallback((e, g) => {
@@ -489,9 +505,19 @@ export default function SpendingTab({
                 onChange={(e) => setEditForm({ ...editForm, frequency: e.target.value })}
               >
                 {FREQUENCIES.map((f) => (
-                  <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>
+                  <option key={f} value={f}>{FREQ_LABELS[f]}</option>
                 ))}
               </select>
+              {editForm.frequency === 'custom-days' && (
+                <input
+                  type="number"
+                  min="1"
+                  style={{ ...s.editInput, marginTop: '4px' }}
+                  placeholder="Every how many days?"
+                  value={editForm.customDayInterval || ''}
+                  onChange={(e) => setEditForm({ ...editForm, customDayInterval: e.target.value })}
+                />
+              )}
             </div>
             <div style={s.editField}>
               <label style={s.editLabel}>Start Date</label>
@@ -540,8 +566,21 @@ export default function SpendingTab({
             })()}
             <div style={s.editActions}>
               <button style={s.editSave} onClick={handleEditSave}>Save</button>
-              <button style={s.editCancel} onClick={() => setEditingTxn(null)}>Cancel</button>
-              <button style={s.editDelete} onClick={handleEditDelete}>Delete</button>
+              <button style={s.editCancel} onClick={() => { setEditingTxn(null); setDeleteConfirmId(null); }}>Cancel</button>
+              {(() => {
+                const isRecurring = editingTxn && editingTxn.frequency !== 'one-time';
+                if (deleteConfirmId === editingTxn?.id && isRecurring) {
+                  return (
+                    <>
+                      <button style={{ ...s.editDelete, fontSize: '11px', color: 'var(--caution-amber)', borderColor: 'var(--caution-amber)' }} onClick={handleDeleteJustOne}>Just This One</button>
+                      <button style={{ ...s.editDelete, fontSize: '11px' }} onClick={handleEditDelete}>Delete All</button>
+                    </>
+                  );
+                }
+                return (
+                  <button style={s.editDelete} onClick={() => isRecurring ? setDeleteConfirmId(editingTxn.id) : handleEditDelete()}>Delete</button>
+                );
+              })()}
             </div>
           </div>
         </div>

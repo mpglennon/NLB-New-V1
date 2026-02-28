@@ -5,7 +5,8 @@ import useStore from '../store/useStore';
 
 const BACKDROP_MS = 200;
 const SLIDE_MS = 300;
-const FREQUENCIES = ['one-time', 'weekly', 'bi-weekly', 'monthly', 'quarterly', 'annually'];
+const FREQUENCIES = ['one-time', 'weekly', 'bi-weekly', 'semi-monthly', 'monthly', 'quarterly', 'annually', 'custom-days'];
+const FREQ_LABELS = { 'one-time': 'One-time', 'weekly': 'Weekly', 'bi-weekly': 'Bi-weekly', 'semi-monthly': '1st & 15th', 'monthly': 'Monthly', 'quarterly': 'Quarterly', 'annually': 'Annually', 'custom-days': 'Every X days' };
 
 // ── Styles ──────────────────────────────────────────────────────────────
 
@@ -444,28 +445,37 @@ export default function Drawer({
 function TransactionItem({ item, isEditing, onStartEdit, onCancelEdit, onSave, onDelete }) {
   const isIncome = item.type === 'income';
   const dateStr = format(item.occurrenceDate, 'MMM d');
-  const freqLabel =
-    item.frequency === 'one-time'
-      ? 'One-time'
-      : item.frequency.charAt(0).toUpperCase() + item.frequency.slice(1);
+  const freqLabel = FREQ_LABELS[item.frequency] || item.frequency;
 
   const getCategories = useStore((s) => s.getCategories);
   const addCustomCategory = useStore((s) => s.addCustomCategory);
+  const updateCategoryClassification = useStore((s) => s.updateCategoryClassification);
+  const settings = useStore((s) => s.settings);
+  const hierarchy = settings.categoryHierarchy || {};
+  const classification = settings.categoryClassification || {};
+  const updateTransaction = useStore((s) => s.updateTransaction);
   const [form, setForm] = useState({});
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   // Initialize form when editing starts
   useEffect(() => {
     if (isEditing) {
       const cats = getCategories(item.type);
       const isCustom = !cats.includes(item.category);
+      const subs = hierarchy[item.category] || [];
+      const isCustomSub = item.subcategory && !subs.includes(item.subcategory);
       setForm({
         category: isCustom ? '__custom__' : item.category,
         customCategory: isCustom ? item.category : '',
+        subcategory: isCustomSub ? '__custom_sub__' : (item.subcategory || ''),
+        customSubcategory: isCustomSub ? item.subcategory : '',
         amount: String(item.amount),
         frequency: item.frequency,
         startDate: item.startDate,
         description: item.description || '',
+        customDayInterval: item.customDayInterval ? String(item.customDayInterval) : '',
       });
+      setDeleteConfirmId(null);
     }
   }, [isEditing, item, getCategories]);
 
@@ -476,26 +486,42 @@ function TransactionItem({ item, isEditing, onStartEdit, onCancelEdit, onSave, o
       : form.category;
     if (!category || isNaN(amount) || amount <= 0 || !form.startDate) return;
 
-    // Add custom category to the store if it's new
     if (form.category === '__custom__' && category) {
       addCustomCategory(item.type, category);
     }
 
+    const subcategory = form.subcategory === '__custom_sub__'
+      ? (form.customSubcategory || '').trim() || null
+      : form.subcategory || null;
+    const customDayInterval = form.frequency === 'custom-days' && form.customDayInterval
+      ? parseInt(form.customDayInterval, 10) : null;
+
     onSave(item.id, {
       category,
+      subcategory,
       amount,
       frequency: form.frequency,
       startDate: form.startDate,
       description: form.description,
       endDate: form.frequency === 'one-time' ? form.startDate : null,
+      customDayInterval,
     });
     onCancelEdit();
   }, [form, item.id, item.type, onSave, onCancelEdit, addCustomCategory]);
 
   const handleDelete = useCallback(() => {
     onDelete(item.id);
+    setDeleteConfirmId(null);
     onCancelEdit();
   }, [item.id, onDelete, onCancelEdit]);
+
+  const handleDeleteJustOne = useCallback(() => {
+    const existing = item.excludeDates || [];
+    const dateToExclude = item.occurrenceDate ? format(item.occurrenceDate, 'yyyy-MM-dd') : item.startDate;
+    updateTransaction(item.id, { excludeDates: [...existing, dateToExclude] });
+    setDeleteConfirmId(null);
+    onCancelEdit();
+  }, [item, updateTransaction, onCancelEdit]);
 
   if (isEditing) {
     const categories = getCategories(item.type);
@@ -506,7 +532,7 @@ function TransactionItem({ item, isEditing, onStartEdit, onCancelEdit, onSave, o
           <select
             style={s.editSelect}
             value={form.category || ''}
-            onChange={(e) => setForm({ ...form, category: e.target.value, customCategory: '' })}
+            onChange={(e) => setForm({ ...form, category: e.target.value, customCategory: '', subcategory: '', customSubcategory: '' })}
           >
             <option value="">Select...</option>
             {categories.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -524,6 +550,31 @@ function TransactionItem({ item, isEditing, onStartEdit, onCancelEdit, onSave, o
               placeholder="Enter category name..."
               autoFocus
             />
+          </div>
+        )}
+        {form.category && form.category !== '__custom__' && (
+          <div style={s.editField}>
+            <label style={s.editLabel}>Subcategory</label>
+            <select
+              style={s.editSelect}
+              value={form.subcategory || ''}
+              onChange={(e) => setForm({ ...form, subcategory: e.target.value, customSubcategory: '' })}
+            >
+              <option value="">None</option>
+              {(hierarchy[form.category] || []).map((sub) => (
+                <option key={sub} value={sub}>{sub}</option>
+              ))}
+              <option value="__custom_sub__">Custom...</option>
+            </select>
+            {form.subcategory === '__custom_sub__' && (
+              <input
+                type="text"
+                style={{ ...s.editInput, marginTop: '4px' }}
+                placeholder="Enter subcategory name"
+                value={form.customSubcategory || ''}
+                onChange={(e) => setForm({ ...form, customSubcategory: e.target.value })}
+              />
+            )}
           </div>
         )}
         <div style={s.editField}>
@@ -544,9 +595,19 @@ function TransactionItem({ item, isEditing, onStartEdit, onCancelEdit, onSave, o
             onChange={(e) => setForm({ ...form, frequency: e.target.value })}
           >
             {FREQUENCIES.map((f) => (
-              <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>
+              <option key={f} value={f}>{FREQ_LABELS[f]}</option>
             ))}
           </select>
+          {form.frequency === 'custom-days' && (
+            <input
+              type="number"
+              min="1"
+              style={{ ...s.editInput, marginTop: '4px' }}
+              placeholder="Every how many days?"
+              value={form.customDayInterval || ''}
+              onChange={(e) => setForm({ ...form, customDayInterval: e.target.value })}
+            />
+          )}
         </div>
         <div style={s.editField}>
           <label style={s.editLabel}>Start Date</label>
@@ -568,10 +629,44 @@ function TransactionItem({ item, isEditing, onStartEdit, onCancelEdit, onSave, o
             placeholder="Optional..."
           />
         </div>
+        {item.type === 'expense' && form.category && form.category !== '__custom__' && (() => {
+          const catName = form.category;
+          const cls = classification[catName] || 'flex';
+          return (
+            <div style={{ ...s.editField, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ ...s.editLabel, marginBottom: 0 }}>Type</label>
+              <div style={{ display: 'flex', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
+                <button type="button" style={{
+                  padding: '3px 10px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: '700',
+                  background: cls === 'non-negotiable' ? 'var(--accent-rose)' : 'transparent',
+                  color: cls === 'non-negotiable' ? '#FFF' : 'var(--text-tertiary)',
+                }} onClick={() => updateCategoryClassification({ ...classification, [catName]: 'non-negotiable' })}>Fixed</button>
+                <button type="button" style={{
+                  padding: '3px 10px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: '700',
+                  background: cls === 'flex' ? 'var(--caution-amber)' : 'transparent',
+                  color: cls === 'flex' ? '#FFF' : 'var(--text-tertiary)',
+                }} onClick={() => updateCategoryClassification({ ...classification, [catName]: 'flex' })}>Flex</button>
+              </div>
+            </div>
+          );
+        })()}
         <div style={s.editActions}>
           <button style={s.editSave} onClick={handleSave}>Save</button>
-          <button style={s.editCancel} onClick={onCancelEdit}>Cancel</button>
-          <button style={s.editDelete} onClick={handleDelete}>Delete</button>
+          <button style={s.editCancel} onClick={() => { onCancelEdit(); setDeleteConfirmId(null); }}>Cancel</button>
+          {(() => {
+            const isRecurring = item.frequency !== 'one-time';
+            if (deleteConfirmId === item.id && isRecurring) {
+              return (
+                <>
+                  <button style={{ ...s.editDelete, fontSize: '11px', color: 'var(--caution-amber)', borderColor: 'var(--caution-amber)' }} onClick={handleDeleteJustOne}>Just This One</button>
+                  <button style={{ ...s.editDelete, fontSize: '11px' }} onClick={handleDelete}>Delete All</button>
+                </>
+              );
+            }
+            return (
+              <button style={s.editDelete} onClick={() => isRecurring ? setDeleteConfirmId(item.id) : handleDelete()}>Delete</button>
+            );
+          })()}
         </div>
       </div>
     );

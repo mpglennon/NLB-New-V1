@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import useStore from '../store/useStore';
 const FADE_MS = 200;
-const FREQUENCIES = ['one-time', 'weekly', 'bi-weekly', 'monthly', 'quarterly', 'annually'];
-const emptyForm = { category: '', customCategory: '', subcategory: '', customSubcategory: '', amount: '', frequency: 'monthly', startDate: '', description: '' };
+const FREQUENCIES = ['one-time', 'weekly', 'bi-weekly', 'semi-monthly', 'monthly', 'quarterly', 'annually', 'custom-days'];
+const FREQ_LABELS = { 'one-time': 'One-time', 'weekly': 'Weekly', 'bi-weekly': 'Bi-weekly', 'semi-monthly': '1st & 15th', 'monthly': 'Monthly', 'quarterly': 'Quarterly', 'annually': 'Annually', 'custom-days': 'Every X days' };
+const emptyForm = { category: '', customCategory: '', subcategory: '', customSubcategory: '', amount: '', frequency: 'monthly', startDate: '', description: '', customDayInterval: '' };
 
 export default function WelcomeModal({ isOpen, onSkip }) {
   const [step, setStep] = useState(1);
@@ -75,7 +76,7 @@ export default function WelcomeModal({ isOpen, onSkip }) {
     const subcategory = draft.subcategory === '__custom_sub__'
       ? (draft.customSubcategory || '').trim() || null
       : draft.subcategory || null;
-    return {
+    const entry = {
       category: draft.category === 'Custom' ? draft.customCategory.trim() : draft.category,
       subcategory,
       amount: parseFloat(draft.amount),
@@ -83,6 +84,10 @@ export default function WelcomeModal({ isOpen, onSkip }) {
       startDate: draft.startDate || new Date().toISOString().split('T')[0],
       description: draft.description || '',
     };
+    if (draft.frequency === 'custom-days' && draft.customDayInterval) {
+      entry.customDayInterval = parseInt(draft.customDayInterval, 10);
+    }
+    return entry;
   };
 
   // Add current income draft to the list
@@ -212,7 +217,7 @@ export default function WelcomeModal({ isOpen, onSkip }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px' }}>
                 <div style={s.savedFlash}>Income saved.</div>
                 <button
-                  style={s.btnAddAnother}
+                  style={{ ...s.btnAddAnother, borderColor: 'var(--safe-green)', color: 'var(--safe-green)' }}
                   onClick={() => { setShowIncomeForm(true); setSavedFlash(null); }}
                 >
                   + Add Another Income
@@ -291,9 +296,19 @@ export default function WelcomeModal({ isOpen, onSkip }) {
                       onChange={(e) => setIncomeDraft({ ...incomeDraft, frequency: e.target.value })}
                     >
                       {FREQUENCIES.map((f) => (
-                        <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>
+                        <option key={f} value={f}>{FREQ_LABELS[f]}</option>
                       ))}
                     </select>
+                    {incomeDraft.frequency === 'custom-days' && (
+                      <input
+                        type="number"
+                        min="1"
+                        style={{ ...s.input, marginTop: '6px' }}
+                        placeholder="Every how many days?"
+                        value={incomeDraft.customDayInterval || ''}
+                        onChange={(e) => setIncomeDraft({ ...incomeDraft, customDayInterval: e.target.value })}
+                      />
+                    )}
                   </div>
                   <div style={s.fieldGroup}>
                     <label style={s.label}>Start Date</label>
@@ -305,7 +320,7 @@ export default function WelcomeModal({ isOpen, onSkip }) {
                       onClick={(e) => { try { e.target.showPicker(); } catch {} }}
                     />
                   </div>
-                  <div style={{ ...s.fieldGroup, gridColumn: '1 / -1' }}>
+                  <div style={s.fieldGroup}>
                     <label style={s.label}>Note (optional)</label>
                     <input
                       type="text"
@@ -370,7 +385,7 @@ export default function WelcomeModal({ isOpen, onSkip }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '4px' }}>
                 <div style={s.savedFlash}>Expense saved.</div>
                 <button
-                  style={s.btnAddAnother}
+                  style={{ ...s.btnAddAnother, borderColor: 'var(--accent-rose)', color: 'var(--accent-rose)' }}
                   onClick={() => { setShowExpenseForm(true); setSavedFlash(null); }}
                 >
                   + Add Another Expense
@@ -449,9 +464,19 @@ export default function WelcomeModal({ isOpen, onSkip }) {
                       onChange={(e) => setExpenseDraft({ ...expenseDraft, frequency: e.target.value })}
                     >
                       {FREQUENCIES.map((f) => (
-                        <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>
+                        <option key={f} value={f}>{FREQ_LABELS[f]}</option>
                       ))}
                     </select>
+                    {expenseDraft.frequency === 'custom-days' && (
+                      <input
+                        type="number"
+                        min="1"
+                        style={{ ...s.input, marginTop: '6px' }}
+                        placeholder="Every how many days?"
+                        value={expenseDraft.customDayInterval || ''}
+                        onChange={(e) => setExpenseDraft({ ...expenseDraft, customDayInterval: e.target.value })}
+                      />
+                    )}
                   </div>
                   <div style={s.fieldGroup}>
                     <label style={s.label}>Start Date</label>
@@ -463,7 +488,7 @@ export default function WelcomeModal({ isOpen, onSkip }) {
                       onClick={(e) => { try { e.target.showPicker(); } catch {} }}
                     />
                   </div>
-                  <div style={{ ...s.fieldGroup, gridColumn: '1 / -1' }}>
+                  <div style={s.fieldGroup}>
                     <label style={s.label}>Note (optional)</label>
                     <input
                       type="text"
@@ -477,7 +502,7 @@ export default function WelcomeModal({ isOpen, onSkip }) {
                     const catName = expenseDraft.category;
                     const cls = classification[catName] || 'flex';
                     return (
-                      <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <label style={{ ...s.label, marginBottom: 0 }}>Type</label>
                         <div style={{ display: 'flex', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
                           <button type="button" style={{
@@ -697,8 +722,8 @@ const s = {
     textAlign: 'center',
   },
   formGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
+    display: 'flex',
+    flexDirection: 'column',
     gap: '12px',
     marginTop: '8px',
   },

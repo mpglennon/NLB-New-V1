@@ -17,7 +17,8 @@ import useStore from '../store/useStore';
 
 const DAY_NAMES_MON = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const DAY_NAMES_SUN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const FREQUENCIES = ['one-time', 'weekly', 'bi-weekly', 'monthly', 'quarterly', 'annually'];
+const FREQUENCIES = ['one-time', 'weekly', 'bi-weekly', 'semi-monthly', 'monthly', 'quarterly', 'annually', 'custom-days'];
+const FREQ_LABELS = { 'one-time': 'One-time', 'weekly': 'Weekly', 'bi-weekly': 'Bi-weekly', 'semi-monthly': '1st & 15th', 'monthly': 'Monthly', 'quarterly': 'Quarterly', 'annually': 'Annually', 'custom-days': 'Every X days' };
 
 const s = {
   header: {
@@ -339,6 +340,8 @@ export default function CashCalendar({
   const DAY_NAMES = weekStartsOn === 0 ? DAY_NAMES_SUN : DAY_NAMES_MON;
   const getCategories = useStore((s) => s.getCategories);
   const addCustomCategory = useStore((s) => s.addCustomCategory);
+  const updateCategoryClassification = useStore((s) => s.updateCategoryClassification);
+  const classification = settings.categoryClassification || {};
   const today = startOfToday();
   const [viewDate, setViewDate] = useState(today);
   const [dragOverDate, setDragOverDate] = useState(null);
@@ -350,6 +353,7 @@ export default function CashCalendar({
   // Inline edit state
   const [editTxn, setEditTxn] = useState(null); // { txn, x, y }
   const [editForm, setEditForm] = useState({});
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   // Hover tooltip state
   const [hoveredBadge, setHoveredBadge] = useState(null); // { txn, x, y }
@@ -510,25 +514,22 @@ export default function CashCalendar({
   }, [updateTransaction]);
 
   // ── Inline edit handlers ──────────────────────────────────────────
-  const openEdit = useCallback((e, txn) => {
+  const openEdit = useCallback((e, txn, occDateKey) => {
     e.stopPropagation();
     if (isDragging) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    // Position edit card near the badge — prefer right, flip left if needed
     const cardW = 300;
     const cardH = 420;
     let x = rect.right + 8;
     let y = rect.top - 20;
-    // Flip horizontally if overflows right
     if (x + cardW > window.innerWidth) x = rect.left - cardW - 8;
     if (x < 8) x = 8;
-    // Flip upward if overflows bottom
     if (y + cardH > window.innerHeight) y = rect.bottom - cardH;
     if (y < 10) y = 10;
 
     const cats = getCategories(txn.type);
     const isCustom = !cats.includes(txn.category);
-    setEditTxn({ txn, x, y });
+    setEditTxn({ txn, x, y, occDateKey });
     const subs = hierarchy[txn.category] || [];
     const isCustomSub = txn.subcategory && !subs.includes(txn.subcategory);
     setEditForm({
@@ -540,7 +541,9 @@ export default function CashCalendar({
       frequency: txn.frequency,
       startDate: txn.startDate,
       description: txn.description || '',
+      customDayInterval: txn.customDayInterval ? String(txn.customDayInterval) : '',
     });
+    setDeleteConfirmId(null);
   }, [isDragging, getCategories]);
 
   const handleEditSave = useCallback(() => {
@@ -560,6 +563,8 @@ export default function CashCalendar({
       ? (editForm.customSubcategory || '').trim() || null
       : editForm.subcategory || null;
 
+    const customDayInterval = editForm.frequency === 'custom-days' && editForm.customDayInterval
+      ? parseInt(editForm.customDayInterval, 10) : null;
     updateTransaction(editTxn.txn.id, {
       category,
       subcategory,
@@ -568,6 +573,7 @@ export default function CashCalendar({
       startDate: editForm.startDate,
       description: editForm.description,
       endDate: editForm.frequency === 'one-time' ? editForm.startDate : null,
+      customDayInterval,
     });
     setEditTxn(null);
   }, [editTxn, editForm, updateTransaction, addCustomCategory]);
@@ -575,8 +581,18 @@ export default function CashCalendar({
   const handleEditDelete = useCallback(() => {
     if (!editTxn) return;
     deleteTransaction(editTxn.txn.id);
+    setDeleteConfirmId(null);
     setEditTxn(null);
   }, [editTxn, deleteTransaction]);
+
+  const handleDeleteJustOne = useCallback(() => {
+    if (!editTxn) return;
+    const existing = editTxn.txn.excludeDates || [];
+    const dateToExclude = editTxn.occDateKey || editTxn.txn.startDate;
+    updateTransaction(editTxn.txn.id, { excludeDates: [...existing, dateToExclude] });
+    setDeleteConfirmId(null);
+    setEditTxn(null);
+  }, [editTxn, updateTransaction]);
 
   // ── Modal actions ─────────────────────────────────────────────────
   const handleMoveAll = useCallback(() => {
@@ -727,7 +743,7 @@ export default function CashCalendar({
                     draggable="true"
                     onDragStart={(e) => handleDragStart(e, txn, dateKey)}
                     onDragEnd={handleDragEnd}
-                    onClick={(e) => openEdit(e, txn)}
+                    onClick={(e) => openEdit(e, txn, dateKey)}
                     style={s.badge}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.background = 'var(--bg-hover)';
@@ -827,7 +843,7 @@ export default function CashCalendar({
                     padding: '6px 8px', borderRadius: '6px', cursor: 'pointer',
                     transition: 'background 120ms ease', marginBottom: '2px',
                   }}
-                  onClick={(e) => { setExpandedDateKey(null); openEdit(e, txn); }}
+                  onClick={(e) => { setExpandedDateKey(null); openEdit(e, txn, expandedDateKey); }}
                   onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 >
@@ -961,9 +977,19 @@ export default function CashCalendar({
                 onChange={(e) => setEditForm({ ...editForm, frequency: e.target.value })}
               >
                 {FREQUENCIES.map((f) => (
-                  <option key={f} value={f}>{f.charAt(0).toUpperCase() + f.slice(1)}</option>
+                  <option key={f} value={f}>{FREQ_LABELS[f]}</option>
                 ))}
               </select>
+              {editForm.frequency === 'custom-days' && (
+                <input
+                  type="number"
+                  min="1"
+                  style={{ ...s.editInput, marginTop: '4px' }}
+                  placeholder="Every how many days?"
+                  value={editForm.customDayInterval || ''}
+                  onChange={(e) => setEditForm({ ...editForm, customDayInterval: e.target.value })}
+                />
+              )}
             </div>
             <div style={s.editField}>
               <label style={s.editLabel}>Start Date</label>
@@ -985,10 +1011,44 @@ export default function CashCalendar({
                 placeholder="Optional..."
               />
             </div>
+            {editTxn.txn.type === 'expense' && editForm.category && editForm.category !== '__custom__' && (() => {
+              const catName = editForm.category;
+              const cls = classification[catName] || 'flex';
+              return (
+                <div style={{ ...s.editField, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <label style={{ ...s.editLabel, marginBottom: 0 }}>Type</label>
+                  <div style={{ display: 'flex', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
+                    <button type="button" style={{
+                      padding: '3px 10px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: '700',
+                      background: cls === 'non-negotiable' ? 'var(--accent-rose)' : 'transparent',
+                      color: cls === 'non-negotiable' ? '#FFF' : 'var(--text-tertiary)',
+                    }} onClick={() => updateCategoryClassification({ ...classification, [catName]: 'non-negotiable' })}>Fixed</button>
+                    <button type="button" style={{
+                      padding: '3px 10px', border: 'none', cursor: 'pointer', fontSize: '11px', fontWeight: '700',
+                      background: cls === 'flex' ? 'var(--caution-amber)' : 'transparent',
+                      color: cls === 'flex' ? '#FFF' : 'var(--text-tertiary)',
+                    }} onClick={() => updateCategoryClassification({ ...classification, [catName]: 'flex' })}>Flex</button>
+                  </div>
+                </div>
+              );
+            })()}
             <div style={s.editActions}>
               <button style={s.editSave} onClick={handleEditSave}>Save</button>
-              <button style={s.editCancel} onClick={() => setEditTxn(null)}>Cancel</button>
-              <button style={s.editDelete} onClick={handleEditDelete}>Delete</button>
+              <button style={s.editCancel} onClick={() => { setEditTxn(null); setDeleteConfirmId(null); }}>Cancel</button>
+              {(() => {
+                const isRecurring = editTxn && editTxn.txn.frequency !== 'one-time';
+                if (deleteConfirmId === editTxn?.txn?.id && isRecurring) {
+                  return (
+                    <>
+                      <button style={{ ...s.editDelete, fontSize: '11px', color: 'var(--caution-amber)', borderColor: 'var(--caution-amber)' }} onClick={handleDeleteJustOne}>Just This One</button>
+                      <button style={{ ...s.editDelete, fontSize: '11px' }} onClick={handleEditDelete}>Delete All</button>
+                    </>
+                  );
+                }
+                return (
+                  <button style={s.editDelete} onClick={() => isRecurring ? setDeleteConfirmId(editTxn.txn.id) : handleEditDelete()}>Delete</button>
+                );
+              })()}
             </div>
           </div>
         </>

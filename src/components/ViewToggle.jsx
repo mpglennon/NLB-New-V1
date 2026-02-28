@@ -23,6 +23,8 @@ export default function ViewToggle({ viewMonth, timeframe, setViewMonth, setTime
 
   const isMonthMode = !!viewMonth;
   const forecastOptions = [
+    { value: 7, label: 'Next 7 days' },
+    { value: 14, label: 'Next 14 days' },
     { value: 30, label: 'Next 30 days' },
     { value: 60, label: 'Next 60 days' },
     { value: 90, label: 'Next 90 days' },
@@ -93,7 +95,7 @@ export default function ViewToggle({ viewMonth, timeframe, setViewMonth, setTime
     setOpenPanel(null);
   };
 
-  const forecastSteps = [30, 60, 90, 365];
+  const forecastSteps = [7, 14, 30, 60, 90, 365];
   const goForecast = (dir) => {
     const idx = forecastSteps.indexOf(timeframe);
     const nextIdx = Math.max(0, Math.min(forecastSteps.length - 1, idx + dir));

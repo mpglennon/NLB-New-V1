@@ -101,7 +101,7 @@ const s = {
     marginTop: '2px',
   },
   input: {
-    width: '100px',
+    width: '140px',
     height: '32px',
     background: 'var(--bg-input)',
     border: '1px solid var(--border-subtle)',

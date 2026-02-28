@@ -4,7 +4,8 @@ import useStore from '../store/useStore';
 import { getOccurrences, getOccurrencesInRange, buildViewRange } from '../utils/runway';
 import ViewToggle from './ViewToggle';
 
-const FREQUENCIES = ['one-time', 'weekly', 'bi-weekly', 'monthly', 'quarterly', 'annually'];
+const FREQUENCIES = ['one-time', 'weekly', 'bi-weekly', 'semi-monthly', 'monthly', 'quarterly', 'annually', 'custom-days'];
+const FREQ_LABELS = { 'one-time': 'One-time', 'weekly': 'Weekly', 'bi-weekly': 'Bi-weekly', 'semi-monthly': '1st & 15th', 'monthly': 'Monthly', 'quarterly': 'Quarterly', 'annually': 'Annually', 'custom-days': 'Every X days' };
 
 const s = {
   wrapper: {
@@ -105,16 +106,15 @@ const s = {
     marginBottom: '8px',
   },
   formGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
+    display: 'flex',
+    flexDirection: 'column',
     gap: '8px',
   },
   formField: {
-    marginBottom: '4px',
+    marginBottom: '0',
   },
   formFieldFull: {
-    marginBottom: '4px',
-    gridColumn: '1 / -1',
+    marginBottom: '0',
   },
   formLabel: {
     fontSize: '11px',
@@ -152,7 +152,6 @@ const s = {
     display: 'flex',
     gap: '6px',
     marginTop: '8px',
-    gridColumn: '1 / -1',
     alignItems: 'center',
   },
   formSave: {
@@ -235,6 +234,7 @@ const defaultForm = {
   frequency: 'monthly',
   startDate: '',
   description: '',
+  customDayInterval: '',
 };
 
 const FILTERS = ['All', 'Recurring', 'One Time'];
@@ -284,6 +284,7 @@ export default function TransactionsTab({
 
   const [sortBy, setSortBy] = useState('date'); // 'date' | 'amount'
   const [sortDir, setSortDir] = useState('asc'); // 'asc' | 'desc'
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   const toggleSort = (field) => {
     if (sortBy === field) {
@@ -370,6 +371,7 @@ export default function TransactionsTab({
       frequency: txn.frequency,
       startDate: txn.startDate,
       description: txn.description || '',
+      customDayInterval: txn.customDayInterval ? String(txn.customDayInterval) : '',
     });
   };
 
@@ -395,6 +397,9 @@ export default function TransactionsTab({
       ? (form.customSubcategory || '').trim() || null
       : form.subcategory || null;
 
+    const customDayInterval = form.frequency === 'custom-days' && form.customDayInterval
+      ? parseInt(form.customDayInterval, 10) : null;
+
     if (editingId) {
       updateTransaction(editingId, {
         category,
@@ -404,6 +409,7 @@ export default function TransactionsTab({
         startDate: form.startDate,
         description: form.description,
         endDate: form.frequency === 'one-time' ? form.startDate : null,
+        customDayInterval,
       });
     } else {
       addTransaction({
@@ -416,6 +422,7 @@ export default function TransactionsTab({
         endDate: form.frequency === 'one-time' ? form.startDate : null,
         description: form.description,
         isActive: true,
+        customDayInterval,
       });
     }
     cancel();
@@ -423,6 +430,14 @@ export default function TransactionsTab({
 
   const handleDelete = (id) => {
     deleteTransaction(id);
+    setDeleteConfirmId(null);
+    cancel();
+  };
+
+  const handleDeleteJustOne = (txn) => {
+    const existing = txn.excludeDates || [];
+    updateTransaction(txn.id, { excludeDates: [...existing, txn.startDate] });
+    setDeleteConfirmId(null);
     cancel();
   };
 
@@ -526,11 +541,19 @@ export default function TransactionsTab({
               onChange={(e) => setForm({ ...form, frequency: e.target.value })}
             >
               {FREQUENCIES.map((f) => (
-                <option key={f} value={f}>
-                  {f.charAt(0).toUpperCase() + f.slice(1)}
-                </option>
+                <option key={f} value={f}>{FREQ_LABELS[f]}</option>
               ))}
             </select>
+            {form.frequency === 'custom-days' && (
+              <input
+                type="number"
+                min="1"
+                style={{ ...s.formInput, marginTop: '4px' }}
+                placeholder="Every how many days?"
+                value={form.customDayInterval || ''}
+                onChange={(e) => setForm({ ...form, customDayInterval: e.target.value })}
+              />
+            )}
           </div>
           <div style={s.formField}>
             <label style={s.formLabel}>Start Date</label>
@@ -556,7 +579,7 @@ export default function TransactionsTab({
             const catName = form.category;
             const cls = classification[catName] || 'flex';
             return (
-              <div style={{ ...s.formFieldFull, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ ...s.formField, display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <label style={{ ...s.formLabel, marginBottom: 0 }}>Type</label>
                 <div style={{ display: 'flex', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
                   <button type="button" style={{
@@ -580,14 +603,32 @@ export default function TransactionsTab({
           <div style={s.formActions}>
             <button style={s.formSave} onClick={() => handleSave(type)}>Save</button>
             <button style={s.formCancel} onClick={cancel}>Cancel</button>
-            {editingId && (
-              <button
-                style={s.formDelete}
-                onClick={() => handleDelete(editingId)}
-                onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; }}
-              >Delete</button>
-            )}
+            {editingId && (() => {
+              const txn = transactions.find((t) => t.id === editingId);
+              const isRecurring = txn && txn.frequency !== 'one-time';
+              if (deleteConfirmId === editingId && isRecurring) {
+                return (
+                  <div style={{ display: 'flex', gap: '4px', marginLeft: 'auto' }}>
+                    <button
+                      style={{ ...s.formDelete, fontSize: '11px', color: 'var(--caution-amber)' }}
+                      onClick={() => handleDeleteJustOne(txn)}
+                    >Just This One</button>
+                    <button
+                      style={{ ...s.formDelete, fontSize: '11px' }}
+                      onClick={() => handleDelete(editingId)}
+                    >Delete All</button>
+                  </div>
+                );
+              }
+              return (
+                <button
+                  style={s.formDelete}
+                  onClick={() => isRecurring ? setDeleteConfirmId(editingId) : handleDelete(editingId)}
+                  onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; }}
+                >Delete</button>
+              );
+            })()}
           </div>
         </div>
       </div>
