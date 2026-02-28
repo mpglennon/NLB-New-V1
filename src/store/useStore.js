@@ -301,6 +301,11 @@ const useStore = create(
       },
 
       updateTransaction: async (id, updates) => {
+        // DEBUG: trace date changes for backward-date bug
+        if (updates.startDate !== undefined) {
+          const old = get().transactions.find(t => t.id === id);
+          console.warn(`[updateTransaction] id=${id} category="${old?.category}" OLD startDate=${old?.startDate} → NEW startDate=${updates.startDate}`);
+        }
         const now = new Date().toISOString();
         set((state) => ({
           transactions: state.transactions.map((t) =>

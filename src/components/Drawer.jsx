@@ -134,7 +134,7 @@ const s = {
   // Inline edit form
   editForm: {
     background: 'var(--bg-card)',
-    border: '2px solid var(--accent-orange)',
+    border: '2px solid var(--accent-gold)',
     borderRadius: '6px',
     padding: '14px 16px',
     marginBottom: '6px',
@@ -182,7 +182,7 @@ const s = {
   editSave: {
     flex: 1,
     height: '34px',
-    background: 'var(--accent-orange)',
+    background: 'var(--accent-gold)',
     color: 'var(--text-primary)',
     border: 'none',
     borderRadius: '4px',

@@ -23,11 +23,12 @@ function sumOverTimeframe(txn, timeframe, viewMonth) {
   } else {
     occurrences = getOccurrences(txn, timeframe);
   }
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const filterStart = viewMonth ? buildViewRange(timeframe, viewMonth).start : today;
-  const count = occurrences.filter((d) => d >= filterStart).length;
-  return txn.amount * count;
+  if (viewMonth) {
+    const range = buildViewRange(timeframe, viewMonth);
+    const count = occurrences.filter((d) => d >= range.start).length;
+    return txn.amount * count;
+  }
+  return txn.amount * occurrences.length;
 }
 
 function groupByCategory(transactions, timeframe, viewMonth) {

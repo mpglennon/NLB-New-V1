@@ -255,7 +255,7 @@ const s = {
   submit: {
     width: '100%',
     height: '44px',
-    backgroundColor: 'var(--accent-orange)',
+    backgroundColor: 'var(--accent-gold)',
     color: '#FFFFFF',
     border: 'none',
     borderRadius: '8px',

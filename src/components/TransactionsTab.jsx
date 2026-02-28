@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, addDays } from 'date-fns';
 import useStore from '../store/useStore';
-import { getOccurrences, getOccurrencesInRange, buildViewRange } from '../utils/runway';
-import ViewToggle from './ViewToggle';
+import { getOccurrencesInRange } from '../utils/runway';
 
 const FREQUENCIES = ['one-time', 'weekly', 'bi-weekly', 'semi-monthly', 'monthly', 'quarterly', 'annually', 'custom-days'];
 const FREQ_LABELS = { 'one-time': 'One-time', 'weekly': 'Weekly', 'bi-weekly': 'Bi-weekly', 'semi-monthly': '1st & 15th', 'monthly': 'Monthly', 'quarterly': 'Quarterly', 'annually': 'Annually', 'custom-days': 'Every X days' };
@@ -97,7 +96,7 @@ const s = {
     padding: '2px 8px',
     borderRadius: '4px',
   },
-  // Modal overlay + card (matches SpendingTab pattern)
+  // Modal overlay + card
   editOverlay: {
     position: 'fixed',
     inset: 0,
@@ -109,7 +108,7 @@ const s = {
   },
   form: {
     background: 'var(--bg-panel)',
-    border: '2px solid var(--accent-orange)',
+    border: '2px solid var(--accent-gold)',
     borderRadius: '12px',
     padding: '20px',
     width: '340px',
@@ -168,7 +167,7 @@ const s = {
   formSave: {
     height: '32px',
     padding: '0 20px',
-    background: 'var(--accent-orange)',
+    background: 'var(--accent-gold)',
     color: 'var(--text-primary)',
     border: 'none',
     borderRadius: '4px',
@@ -211,29 +210,6 @@ const s = {
     padding: '32px 0',
     textAlign: 'center',
   },
-  filterBar: {
-    display: 'flex',
-    gap: '4px',
-    marginBottom: '24px',
-  },
-  filterBtn: {
-    background: 'transparent',
-    borderTop: 'none',
-    borderLeft: 'none',
-    borderRight: 'none',
-    borderBottom: '3px solid transparent',
-    color: 'var(--text-tertiary)',
-    padding: '10px 20px',
-    fontSize: '15px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    marginBottom: '-1px',
-    transition: 'color 150ms ease, border-bottom-color 150ms ease',
-  },
-  filterActive: {
-    color: 'var(--accent-orange)',
-    borderBottom: '3px solid var(--accent-orange)',
-  },
 };
 
 const defaultForm = {
@@ -244,11 +220,10 @@ const defaultForm = {
   amount: '',
   frequency: 'monthly',
   startDate: '',
+  endDate: '',
   description: '',
   customDayInterval: '',
 };
-
-const FILTERS = ['All', 'Recurring', 'One Time'];
 
 export default function TransactionsTab({
   transactions,
@@ -266,7 +241,7 @@ export default function TransactionsTab({
     const ref = scrollToType === 'income' ? incomeRef : expenseRef;
     if (ref.current) {
       ref.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      ref.current.style.outline = '2px solid var(--accent-orange)';
+      ref.current.style.outline = '2px solid var(--accent-gold)';
       ref.current.style.outlineOffset = '4px';
       ref.current.style.borderRadius = '8px';
       setTimeout(() => {
@@ -277,25 +252,32 @@ export default function TransactionsTab({
     }
     if (onScrollHandled) onScrollHandled();
   }, [scrollToType, onScrollHandled]);
+
   const getCategories = useStore((s) => s.getCategories);
   const addCustomCategory = useStore((s) => s.addCustomCategory);
   const updateCategoryClassification = useStore((s) => s.updateCategoryClassification);
-  const viewMonth = useStore((s) => s.viewMonth);
-  const setViewMonth = useStore((s) => s.setViewMonth);
-  const timeframe = useStore((s) => s.timeframe);
-  const setTimeframe = useStore((s) => s.setTimeframe);
   const settings = useStore((s) => s.settings);
   const hierarchy = settings.categoryHierarchy || {};
   const classification = settings.categoryClassification || {};
-  const [editingId, setEditingId] = useState(null);
-  const [addingType, setAddingType] = useState(null); // 'income' | 'expense' | null
-  const [form, setForm] = useState(defaultForm);
-  const [filter, setFilter] = useState('All');
-  const [mobileColumn, setMobileColumn] = useState('expenses'); // 'income' | 'expenses'
 
-  const [sortBy, setSortBy] = useState('date'); // 'date' | 'amount'
-  const [sortDir, setSortDir] = useState('asc'); // 'asc' | 'desc'
+  const [editingId, setEditingId] = useState(null);
+  const [addingType, setAddingType] = useState(null);
+  const [form, setForm] = useState(defaultForm);
+  const [mobileColumn, setMobileColumn] = useState('expenses');
+  const [sortBy, setSortBy] = useState('date');
+  const [sortDir, setSortDir] = useState('asc');
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+
+  // Filter panel state
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterType, setFilterType] = useState(''); // '' | 'recurring' | 'one-time'
+  const [filterCategory, setFilterCategory] = useState('');
+  const [filterDateStart, setFilterDateStart] = useState('');
+  const [filterDateEnd, setFilterDateEnd] = useState('');
+  const [filterAmountMin, setFilterAmountMin] = useState('');
+  const [filterAmountMax, setFilterAmountMax] = useState('');
+
+  const hasDateFilter = filterDateStart || filterDateEnd;
 
   const toggleSort = (field) => {
     if (sortBy === field) {
@@ -306,62 +288,92 @@ export default function TransactionsTab({
     }
   };
 
-  const { income, expenses, incomeTotal, expenseTotal, viewRange } = useMemo(() => {
-    const vr = buildViewRange(timeframe, viewMonth);
+  const clearFilters = () => {
+    setFilterType('');
+    setFilterCategory('');
+    setFilterDateStart('');
+    setFilterDateEnd('');
+    setFilterAmountMin('');
+    setFilterAmountMax('');
+  };
 
-    // Attach occurrence count within the active view range
-    const withOccurrences = transactions.map((t) => {
-      const occs = getOccurrencesInRange(t, vr.start, vr.end);
-      return { ...t, occurrenceCount: occs.length };
-    });
+  // All unique categories from transactions (for category filter dropdown)
+  const allCategories = useMemo(() => {
+    const cats = new Set();
+    for (const t of transactions) cats.add(t.category);
+    return [...cats].sort();
+  }, [transactions]);
 
-    // Keep transactions that have occurrences in the window OR are paused (always visible)
-    const visible = withOccurrences.filter((t) => t.occurrenceCount > 0 || !t.isActive);
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filterType) count++;
+    if (filterCategory) count++;
+    if (filterDateStart) count++;
+    if (filterDateEnd) count++;
+    if (filterAmountMin) count++;
+    if (filterAmountMax) count++;
+    return count;
+  }, [filterType, filterCategory, filterDateStart, filterDateEnd, filterAmountMin, filterAmountMax]);
 
-    const filtered = visible.filter((t) => {
-      if (filter === 'All') return true;
-      if (filter === 'Recurring') return t.frequency !== 'one-time';
-      return t.frequency === 'one-time';
-    });
+  const { income, expenses, incomeTotal, expenseTotal } = useMemo(() => {
+    // Start with all transactions — no time-range filtering by default
+    let list = [...transactions];
 
+    // Apply type filter
+    if (filterType === 'recurring') {
+      list = list.filter((t) => t.frequency !== 'one-time');
+    } else if (filterType === 'one-time') {
+      list = list.filter((t) => t.frequency === 'one-time');
+    }
+
+    // Apply category filter
+    if (filterCategory) {
+      list = list.filter((t) => t.category === filterCategory);
+    }
+
+    // Apply amount filter
+    const minAmt = parseFloat(filterAmountMin);
+    const maxAmt = parseFloat(filterAmountMax);
+    if (!isNaN(minAmt)) list = list.filter((t) => t.amount >= minAmt);
+    if (!isNaN(maxAmt)) list = list.filter((t) => t.amount <= maxAmt);
+
+    // When date filter is active, hide items with no occurrences in range
+    if (hasDateFilter) {
+      const rangeStart = filterDateStart ? new Date(filterDateStart + 'T00:00:00') : new Date();
+      const rangeEnd = filterDateEnd ? new Date(filterDateEnd + 'T23:59:59') : addDays(rangeStart, 365);
+      list = list.filter((t) => {
+        if (!t.isActive) return true;
+        const occs = getOccurrencesInRange(t, rangeStart, rangeEnd);
+        return occs.length > 0;
+      });
+    }
+
+    // Sort
     const dir = sortDir === 'asc' ? 1 : -1;
     const sortFn = sortBy === 'amount'
       ? (a, b) => (a.amount - b.amount) * dir
       : (a, b) => ((a.startDate || '').localeCompare(b.startDate || '')) * dir;
 
-    const inc = filtered.filter((t) => t.type === 'income').sort(sortFn);
-    const exp = filtered.filter((t) => t.type === 'expense').sort(sortFn);
+    const inc = list.filter((t) => t.type === 'income').sort(sortFn);
+    const exp = list.filter((t) => t.type === 'expense').sort(sortFn);
 
     return {
       income: inc,
       expenses: exp,
-      incomeTotal: inc.reduce((sum, t) => sum + (t.isActive ? t.amount * t.occurrenceCount : 0), 0),
-      expenseTotal: exp.reduce((sum, t) => sum + (t.isActive ? t.amount * t.occurrenceCount : 0), 0),
-      viewRange: vr,
+      incomeTotal: inc.reduce((sum, t) => sum + (t.isActive ? t.amount : 0), 0),
+      expenseTotal: exp.reduce((sum, t) => sum + (t.isActive ? t.amount : 0), 0),
     };
-  }, [transactions, filter, sortBy, sortDir, timeframe, viewMonth]);
+  }, [transactions, filterType, filterCategory, filterDateStart, filterDateEnd, filterAmountMin, filterAmountMax, sortBy, sortDir, hasDateFilter]);
 
-  // View-range outlook — computed from ALL active transactions regardless of filter
-  const { outlookIncome, outlookExpenses } = useMemo(() => {
-    const vr = buildViewRange(timeframe, viewMonth);
-    let inc = 0;
-    let exp = 0;
-    for (const t of transactions) {
-      if (!t.isActive) continue;
-      const occs = getOccurrencesInRange(t, vr.start, vr.end);
-      if (t.type === 'income') inc += t.amount * occs.length;
-      else exp += t.amount * occs.length;
-    }
-    return { outlookIncome: Math.round(inc), outlookExpenses: Math.round(exp) };
-  }, [transactions, timeframe, viewMonth]);
-  const outlookNet = outlookIncome - outlookExpenses;
+  // Outlook strip — only when date filter is active
+  const outlookNet = hasDateFilter ? Math.round(incomeTotal - expenseTotal) : 0;
 
   const startAdd = (type) => {
     setEditingId(null);
     setAddingType(type);
     setForm({
       ...defaultForm,
-      frequency: filter === 'One Time' ? 'one-time' : 'monthly',
+      frequency: filterType === 'one-time' ? 'one-time' : 'monthly',
       startDate: new Date().toISOString().split('T')[0],
     });
   };
@@ -381,6 +393,7 @@ export default function TransactionsTab({
       amount: String(txn.amount),
       frequency: txn.frequency,
       startDate: txn.startDate,
+      endDate: txn.endDate || '',
       description: txn.description || '',
       customDayInterval: txn.customDayInterval ? String(txn.customDayInterval) : '',
     });
@@ -399,7 +412,6 @@ export default function TransactionsTab({
       : form.category;
     if (!category || isNaN(amount) || amount <= 0 || !form.startDate) return;
 
-    // Add custom category to the store if it's new
     if (form.category === '__custom__' && category) {
       addCustomCategory(type, category);
     }
@@ -412,6 +424,9 @@ export default function TransactionsTab({
       ? parseInt(form.customDayInterval, 10) : null;
 
     if (editingId) {
+      const existing = transactions.find((t) => t.id === editingId);
+      const dateChanged = existing && existing.startDate !== form.startDate;
+      const freqChanged = existing && existing.frequency !== form.frequency;
       updateTransaction(editingId, {
         category,
         subcategory,
@@ -419,8 +434,11 @@ export default function TransactionsTab({
         frequency: form.frequency,
         startDate: form.startDate,
         description: form.description,
-        endDate: form.frequency === 'one-time' ? form.startDate : null,
+        endDate: form.frequency === 'one-time' ? form.startDate : (form.endDate || null),
         customDayInterval,
+        // Clear excludeDates when startDate or frequency changes — old exclusions
+        // were tied to the old schedule and would block the new occurrences
+        ...(dateChanged || freqChanged ? { excludeDates: [] } : {}),
       });
     } else {
       addTransaction({
@@ -430,7 +448,7 @@ export default function TransactionsTab({
         amount,
         frequency: form.frequency,
         startDate: form.startDate,
-        endDate: form.frequency === 'one-time' ? form.startDate : null,
+        endDate: form.frequency === 'one-time' ? form.startDate : (form.endDate || null),
         description: form.description,
         isActive: true,
         customDayInterval,
@@ -445,28 +463,45 @@ export default function TransactionsTab({
     cancel();
   };
 
+  // Change 4: Fix — exclude the correct occurrence date, not the series base date
   const handleDeleteJustOne = (txn) => {
     const existing = txn.excludeDates || [];
-    updateTransaction(txn.id, { excludeDates: [...existing, txn.startDate] });
+    let dateToExclude = txn.startDate; // fallback
+
+    if (hasDateFilter) {
+      // Find occurrences within the active date filter range
+      const rangeStart = filterDateStart ? new Date(filterDateStart + 'T00:00:00') : new Date();
+      const rangeEnd = filterDateEnd ? new Date(filterDateEnd + 'T23:59:59') : addDays(rangeStart, 365);
+      const occs = getOccurrencesInRange(txn, rangeStart, rangeEnd);
+      if (occs.length > 0) {
+        dateToExclude = format(occs[0], 'yyyy-MM-dd');
+      }
+    } else {
+      // No date filter — find the next upcoming occurrence (365-day lookahead)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const futureEnd = addDays(today, 365);
+      const occs = getOccurrencesInRange(txn, today, futureEnd);
+      if (occs.length > 0) {
+        dateToExclude = format(occs[0], 'yyyy-MM-dd');
+      }
+    }
+
+    updateTransaction(txn.id, { excludeDates: [...existing, dateToExclude] });
     setDeleteConfirmId(null);
     cancel();
   };
 
-  const toggleActive = (txn) => {
-    updateTransaction(txn.id, { isActive: !txn.isActive });
-  };
-
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
 
-  // "Back to top" visibility — show once user scrolls past ~1 screen height
+  // "Back to top" visibility
   const [showBackToTop, setShowBackToTop] = useState(false);
   useEffect(() => {
     const onScroll = () => {
-      // Show once user has scrolled enough that the top controls are off-screen
       setShowBackToTop(window.scrollY > 120);
     };
     window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll(); // check initial position
+    onScroll();
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
@@ -583,6 +618,29 @@ export default function TransactionsTab({
               onFocus={(e) => { try { e.target.showPicker(); } catch {} }}
             />
           </div>
+          {form.frequency !== 'one-time' && (
+            <div style={s.formField}>
+              <label style={s.formLabel}>End Date <span style={{ fontWeight: '400', color: 'var(--text-tertiary)', textTransform: 'none' }}>(optional)</span></label>
+              <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                <input
+                  type="date"
+                  style={{ ...s.formInput, cursor: 'pointer', flex: 1 }}
+                  value={form.endDate}
+                  min={form.startDate || undefined}
+                  onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+                  onFocus={(e) => { try { e.target.showPicker(); } catch {} }}
+                />
+                {form.endDate && (
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, endDate: '' })}
+                    style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: '16px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}
+                    title="Clear end date"
+                  >&times;</button>
+                )}
+              </div>
+            </div>
+          )}
           <div style={s.formFieldFull}>
             <label style={s.formLabel}>Note (optional)</label>
             <input
@@ -679,16 +737,17 @@ export default function TransactionsTab({
           <span>{txn.frequency.charAt(0).toUpperCase() + txn.frequency.slice(1)}</span>
           <span>&middot;</span>
           <span>{txn.startDate ? format(parseISO(txn.startDate), 'MMM d, yyyy') : '—'}</span>
+          {txn.frequency !== 'one-time' && txn.endDate && txn.endDate !== txn.startDate && (
+            <>
+              <span style={{ color: 'var(--text-tertiary)' }}>&rarr;</span>
+              <span style={{ color: 'var(--text-tertiary)' }}>{format(parseISO(txn.endDate), 'MMM d, yyyy')}</span>
+            </>
+          )}
           {txn.description && (
             <>
               <span>&middot;</span>
               <span>{txn.description}</span>
             </>
-          )}
-          {txn.occurrenceCount > 1 && txn.isActive && (
-            <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--badge-gold)', background: 'var(--badge-gold-bg)', padding: '2px 8px', borderRadius: '4px', letterSpacing: '0.03em' }}>
-              {txn.occurrenceCount}x
-            </span>
           )}
           {!txn.isActive && <span style={s.pausedBadge}>PAUSED</span>}
         </div>
@@ -699,141 +758,254 @@ export default function TransactionsTab({
   const showIncome = !isMobile || mobileColumn === 'income';
   const showExpenses = !isMobile || mobileColumn === 'expenses';
 
+  // Filter panel JSX (shared between desktop & mobile)
+  const filterPanel = filterOpen && (
+    <div style={{
+      background: 'var(--bg-card)',
+      border: '1px solid var(--border-subtle)',
+      borderRadius: '8px',
+      padding: '16px',
+      marginBottom: '16px',
+    }}>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr',
+        gap: '12px',
+      }}>
+        {/* Type */}
+        <div>
+          <label style={s.formLabel}>Type</label>
+          <select
+            style={{ ...s.formSelect, height: '32px' }}
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+          >
+            <option value="">All</option>
+            <option value="recurring">Recurring</option>
+            <option value="one-time">One Time</option>
+          </select>
+        </div>
+
+        {/* Category */}
+        <div>
+          <label style={s.formLabel}>Category</label>
+          <select
+            style={{ ...s.formSelect, height: '32px' }}
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+          >
+            <option value="">All</option>
+            {allCategories.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Date From */}
+        <div>
+          <label style={s.formLabel}>Date From</label>
+          <input
+            type="date"
+            style={{ ...s.formInput, height: '32px', cursor: 'pointer' }}
+            value={filterDateStart}
+            onChange={(e) => setFilterDateStart(e.target.value)}
+            onClick={(e) => { try { e.target.showPicker(); } catch {} }}
+          />
+        </div>
+
+        {/* Date To */}
+        <div>
+          <label style={s.formLabel}>Date To</label>
+          <input
+            type="date"
+            style={{ ...s.formInput, height: '32px', cursor: 'pointer' }}
+            value={filterDateEnd}
+            onChange={(e) => setFilterDateEnd(e.target.value)}
+            onClick={(e) => { try { e.target.showPicker(); } catch {} }}
+          />
+        </div>
+
+        {/* Amount Min */}
+        <div>
+          <label style={s.formLabel}>Amount Min</label>
+          <input
+            type="number"
+            step="0.01"
+            style={{ ...s.formInput, height: '32px' }}
+            value={filterAmountMin}
+            onChange={(e) => setFilterAmountMin(e.target.value)}
+            placeholder="$0"
+          />
+        </div>
+
+        {/* Amount Max */}
+        <div>
+          <label style={s.formLabel}>Amount Max</label>
+          <input
+            type="number"
+            step="0.01"
+            style={{ ...s.formInput, height: '32px' }}
+            value={filterAmountMax}
+            onChange={(e) => setFilterAmountMax(e.target.value)}
+            placeholder="No limit"
+          />
+        </div>
+      </div>
+
+      {activeFilterCount > 0 && (
+        <button
+          style={{
+            marginTop: '12px',
+            background: 'transparent',
+            border: 'none',
+            color: 'var(--text-tertiary)',
+            fontSize: '12px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            textDecoration: 'underline',
+            textUnderlineOffset: '3px',
+          }}
+          onClick={clearFilters}
+        >
+          Clear All Filters
+        </button>
+      )}
+    </div>
+  );
+
   return (
     <div style={{ paddingBottom: isMobile ? '80px' : 0 }}>
-      {/* Filter toggles + ViewToggle */}
+      {/* Desktop: Filter button + Sort controls */}
       {!isMobile && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', gap: '0' }}>
-          <div style={{ display: 'flex', flex: 1, gap: '0', borderBottom: '1px solid var(--border-subtle)' }}>
-            {FILTERS.map((f) => (
-              <button
-                key={f}
-                style={{
-                  ...s.filterBtn,
-                  ...(filter === f ? s.filterActive : {}),
-                  padding: '10px 20px',
-                  fontSize: '15px',
-                  textAlign: 'center',
-                }}
-                onClick={() => setFilter(f)}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
-          <div style={{ display: 'flex', gap: '4px', flexShrink: 0, alignItems: 'center' }}>
-            <ViewToggle
-              viewMonth={viewMonth}
-              timeframe={timeframe}
-              setViewMonth={setViewMonth}
-              setTimeframe={setTimeframe}
-              tfLabel={viewRange.label}
-              compact
-            />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <button
+            style={{
+              background: activeFilterCount > 0 ? 'var(--accent-gold)' : 'transparent',
+              color: activeFilterCount > 0 ? '#FFF' : 'var(--text-tertiary)',
+              border: activeFilterCount > 0 ? 'none' : '1px solid var(--border-subtle)',
+              borderRadius: '6px',
+              padding: '6px 16px',
+              fontSize: '13px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'all 150ms ease',
+            }}
+            onClick={() => setFilterOpen(!filterOpen)}
+          >
+            Filter{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''} {filterOpen ? '▴' : '▾'}
+          </button>
+
+          <div style={{ display: 'flex', gap: '4px' }}>
+            <button
+              style={{
+                background: sortBy === 'date' ? 'var(--accent-gold)' : 'transparent',
+                color: sortBy === 'date' ? 'var(--text-primary)' : 'var(--text-tertiary)',
+                border: sortBy === 'date' ? 'none' : '1px solid var(--border-subtle)',
+                borderRadius: '4px',
+                padding: '4px 12px',
+                fontSize: '13px',
+                fontWeight: '600',
+                cursor: 'pointer',
+              }}
+              onClick={() => toggleSort('date')}
+            >
+              Date {sortBy === 'date' ? (sortDir === 'asc' ? '\u2191' : '\u2193') : ''}
+            </button>
+            <button
+              style={{
+                background: sortBy === 'amount' ? 'var(--accent-gold)' : 'transparent',
+                color: sortBy === 'amount' ? 'var(--text-primary)' : 'var(--text-tertiary)',
+                border: sortBy === 'amount' ? 'none' : '1px solid var(--border-subtle)',
+                borderRadius: '4px',
+                padding: '4px 12px',
+                fontSize: '13px',
+                fontWeight: '600',
+                cursor: 'pointer',
+              }}
+              onClick={() => toggleSort('amount')}
+            >
+              Amount {sortBy === 'amount' ? (sortDir === 'asc' ? '\u2191' : '\u2193') : ''}
+            </button>
           </div>
         </div>
       )}
 
-    {/* Mobile: balanced 2x2 control grid — inline Month/Forecast to match Income/Expenses */}
-    {isMobile && (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px', alignItems: 'center' }}>
-        <ViewToggle
-          viewMonth={viewMonth}
-          timeframe={timeframe}
-          setViewMonth={setViewMonth}
-          setTimeframe={setTimeframe}
-          tfLabel={viewRange.label}
-          mobileWidth
-        />
-        <div style={{
-          display: 'flex',
-          borderRadius: '8px',
-          overflow: 'hidden',
-          border: '1px solid var(--border-subtle)',
-          background: 'var(--bg-card)',
-          maxWidth: '280px',
-          width: '100%',
-        }}>
-          {[
-            { key: 'income', label: 'Income', count: income.length, color: 'var(--safe-green)' },
-            { key: 'expenses', label: 'Expenses', count: expenses.length, color: 'var(--accent-rose)' },
-          ].map((col) => (
-            <button
-              key={col.key}
-              style={{
-                flex: 1,
-                padding: '8px 0',
-                height: '36px',
-                border: 'none',
-                fontSize: '13px',
-                fontWeight: '700',
-                cursor: 'pointer',
-                transition: 'all 200ms ease',
-                background: mobileColumn === col.key ? col.color : 'transparent',
-                color: mobileColumn === col.key ? '#FFF' : 'var(--text-tertiary)',
-              }}
-              onClick={() => { setMobileColumn(col.key); cancel(); }}
-            >
-              {col.label} ({col.count})
-            </button>
-          ))}
+      {/* Mobile controls */}
+      {isMobile && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px', alignItems: 'center' }}>
+          <div style={{
+            display: 'flex',
+            borderRadius: '8px',
+            overflow: 'hidden',
+            border: '1px solid var(--border-subtle)',
+            background: 'var(--bg-card)',
+            maxWidth: '280px',
+            width: '100%',
+          }}>
+            {[
+              { key: 'income', label: 'Income', count: income.length, color: 'var(--safe-green)' },
+              { key: 'expenses', label: 'Expenses', count: expenses.length, color: 'var(--accent-rose)' },
+            ].map((col) => (
+              <button
+                key={col.key}
+                style={{
+                  flex: 1,
+                  padding: '8px 0',
+                  height: '36px',
+                  border: 'none',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 200ms ease',
+                  background: mobileColumn === col.key ? col.color : 'transparent',
+                  color: mobileColumn === col.key ? '#FFF' : 'var(--text-tertiary)',
+                }}
+                onClick={() => { setMobileColumn(col.key); cancel(); }}
+              >
+                {col.label} ({col.count})
+              </button>
+            ))}
+          </div>
+          <button
+            style={{
+              background: activeFilterCount > 0 ? 'var(--accent-gold)' : 'transparent',
+              color: activeFilterCount > 0 ? '#FFF' : 'var(--text-tertiary)',
+              border: activeFilterCount > 0 ? 'none' : '1px solid var(--border-subtle)',
+              borderRadius: '6px',
+              padding: '6px 16px',
+              fontSize: '13px',
+              fontWeight: '600',
+              cursor: 'pointer',
+            }}
+            onClick={() => setFilterOpen(!filterOpen)}
+          >
+            Filter{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''} {filterOpen ? '▴' : '▾'}
+          </button>
         </div>
-      </div>
-    )}
+      )}
 
-    {/* View-range outlook strip */}
-    {(outlookIncome > 0 || outlookExpenses > 0) && (
-      <div style={{ ...s.netStrip, ...(isMobile ? { display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' } : {}) }}>
-        <div>
-          <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: '0.08em', textTransform: 'uppercase', marginRight: '12px' }}>
-            {viewRange.label} Outlook
-          </span>
-          <span style={{ fontSize: isMobile ? '18px' : '15px', fontWeight: 700, color: outlookNet >= 0 ? 'var(--safe-green)' : 'var(--critical-red)' }}>
-            Net {outlookNet >= 0 ? '+' : '-'}${Math.abs(outlookNet).toLocaleString()}
-          </span>
+      {/* Collapsible filter panel */}
+      {filterPanel}
+
+      {/* Outlook strip — only when date range filter is active */}
+      {hasDateFilter && (incomeTotal > 0 || expenseTotal > 0) && (
+        <div style={{ ...s.netStrip, ...(isMobile ? { display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' } : {}) }}>
+          <div>
+            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: '0.08em', textTransform: 'uppercase', marginRight: '12px' }}>
+              Date Range Outlook
+            </span>
+            <span style={{ fontSize: isMobile ? '18px' : '15px', fontWeight: 700, color: outlookNet >= 0 ? 'var(--safe-green)' : 'var(--critical-red)' }}>
+              Net {outlookNet >= 0 ? '+' : '-'}${Math.abs(outlookNet).toLocaleString()}
+            </span>
+          </div>
+          <div style={{ fontSize: isMobile ? '14px' : '12px', color: 'var(--text-tertiary)', ...(isMobile ? {} : { marginLeft: '12px', display: 'inline' }) }}>
+            <span style={{ color: 'var(--safe-green)', fontWeight: 600 }}>${Math.round(incomeTotal).toLocaleString()} in</span>
+            <span style={{ margin: '0 6px' }}>·</span>
+            <span style={{ color: 'var(--accent-rose)', fontWeight: 600 }}>${Math.round(expenseTotal).toLocaleString()} out</span>
+          </div>
         </div>
-        <div style={{ fontSize: isMobile ? '14px' : '12px', color: 'var(--text-tertiary)', ...(isMobile ? {} : { marginLeft: '12px', display: 'inline' }) }}>
-          <span style={{ color: 'var(--safe-green)', fontWeight: 600 }}>${outlookIncome.toLocaleString()} in</span>
-          <span style={{ margin: '0 6px' }}>·</span>
-          <span style={{ color: 'var(--accent-rose)', fontWeight: 600 }}>${outlookExpenses.toLocaleString()} out</span>
-        </div>
-      </div>
-    )}
-    {/* Sort controls — right-aligned above the list (desktop only) */}
-    {!isMobile && (
-    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '4px', marginBottom: '12px' }}>
-      <button
-        style={{
-          background: sortBy === 'date' ? 'var(--accent-orange)' : 'transparent',
-          color: sortBy === 'date' ? 'var(--text-primary)' : 'var(--text-tertiary)',
-          border: sortBy === 'date' ? 'none' : '1px solid var(--border-subtle)',
-          borderRadius: '4px',
-          padding: '4px 12px',
-          fontSize: '13px',
-          fontWeight: '600',
-          cursor: 'pointer',
-        }}
-        onClick={() => toggleSort('date')}
-      >
-        Date {sortBy === 'date' ? (sortDir === 'asc' ? '\u2191' : '\u2193') : ''}
-      </button>
-      <button
-        style={{
-          background: sortBy === 'amount' ? 'var(--accent-orange)' : 'transparent',
-          color: sortBy === 'amount' ? 'var(--text-primary)' : 'var(--text-tertiary)',
-          border: sortBy === 'amount' ? 'none' : '1px solid var(--border-subtle)',
-          borderRadius: '4px',
-          padding: '4px 12px',
-          fontSize: '13px',
-          fontWeight: '600',
-          cursor: 'pointer',
-        }}
-        onClick={() => toggleSort('amount')}
-      >
-        Amount {sortBy === 'amount' ? (sortDir === 'asc' ? '\u2191' : '\u2193') : ''}
-      </button>
-    </div>
-    )}
+      )}
+
     <div style={{
       ...s.wrapper,
       ...(isMobile ? { gridTemplateColumns: '1fr', gap: '16px' } : {}),
@@ -846,7 +1018,7 @@ export default function TransactionsTab({
             <h3 style={s.columnTitle}>Income</h3>
             {incomeTotal > 0 && (
               <span style={{ fontSize: '18px', fontWeight: '700', color: 'var(--accent-cyan)' }}>
-                ${incomeTotal.toLocaleString()}
+                ${Math.round(incomeTotal).toLocaleString()}
               </span>
             )}
           </div>
@@ -867,21 +1039,20 @@ export default function TransactionsTab({
         <div style={s.list}>
           {income.length === 0 && !addingType ? (
             <div style={s.empty}>
-              {filter === 'All' ? (
+              {activeFilterCount === 0 ? (
                 <>
                   <div style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>No income yet. What's coming in?</div>
                   <div>Paycheck, side gig, freelance — start with the big one.</div>
                 </>
               ) : (
                 <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>
-                  No {filter.toLowerCase()} income set up yet.
+                  No income matches your filters.
                 </div>
               )}
             </div>
           ) : (
             income.map(renderItem)
           )}
-          {/* Persistent add button at bottom of list */}
           {income.length >= 3 && !addingType && (
             <button
               style={{
@@ -917,7 +1088,7 @@ export default function TransactionsTab({
             <h3 style={s.columnTitle}>Expenses</h3>
             {expenseTotal > 0 && (
               <span style={{ fontSize: '18px', fontWeight: '700', color: 'var(--accent-rose)' }}>
-                ${expenseTotal.toLocaleString()}
+                ${Math.round(expenseTotal).toLocaleString()}
               </span>
             )}
           </div>
@@ -938,21 +1109,20 @@ export default function TransactionsTab({
         <div style={s.list}>
           {expenses.length === 0 && !addingType ? (
             <div style={s.empty}>
-              {filter === 'All' ? (
+              {activeFilterCount === 0 ? (
                 <>
                   <div style={{ fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>No expenses yet. Focus on the big levers.</div>
                   <div>Rent, car payment, insurance — the lattes can wait.</div>
                 </>
               ) : (
                 <div style={{ fontWeight: '600', color: 'var(--text-primary)' }}>
-                  No {filter.toLowerCase()} expenses set up yet.
+                  No expenses match your filters.
                 </div>
               )}
             </div>
           ) : (
             expenses.map(renderItem)
           )}
-          {/* Persistent add button at bottom of list */}
           {expenses.length >= 3 && !addingType && (
             <button
               style={{
@@ -981,7 +1151,7 @@ export default function TransactionsTab({
       )}
     </div>
 
-    {/* Mobile FAB — floating add button */}
+    {/* Mobile FAB */}
     {isMobile && !addingType && !editingId && (
       <button
         onClick={() => startAdd(mobileColumn === 'income' ? 'income' : 'expense')}
@@ -1013,7 +1183,7 @@ export default function TransactionsTab({
       </button>
     )}
 
-    {/* Desktop floating controls — stacked and right-aligned */}
+    {/* Desktop floating controls */}
     {!isMobile && showBackToTop && (
       <div style={{
         position: 'fixed',
@@ -1088,7 +1258,7 @@ export default function TransactionsTab({
       </button>
     )}
 
-    {/* Modal overlay form — for editing or adding */}
+    {/* Modal overlay form */}
     {editingId && renderForm(transactions.find((t) => t.id === editingId)?.type || 'expense')}
     {addingType && renderForm(addingType)}
     </div>

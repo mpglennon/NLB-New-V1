@@ -180,7 +180,7 @@ export default function WelcomeModal({ isOpen, onSkip }) {
                 onChange={(e) => setBalance(e.target.value)}
                 style={s.bigInput}
                 placeholder="0.00"
-                onFocus={(e) => { e.target.style.borderColor = 'var(--accent-orange)'; }}
+                onFocus={(e) => { e.target.style.borderColor = 'var(--accent-gold)'; }}
                 onBlur={(e) => { e.target.style.borderColor = 'var(--border-subtle)'; }}
               />
             </div>
@@ -592,8 +592,8 @@ export default function WelcomeModal({ isOpen, onSkip }) {
               <button style={{
                 ...s.btnPrimary,
                 background: 'transparent',
-                border: '2px solid var(--accent-orange)',
-                color: 'var(--accent-orange)',
+                border: '2px solid var(--accent-gold)',
+                color: 'var(--accent-gold)',
               }} onClick={handleComplete}>Continue to App</button>
             ) : (
               <button style={{
@@ -674,12 +674,12 @@ const s = {
     transition: 'background 200ms ease',
   },
   stepDotActive: {
-    background: 'var(--accent-orange)',
+    background: 'var(--accent-gold)',
   },
   stepLabel: {
     fontSize: '12px',
     fontWeight: '600',
-    color: 'var(--accent-orange)',
+    color: 'var(--accent-gold)',
     textTransform: 'uppercase',
     letterSpacing: '0.1em',
     marginBottom: '4px',
@@ -789,7 +789,7 @@ const s = {
   btnPrimary: {
     height: '48px',
     padding: '0 32px',
-    background: 'var(--accent-orange)',
+    background: 'var(--accent-gold)',
     color: '#FFFFFF',
     border: 'none',
     borderRadius: '8px',
@@ -813,8 +813,8 @@ const s = {
   },
   btnAddAnother: {
     background: 'transparent',
-    border: '2px dashed var(--accent-orange)',
-    color: 'var(--accent-orange)',
+    border: '2px dashed var(--accent-gold)',
+    color: 'var(--accent-gold)',
     borderRadius: '8px',
     padding: '14px 0',
     fontSize: '15px',
@@ -826,7 +826,7 @@ const s = {
     letterSpacing: '0.02em',
   },
   btnSave: {
-    background: 'var(--accent-orange)',
+    background: 'var(--accent-gold)',
     color: '#FFFFFF',
     border: 'none',
     borderRadius: '8px',

@@ -23,8 +23,9 @@ const FREQ_LABELS = { 'one-time': 'One-time', 'weekly': 'Weekly', 'bi-weekly': '
 const s = {
   header: {
     display: 'flex',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
+    gap: '12px',
     marginBottom: '16px',
   },
   monthTitle: {
@@ -167,7 +168,7 @@ const s = {
     position: 'fixed',
     zIndex: 2001,
     background: 'var(--bg-panel)',
-    border: '2px solid var(--accent-orange)',
+    border: '2px solid var(--accent-gold)',
     borderRadius: '10px',
     padding: '18px',
     width: '300px',
@@ -237,7 +238,7 @@ const s = {
   editSave: {
     flex: 1,
     height: '34px',
-    background: 'var(--accent-orange)',
+    background: 'var(--accent-gold)',
     color: 'var(--text-primary)',
     border: 'none',
     borderRadius: '4px',
@@ -279,7 +280,7 @@ const s = {
   },
   modal: {
     background: 'var(--bg-panel)',
-    border: '2px solid var(--accent-orange)',
+    border: '2px solid var(--accent-gold)',
     borderRadius: '12px',
     padding: '24px',
     minWidth: '300px',
@@ -507,7 +508,7 @@ export default function CashCalendar({
     if (fromDate === toDateKey) return;
 
     if (txn.frequency === 'one-time') {
-      updateTransaction(txn.id, { startDate: toDateKey, endDate: toDateKey });
+      updateTransaction(txn.id, { startDate: toDateKey, endDate: toDateKey, excludeDates: [] });
     } else {
       setDropModal({ txn, fromDate, toDate: toDateKey });
     }
@@ -540,6 +541,7 @@ export default function CashCalendar({
       amount: String(txn.amount),
       frequency: txn.frequency,
       startDate: txn.startDate,
+      endDate: txn.endDate || '',
       description: txn.description || '',
       customDayInterval: txn.customDayInterval ? String(txn.customDayInterval) : '',
     });
@@ -565,6 +567,8 @@ export default function CashCalendar({
 
     const customDayInterval = editForm.frequency === 'custom-days' && editForm.customDayInterval
       ? parseInt(editForm.customDayInterval, 10) : null;
+    const dateChanged = editTxn.txn.startDate !== editForm.startDate;
+    const freqChanged = editTxn.txn.frequency !== editForm.frequency;
     updateTransaction(editTxn.txn.id, {
       category,
       subcategory,
@@ -572,8 +576,9 @@ export default function CashCalendar({
       frequency: editForm.frequency,
       startDate: editForm.startDate,
       description: editForm.description,
-      endDate: editForm.frequency === 'one-time' ? editForm.startDate : null,
+      endDate: editForm.frequency === 'one-time' ? editForm.startDate : (editForm.endDate || null),
       customDayInterval,
+      ...(dateChanged || freqChanged ? { excludeDates: [] } : {}),
     });
     setEditTxn(null);
   }, [editTxn, editForm, updateTransaction, addCustomCategory]);
@@ -600,7 +605,7 @@ export default function CashCalendar({
     const { txn, fromDate, toDate } = dropModal;
     const delta = differenceInCalendarDays(parseISO(toDate), parseISO(fromDate));
     const newStart = addDays(parseISO(txn.startDate), delta);
-    updateTransaction(txn.id, { startDate: format(newStart, 'yyyy-MM-dd') });
+    updateTransaction(txn.id, { startDate: format(newStart, 'yyyy-MM-dd'), excludeDates: [] });
     setDropModal(null);
   }, [dropModal, updateTransaction]);
 
@@ -640,8 +645,8 @@ export default function CashCalendar({
             <button
               style={{
                 background: 'transparent',
-                border: '1px solid var(--accent-orange)',
-                color: 'var(--accent-orange)',
+                border: '1px solid var(--accent-gold)',
+                color: 'var(--accent-gold)',
                 borderRadius: '6px',
                 padding: '4px 12px',
                 fontSize: '12px',
@@ -651,8 +656,8 @@ export default function CashCalendar({
                 transition: 'all 200ms ease',
               }}
               onClick={() => setViewDate(today)}
-              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--accent-orange)'; e.currentTarget.style.color = '#FFFFFF'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--accent-orange)'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--accent-gold)'; e.currentTarget.style.color = '#FFFFFF'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--accent-gold)'; }}
             >
               Today
             </button>
@@ -688,7 +693,7 @@ export default function CashCalendar({
           const isDragOver = dragOverDate === dateKey;
 
           const borderColor = isToday
-            ? 'var(--accent-orange)'
+            ? 'var(--accent-gold)'
             : isFuture && balance !== undefined
               ? getCellBorderColor(balance, cautionThreshold)
               : 'var(--border-subtle)';
@@ -705,7 +710,7 @@ export default function CashCalendar({
               style={{
                 ...s.cell,
                 border: isDragOver
-                  ? '3px solid var(--accent-orange)'
+                  ? '3px solid var(--accent-gold)'
                   : `${borderWidth} solid ${borderColor}`,
                 opacity: inMonth ? 1 : 0.35,
                 background: isDragOver ? 'rgba(255,107,53,0.08)' : 'var(--bg-card)',
@@ -768,7 +773,7 @@ export default function CashCalendar({
               {txns.length > 3 && (
                 <div
                   style={{
-                    fontSize: '10px', color: 'var(--accent-orange)', marginTop: '2px',
+                    fontSize: '10px', color: 'var(--accent-gold)', marginTop: '2px',
                     cursor: 'pointer', fontWeight: '600',
                   }}
                   onClick={(e) => {
@@ -1001,6 +1006,29 @@ export default function CashCalendar({
                 onClick={(e) => { try { e.target.showPicker(); } catch {} }}
               />
             </div>
+            {editForm.frequency !== 'one-time' && (
+              <div style={s.editField}>
+                <label style={s.editLabel}>End Date <span style={{ fontWeight: '400', color: 'var(--text-tertiary)', textTransform: 'none' }}>(optional)</span></label>
+                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                  <input
+                    type="date"
+                    style={{ ...s.editInput, cursor: 'pointer', flex: 1 }}
+                    value={editForm.endDate || ''}
+                    min={editForm.startDate || undefined}
+                    onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })}
+                    onClick={(e) => { try { e.target.showPicker(); } catch {} }}
+                  />
+                  {editForm.endDate && (
+                    <button
+                      type="button"
+                      onClick={() => setEditForm({ ...editForm, endDate: '' })}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: '16px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}
+                      title="Clear end date"
+                    >&times;</button>
+                  )}
+                </div>
+              </div>
+            )}
             <div style={s.editField}>
               <label style={s.editLabel}>Note</label>
               <input
@@ -1067,7 +1095,7 @@ export default function CashCalendar({
               Moving from {format(parseISO(dropModal.fromDate), 'MMM d')} to {format(parseISO(dropModal.toDate), 'MMM d')}
             </div>
             <button
-              style={{ ...s.modalBtn, background: 'var(--accent-orange)', color: '#FFFFFF' }}
+              style={{ ...s.modalBtn, background: 'var(--accent-gold)', color: '#FFFFFF' }}
               onClick={handleMoveOne}
               onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.85'; }}
               onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}

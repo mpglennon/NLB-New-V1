@@ -9,6 +9,7 @@ import {
   Cell,
 } from 'recharts';
 import useStore from '../store/useStore';
+import { addDays, format } from 'date-fns';
 import { getOccurrences, getOccurrencesInRange, buildViewRange } from '../utils/runway';
 import { defaultCategoryClassification } from '../data/demoData';
 
@@ -23,11 +24,12 @@ function sumOverTimeframe(txn, timeframe, viewMonth) {
   } else {
     occurrences = getOccurrences(txn, timeframe);
   }
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const filterStart = viewMonth ? buildViewRange(timeframe, viewMonth).start : today;
-  const count = occurrences.filter((d) => d >= filterStart).length;
-  return txn.amount * count;
+  if (viewMonth) {
+    const range = buildViewRange(timeframe, viewMonth);
+    const count = occurrences.filter((d) => d >= range.start).length;
+    return txn.amount * count;
+  }
+  return txn.amount * occurrences.length;
 }
 
 function groupByCategory(transactions, timeframe, viewMonth) {
@@ -88,6 +90,7 @@ export default function SpendingTab({
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [spendingSortBy, setSpendingSortBy] = useState('amount'); // 'amount' | 'name'
   const [spendingSortDir, setSpendingSortDir] = useState('desc');
+  const [addingExpense, setAddingExpense] = useState(false);
 
   const vr = buildViewRange(timeframe, viewMonth);
   const tfLabel = vr.label;
@@ -152,6 +155,7 @@ export default function SpendingTab({
         amount: String(match.amount),
         frequency: match.frequency,
         startDate: match.startDate,
+        endDate: match.endDate || '',
         description: match.description || '',
         customDayInterval: match.customDayInterval ? String(match.customDayInterval) : '',
       });
@@ -176,6 +180,7 @@ export default function SpendingTab({
         amount: String(match.amount),
         frequency: match.frequency,
         startDate: match.startDate,
+        endDate: match.endDate || '',
         description: match.description || '',
         customDayInterval: match.customDayInterval ? String(match.customDayInterval) : '',
       });
@@ -197,6 +202,8 @@ export default function SpendingTab({
       : editForm.subcategory || null;
     const customDayInterval = editForm.frequency === 'custom-days' && editForm.customDayInterval
       ? parseInt(editForm.customDayInterval, 10) : null;
+    const dateChanged = editingTxn.startDate !== editForm.startDate;
+    const freqChanged = editingTxn.frequency !== editForm.frequency;
     updateTransaction(editingTxn.id, {
       category,
       subcategory,
@@ -204,8 +211,9 @@ export default function SpendingTab({
       frequency: editForm.frequency,
       startDate: editForm.startDate,
       description: editForm.description,
-      endDate: editForm.frequency === 'one-time' ? editForm.startDate : null,
+      endDate: editForm.frequency === 'one-time' ? editForm.startDate : (editForm.endDate || null),
       customDayInterval,
+      ...(dateChanged || freqChanged ? { excludeDates: [] } : {}),
     });
     setEditingTxn(null);
   }, [editingTxn, editForm, updateTransaction, addCustomCategory]);
@@ -220,7 +228,13 @@ export default function SpendingTab({
   const handleDeleteJustOne = useCallback(() => {
     if (!editingTxn) return;
     const existing = editingTxn.excludeDates || [];
-    updateTransaction(editingTxn.id, { excludeDates: [...existing, editingTxn.startDate] });
+    // Find the next upcoming occurrence instead of using the series base date
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const futureEnd = addDays(today, 365);
+    const occs = getOccurrencesInRange(editingTxn, today, futureEnd);
+    const dateToExclude = occs.length > 0 ? format(occs[0], 'yyyy-MM-dd') : editingTxn.startDate;
+    updateTransaction(editingTxn.id, { excludeDates: [...existing, dateToExclude] });
     setDeleteConfirmId(null);
     setEditingTxn(null);
   }, [editingTxn, updateTransaction]);
@@ -342,7 +356,32 @@ export default function SpendingTab({
             <span style={s.totalLabel}>Total: {fmt(totalExpenses)}</span>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '4px' }}>
+        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+          <button
+            onClick={() => {
+              setEditingTxn(null);
+              setAddingExpense(true);
+              setEditForm({
+                category: '', customCategory: '', subcategory: '', customSubcategory: '',
+                amount: '', frequency: 'monthly', startDate: new Date().toISOString().slice(0, 10),
+                endDate: '', description: '', customDayInterval: '',
+              });
+            }}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--accent-rose)',
+              fontSize: '20px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              padding: '0 6px',
+              lineHeight: '1',
+              transition: 'opacity 150ms ease',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.7'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+            title="Add expense"
+          >+</button>
           {[
             { key: 'amount', label: 'Amount' },
             { key: 'name', label: 'Category' },
@@ -350,7 +389,7 @@ export default function SpendingTab({
             <button
               key={opt.key}
               style={{
-                background: spendingSortBy === opt.key ? 'var(--accent-orange)' : 'transparent',
+                background: spendingSortBy === opt.key ? 'var(--accent-gold)' : 'transparent',
                 color: spendingSortBy === opt.key ? 'var(--text-primary)' : 'var(--text-tertiary)',
                 border: spendingSortBy === opt.key ? 'none' : '1px solid var(--border-subtle)',
                 borderRadius: '4px',
@@ -529,6 +568,29 @@ export default function SpendingTab({
                 onClick={(e) => { try { e.target.showPicker(); } catch {} }}
               />
             </div>
+            {editForm.frequency !== 'one-time' && (
+              <div style={s.editField}>
+                <label style={s.editLabel}>End Date <span style={{ fontWeight: '400', color: 'var(--text-tertiary)', textTransform: 'none' }}>(optional)</span></label>
+                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                  <input
+                    type="date"
+                    style={{ ...s.editInput, cursor: 'pointer', flex: 1 }}
+                    value={editForm.endDate || ''}
+                    min={editForm.startDate || undefined}
+                    onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })}
+                    onClick={(e) => { try { e.target.showPicker(); } catch {} }}
+                  />
+                  {editForm.endDate && (
+                    <button
+                      type="button"
+                      onClick={() => setEditForm({ ...editForm, endDate: '' })}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: '16px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }}
+                      title="Clear end date"
+                    >&times;</button>
+                  )}
+                </div>
+              </div>
+            )}
             <div style={s.editField}>
               <label style={s.editLabel}>Note</label>
               <input
@@ -581,6 +643,95 @@ export default function SpendingTab({
                   <button style={s.editDelete} onClick={() => isRecurring ? setDeleteConfirmId(editingTxn.id) : handleEditDelete()}>Delete</button>
                 );
               })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add expense modal */}
+      {addingExpense && (
+        <div style={s.editOverlay} onClick={() => setAddingExpense(false)}>
+          <div style={s.editCard} onClick={(e) => e.stopPropagation()}>
+            <div style={s.editHeader}>
+              <span style={s.editTitle}>Add Expense</span>
+              <button style={s.editClose} onClick={() => setAddingExpense(false)}>✕</button>
+            </div>
+            <div style={s.editField}>
+              <label style={s.editLabel}>Category</label>
+              <select style={s.editSelect} value={editForm.category || ''} onChange={(e) => setEditForm({ ...editForm, category: e.target.value, customCategory: '', subcategory: '' })}>
+                <option value="">Select...</option>
+                {getCategories('expense').map((c) => <option key={c} value={c}>{c}</option>)}
+                <option value="__custom__">Custom...</option>
+              </select>
+            </div>
+            {editForm.category === '__custom__' && (
+              <div style={s.editField}>
+                <label style={s.editLabel}>Custom Name</label>
+                <input type="text" style={s.editInput} value={editForm.customCategory || ''} onChange={(e) => setEditForm({ ...editForm, customCategory: e.target.value })} placeholder="Enter category name..." autoFocus />
+              </div>
+            )}
+            {editForm.category && editForm.category !== '__custom__' && (
+              <div style={s.editField}>
+                <label style={s.editLabel}>Subcategory</label>
+                <select style={s.editSelect} value={editForm.subcategory || ''} onChange={(e) => setEditForm({ ...editForm, subcategory: e.target.value, customSubcategory: '' })}>
+                  <option value="">None</option>
+                  {(hierarchy[editForm.category] || []).map((sub) => <option key={sub} value={sub}>{sub}</option>)}
+                  <option value="__custom_sub__">Custom...</option>
+                </select>
+                {editForm.subcategory === '__custom_sub__' && (
+                  <input type="text" style={{ ...s.editInput, marginTop: '6px' }} placeholder="Enter subcategory name" value={editForm.customSubcategory || ''} onChange={(e) => setEditForm({ ...editForm, customSubcategory: e.target.value })} autoFocus />
+                )}
+              </div>
+            )}
+            <div style={s.editField}>
+              <label style={s.editLabel}>Amount</label>
+              <input type="number" step="0.01" style={s.editInput} value={editForm.amount || ''} onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })} placeholder="0.00" />
+            </div>
+            <div style={s.editField}>
+              <label style={s.editLabel}>Frequency</label>
+              <select style={s.editSelect} value={editForm.frequency || 'monthly'} onChange={(e) => setEditForm({ ...editForm, frequency: e.target.value })}>
+                {FREQUENCIES.map((f) => <option key={f} value={f}>{FREQ_LABELS[f]}</option>)}
+              </select>
+              {editForm.frequency === 'custom-days' && (
+                <input type="number" min="1" style={{ ...s.editInput, marginTop: '4px' }} placeholder="Every how many days?" value={editForm.customDayInterval || ''} onChange={(e) => setEditForm({ ...editForm, customDayInterval: e.target.value })} />
+              )}
+            </div>
+            <div style={s.editField}>
+              <label style={s.editLabel}>Start Date</label>
+              <input type="date" style={{ ...s.editInput, cursor: 'pointer' }} value={editForm.startDate || ''} onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })} onClick={(e) => { try { e.target.showPicker(); } catch {} }} />
+            </div>
+            {editForm.frequency !== 'one-time' && (
+              <div style={s.editField}>
+                <label style={s.editLabel}>End Date <span style={{ fontWeight: '400', color: 'var(--text-tertiary)', textTransform: 'none' }}>(optional)</span></label>
+                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                  <input type="date" style={{ ...s.editInput, cursor: 'pointer', flex: 1 }} value={editForm.endDate || ''} min={editForm.startDate || undefined} onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })} onClick={(e) => { try { e.target.showPicker(); } catch {} }} />
+                  {editForm.endDate && (
+                    <button type="button" onClick={() => setEditForm({ ...editForm, endDate: '' })} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', fontSize: '16px', cursor: 'pointer', padding: '0 4px', lineHeight: 1 }} title="Clear end date">&times;</button>
+                  )}
+                </div>
+              </div>
+            )}
+            <div style={s.editField}>
+              <label style={s.editLabel}>Note</label>
+              <input type="text" style={s.editInput} value={editForm.description || ''} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} placeholder="Optional..." />
+            </div>
+            <div style={s.editActions}>
+              <button style={s.editSave} onClick={() => {
+                const amount = parseFloat(editForm.amount);
+                const category = editForm.category === '__custom__' ? (editForm.customCategory || '').trim() : editForm.category;
+                if (!category || isNaN(amount) || amount <= 0 || !editForm.startDate) return;
+                if (editForm.category === '__custom__' && category) addCustomCategory('expense', category);
+                const subcategory = editForm.subcategory === '__custom_sub__' ? (editForm.customSubcategory || '').trim() || null : editForm.subcategory || null;
+                const customDayInterval = editForm.frequency === 'custom-days' && editForm.customDayInterval ? parseInt(editForm.customDayInterval, 10) : null;
+                addTransaction({
+                  type: 'expense', category, subcategory, amount,
+                  frequency: editForm.frequency, startDate: editForm.startDate,
+                  endDate: editForm.frequency === 'one-time' ? editForm.startDate : (editForm.endDate || null),
+                  description: editForm.description, isActive: true, customDayInterval,
+                });
+                setAddingExpense(false);
+              }}>Save</button>
+              <button style={s.editCancel} onClick={() => setAddingExpense(false)}>Cancel</button>
             </div>
           </div>
         </div>
@@ -761,7 +912,7 @@ const s = {
   },
   editCard: {
     background: 'var(--bg-panel)',
-    border: '2px solid var(--accent-orange)',
+    border: '2px solid var(--accent-gold)',
     borderRadius: '12px',
     padding: '20px',
     width: '340px',
@@ -830,7 +981,7 @@ const s = {
   editSave: {
     flex: 1,
     height: '34px',
-    background: 'var(--accent-orange)',
+    background: 'var(--accent-gold)',
     color: '#FFFFFF',
     border: 'none',
     borderRadius: '4px',

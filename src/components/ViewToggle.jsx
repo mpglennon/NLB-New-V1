@@ -60,7 +60,7 @@ export default function ViewToggle({ viewMonth, timeframe, setViewMonth, setTime
   const dropdownStyle = {
     position: 'absolute',
     top: '42px',
-    right: 0,
+    left: 0,
     background: 'var(--bg-panel)',
     border: '1px solid var(--border-subtle)',
     borderRadius: '8px',
@@ -124,119 +124,123 @@ export default function ViewToggle({ viewMonth, timeframe, setViewMonth, setTime
   const arrowHoverIn = (e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover, var(--bg-panel))'; e.currentTarget.style.borderColor = 'var(--border-focus)'; };
   const arrowHoverOut = (e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'var(--bg-card)'; e.currentTarget.style.borderColor = 'var(--border-subtle)'; };
 
-  const wrapperStyle = mobileWidth
-    ? { position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }
+  // Outer wrapper handles layout (flex-end alignment, margin)
+  // Inner wrapper handles dropdown positioning (position: relative)
+  const outerStyle = mobileWidth
+    ? { display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }
     : compact
-      ? { position: 'relative', display: 'flex', alignItems: 'center', gap: '10px' }
-      : { ...topControlsStyle, position: 'relative', alignItems: 'center', ...(isMobile ? { justifyContent: 'center' } : {}) };
+      ? { display: 'flex', alignItems: 'center' }
+      : { ...topControlsStyle, alignItems: 'center', ...(isMobile ? { justifyContent: 'center' } : {}) };
 
   return (
-    <div style={wrapperStyle} ref={ref}>
-      <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden', ...(mobileWidth ? { maxWidth: '280px', width: '100%' } : {}) }}>
-        <button
-          style={mobileWidth ? {
-            flex: 1,
-            height: '36px',
-            padding: '8px 0',
-            fontSize: '13px',
-            fontWeight: '700',
-            cursor: 'pointer',
-            transition: 'all 150ms ease',
-            letterSpacing: '0.02em',
-            borderRadius: '8px 0 0 8px',
-            borderTop: '1px solid var(--border-subtle)',
-            borderBottom: '1px solid var(--border-subtle)',
-            borderLeft: '1px solid var(--border-subtle)',
-            borderRight: 'none',
-            background: isMonthMode ? 'var(--accent-cyan)' : 'var(--bg-card)',
-            color: isMonthMode ? '#0A0A1A' : 'var(--text-tertiary)',
-          } : {
-            ...toggleBtnBase,
-            ...(isMonthMode ? activeStyle : inactiveStyle),
-            borderRadius: '8px 0 0 8px',
-            borderRight: 'none',
-          }}
-          onClick={() => {
-            setOpenPanel(openPanel === 'month' ? null : 'month');
-          }}
-        >
-          Month ▾
-        </button>
-        <button
-          style={mobileWidth ? {
-            flex: 1,
-            height: '36px',
-            padding: '8px 0',
-            fontSize: '13px',
-            fontWeight: '700',
-            cursor: 'pointer',
-            transition: 'all 150ms ease',
-            letterSpacing: '0.02em',
-            borderRadius: '0 8px 8px 0',
-            border: '1px solid var(--border-subtle)',
-            background: !isMonthMode ? 'var(--accent-cyan)' : 'var(--bg-card)',
-            color: !isMonthMode ? '#0A0A1A' : 'var(--text-tertiary)',
-          } : {
-            ...toggleBtnBase,
-            ...(!isMonthMode ? activeStyle : inactiveStyle),
-            borderRadius: '0 8px 8px 0',
-          }}
-          onClick={() => {
-            setOpenPanel(openPanel === 'forecast' ? null : 'forecast');
-          }}
-        >
-          Forecast ▾
-        </button>
+    <div style={outerStyle} ref={ref}>
+      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: compact ? '10px' : '8px' }}>
+        <div style={{ display: 'flex', borderRadius: '8px', overflow: 'hidden', ...(mobileWidth ? { maxWidth: '280px', width: '100%' } : {}) }}>
+          <button
+            style={mobileWidth ? {
+              flex: 1,
+              height: '36px',
+              padding: '8px 0',
+              fontSize: '13px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              transition: 'all 150ms ease',
+              letterSpacing: '0.02em',
+              borderRadius: '8px 0 0 8px',
+              borderTop: '1px solid var(--border-subtle)',
+              borderBottom: '1px solid var(--border-subtle)',
+              borderLeft: '1px solid var(--border-subtle)',
+              borderRight: 'none',
+              background: isMonthMode ? 'var(--accent-cyan)' : 'var(--bg-card)',
+              color: isMonthMode ? '#0A0A1A' : 'var(--text-tertiary)',
+            } : {
+              ...toggleBtnBase,
+              ...(isMonthMode ? activeStyle : inactiveStyle),
+              borderRadius: '8px 0 0 8px',
+              borderRight: 'none',
+            }}
+            onClick={() => {
+              setOpenPanel(openPanel === 'month' ? null : 'month');
+            }}
+          >
+            Month ▾
+          </button>
+          <button
+            style={mobileWidth ? {
+              flex: 1,
+              height: '36px',
+              padding: '8px 0',
+              fontSize: '13px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              transition: 'all 150ms ease',
+              letterSpacing: '0.02em',
+              borderRadius: '0 8px 8px 0',
+              border: '1px solid var(--border-subtle)',
+              background: !isMonthMode ? 'var(--accent-cyan)' : 'var(--bg-card)',
+              color: !isMonthMode ? '#0A0A1A' : 'var(--text-tertiary)',
+            } : {
+              ...toggleBtnBase,
+              ...(!isMonthMode ? activeStyle : inactiveStyle),
+              borderRadius: '0 8px 8px 0',
+            }}
+            onClick={() => {
+              setOpenPanel(openPanel === 'forecast' ? null : 'forecast');
+            }}
+          >
+            Forecast ▾
+          </button>
+        </div>
+        {!isMobile && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <button
+              style={arrowBtn}
+              onClick={() => isMonthMode ? goMonth(-1) : goForecast(-1)}
+              onMouseEnter={arrowHoverIn}
+              onMouseLeave={arrowHoverOut}
+            >‹</button>
+            <span style={{ fontSize: compact ? '12px' : '14px', fontWeight: '600', color: 'var(--text-primary)', minWidth: compact ? '100px' : '120px', textAlign: 'center' }}>{tfLabel}</span>
+            <button
+              style={arrowBtn}
+              onClick={() => isMonthMode ? goMonth(1) : goForecast(1)}
+              onMouseEnter={arrowHoverIn}
+              onMouseLeave={arrowHoverOut}
+            >›</button>
+          </div>
+        )}
+
+        {openPanel === 'month' && (
+          <div style={dropdownStyle}>
+            {monthOptions.map((opt) => (
+              <button
+                key={opt.value}
+                style={optionStyle(viewMonth === opt.value)}
+                onClick={() => { setViewMonth(opt.value); setOpenPanel(null); }}
+                onMouseEnter={(e) => { if (viewMonth !== opt.value) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                onMouseLeave={(e) => { if (viewMonth !== opt.value) e.currentTarget.style.background = 'transparent'; }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {openPanel === 'forecast' && (
+          <div style={dropdownStyle}>
+            {forecastOptions.map((opt) => (
+              <button
+                key={opt.value}
+                style={optionStyle(!viewMonth && timeframe === opt.value)}
+                onClick={() => { setTimeframe(opt.value); setViewMonth(null); setOpenPanel(null); }}
+                onMouseEnter={(e) => { if (viewMonth || timeframe !== opt.value) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                onMouseLeave={(e) => { if (viewMonth || timeframe !== opt.value) e.currentTarget.style.background = 'transparent'; }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
-      {!isMobile && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', ...(!compact ? { marginLeft: '8px' } : {}) }}>
-          <button
-            style={arrowBtn}
-            onClick={() => isMonthMode ? goMonth(-1) : goForecast(-1)}
-            onMouseEnter={arrowHoverIn}
-            onMouseLeave={arrowHoverOut}
-          >‹</button>
-          <span style={{ fontSize: compact ? '12px' : '14px', fontWeight: '600', color: 'var(--text-primary)', minWidth: compact ? '100px' : '120px', textAlign: 'center' }}>{tfLabel}</span>
-          <button
-            style={arrowBtn}
-            onClick={() => isMonthMode ? goMonth(1) : goForecast(1)}
-            onMouseEnter={arrowHoverIn}
-            onMouseLeave={arrowHoverOut}
-          >›</button>
-        </div>
-      )}
-
-      {openPanel === 'month' && (
-        <div style={dropdownStyle}>
-          {monthOptions.map((opt) => (
-            <button
-              key={opt.value}
-              style={optionStyle(viewMonth === opt.value)}
-              onClick={() => { setViewMonth(opt.value); setOpenPanel(null); }}
-              onMouseEnter={(e) => { if (viewMonth !== opt.value) e.currentTarget.style.background = 'var(--bg-hover)'; }}
-              onMouseLeave={(e) => { if (viewMonth !== opt.value) e.currentTarget.style.background = 'transparent'; }}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {openPanel === 'forecast' && (
-        <div style={dropdownStyle}>
-          {forecastOptions.map((opt) => (
-            <button
-              key={opt.value}
-              style={optionStyle(!viewMonth && timeframe === opt.value)}
-              onClick={() => { setTimeframe(opt.value); setViewMonth(null); setOpenPanel(null); }}
-              onMouseEnter={(e) => { if (viewMonth || timeframe !== opt.value) e.currentTarget.style.background = 'var(--bg-hover)'; }}
-              onMouseLeave={(e) => { if (viewMonth || timeframe !== opt.value) e.currentTarget.style.background = 'transparent'; }}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

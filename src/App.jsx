@@ -92,8 +92,8 @@ const styles = {
     transition: 'color 150ms ease, border-color 150ms ease',
   },
   activeTab: {
-    color: 'var(--accent-orange)',
-    borderBottomColor: 'var(--accent-orange)',
+    color: 'var(--accent-gold)',
+    borderBottomColor: 'var(--accent-gold)',
   },
   mainContent: {
     maxWidth: '1400px',
@@ -198,8 +198,6 @@ function getBalanceBorderColor(balance, threshold) {
 
 // Sum all occurrences of transactions of a given type over a view range
 function sumByType(transactions, type, timeframe, viewMonth) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
   let total = 0;
   for (const txn of transactions) {
     if (!txn.isActive || txn.type !== type) continue;
@@ -210,8 +208,7 @@ function sumByType(transactions, type, timeframe, viewMonth) {
     } else {
       occs = getOccurrences(txn, timeframe);
     }
-    const count = occs.filter((d) => d >= (viewMonth ? buildViewRange(timeframe, viewMonth).start : today)).length;
-    total += txn.amount * count;
+    total += txn.amount * occs.length;
   }
   return Math.round(total);
 }
@@ -591,7 +588,7 @@ function App() {
                 padding: 0,
               }}
               onClick={() => updateSettings({ theme: settings.theme === 'dark' ? 'light' : 'dark' })}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent-orange)'; e.currentTarget.style.color = 'var(--accent-orange)'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent-gold)'; e.currentTarget.style.color = 'var(--accent-gold)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-subtle)'; e.currentTarget.style.color = 'var(--text-tertiary)'; }}
               title={settings.theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
             >
@@ -644,7 +641,7 @@ function App() {
                 transition: 'all 200ms ease',
               }}
               onClick={() => setSettingsOpen(true)}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent-orange)'; e.currentTarget.style.color = 'var(--accent-orange)'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent-gold)'; e.currentTarget.style.color = 'var(--accent-gold)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-subtle)'; e.currentTarget.style.color = 'var(--text-tertiary)'; }}
               title="Settings"
             >
@@ -677,8 +674,8 @@ function App() {
               className={`nlb-tab-btn${tab === 'Cash Calendar' ? ' nlb-tab-calendar' : ''}${tab === 'Spending' ? ' nlb-tab-spending' : ''}`}
               style={{
                 ...styles.tab,
-                color: activeTab === tab ? 'var(--accent-orange)' : 'var(--text-tertiary)',
-                borderBottomColor: activeTab === tab ? 'var(--accent-orange)' : 'transparent',
+                color: activeTab === tab ? 'var(--accent-gold)' : 'var(--text-tertiary)',
+                borderBottomColor: activeTab === tab ? 'var(--accent-gold)' : 'transparent',
               }}
               onClick={() => setActiveTab(tab)}
             >
@@ -807,7 +804,7 @@ function App() {
                 <span style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)' }}>Cash Flow Projection</span>
                 <span style={{ fontSize: '13px', color: 'var(--text-tertiary)' }}>{tfLabel}</span>
               </div>
-              <div style={{ height: 'calc(100% - 36px)', outline: 'none' }}>
+              <div style={{ height: 'calc(100% - 36px)', outline: 'none', position: 'relative' }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart
                     data={chartData}
@@ -971,16 +968,16 @@ function App() {
                     />
                   </AreaChart>
                 </ResponsiveContainer>
-              </div>
 
-              {/* THRESHOLD PILL — HTML overlay, avoids SVG clipping */}
-              {settings.cautionThreshold > 0 && !isMobile && thresholdY !== null && (
-                <ThresholdPill
-                  threshold={settings.cautionThreshold}
-                  pixelY={thresholdY}
-                  onUpdate={(v) => updateSettings({ cautionThreshold: v })}
-                />
-              )}
+                {/* THRESHOLD PILL — HTML overlay, avoids SVG clipping */}
+                {settings.cautionThreshold > 0 && !isMobile && thresholdY !== null && (
+                  <ThresholdPill
+                    threshold={settings.cautionThreshold}
+                    pixelY={thresholdY}
+                    onUpdate={(v) => updateSettings({ cautionThreshold: v })}
+                  />
+                )}
+              </div>
 
               {/* CHART POPOVER — desktop only */}
               {pinnedDay && !isMobile && (
@@ -1139,7 +1136,7 @@ const popoverStyles = {
   },
   editForm: {
     background: 'var(--bg-card)',
-    border: '2px solid var(--accent-orange)',
+    border: '2px solid var(--accent-gold)',
     borderRadius: '6px',
     padding: '12px 14px',
     marginBottom: '6px',
@@ -1163,7 +1160,7 @@ const popoverStyles = {
   },
   editActions: { display: 'flex', gap: '6px', marginTop: '8px' },
   editSave: {
-    flex: 1, height: '32px', background: 'var(--accent-orange)', color: '#FFFFFF',
+    flex: 1, height: '32px', background: 'var(--accent-gold)', color: '#FFFFFF',
     border: 'none', borderRadius: '4px', fontSize: '13px', fontWeight: '700', cursor: 'pointer',
   },
   editCancel: {
@@ -1491,8 +1488,8 @@ function ThresholdPill({ threshold, pixelY, onUpdate }) {
     <div
       style={{
         position: 'absolute',
-        right: '12px',
-        top: `${pixelY - 2}px`,
+        right: '-4px',
+        top: `${pixelY}px`,
         transform: 'translateY(-50%)',
         zIndex: 5,
         pointerEvents: 'auto',

@@ -232,7 +232,7 @@ export const defaultCategoryClassification = {
 
 /** Default subcategory hierarchy (parent → children) */
 export const defaultCategoryHierarchy = {
-  'Groceries': ['Walmart', 'Costco', 'Trader Joe\'s', 'Other'],
+  'Groceries': ['Walmart', 'Costco', 'Other'],
   'Dining Out': ['Restaurants', 'Fast Food', 'Coffee', 'Delivery'],
   'Subscriptions': ['Streaming', 'Software', 'Gym', 'Other'],
   'Insurance': ['Auto', 'Health', 'Home', 'Life'],

@@ -164,7 +164,7 @@ const s = {
   restoreBtn: {
     background: 'transparent',
     border: 'none',
-    color: 'var(--accent-orange)',
+    color: 'var(--accent-gold)',
     fontSize: '12px',
     cursor: 'pointer',
     padding: '0',
@@ -189,7 +189,7 @@ const s = {
   addBtn: {
     height: '30px',
     padding: '0 14px',
-    background: 'var(--accent-orange)',
+    background: 'var(--accent-gold)',
     color: '#FFFFFF',
     border: 'none',
     borderRadius: '6px',
@@ -304,7 +304,7 @@ export default function SettingsModal({ isOpen, onClose }) {
                   key={t}
                   style={{
                     padding: '6px 16px',
-                    background: settings.theme === t ? 'var(--accent-orange)' : 'transparent',
+                    background: settings.theme === t ? 'var(--accent-gold)' : 'transparent',
                     color: settings.theme === t ? '#FFFFFF' : 'var(--text-tertiary)',
                     border: 'none',
                     fontSize: '13px',
@@ -557,8 +557,8 @@ export default function SettingsModal({ isOpen, onClose }) {
             <button
               style={{
                 background: 'transparent',
-                border: '1px solid var(--accent-orange)',
-                color: 'var(--accent-orange)',
+                border: '1px solid var(--accent-gold)',
+                color: 'var(--accent-gold)',
                 padding: '6px 14px',
                 borderRadius: '6px',
                 fontSize: '12px',
