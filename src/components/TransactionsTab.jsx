@@ -268,6 +268,7 @@ export default function TransactionsTab({
   const [sortDir, setSortDir] = useState('asc');
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [viewMonth, setViewMonth] = useState(new Date());
+  const [yearView, setYearView] = useState(false);
 
   // Filter panel state
   const [filterOpen, setFilterOpen] = useState(false);
@@ -358,11 +359,19 @@ export default function TransactionsTab({
     const inc = list.filter((t) => t.type === 'income').sort(sortFn);
     const exp = list.filter((t) => t.type === 'expense').sort(sortFn);
 
-    // Compute totals based on occurrences in the selected month (or date filter range)
-    const monthStart = startOfMonth(viewMonth);
-    const monthEnd = endOfMonth(viewMonth);
-    const windowStart = hasDateFilter && filterDateStart ? new Date(filterDateStart + 'T00:00:00') : monthStart;
-    const windowEnd = hasDateFilter && filterDateEnd ? new Date(filterDateEnd + 'T23:59:59') : monthEnd;
+    // Compute totals based on the active window: month, year, or date filter
+    const now = new Date();
+    let windowStart, windowEnd;
+    if (hasDateFilter && filterDateStart) {
+      windowStart = new Date(filterDateStart + 'T00:00:00');
+      windowEnd = hasDateFilter && filterDateEnd ? new Date(filterDateEnd + 'T23:59:59') : endOfMonth(viewMonth);
+    } else if (yearView) {
+      windowStart = now;
+      windowEnd = addDays(now, 365);
+    } else {
+      windowStart = startOfMonth(viewMonth);
+      windowEnd = endOfMonth(viewMonth);
+    }
     const sumOccurrences = (t) => {
       if (!t.isActive) return 0;
       const occs = getOccurrencesInRange(t, windowStart, windowEnd);
@@ -375,10 +384,10 @@ export default function TransactionsTab({
       incomeTotal: inc.reduce((sum, t) => sum + sumOccurrences(t), 0),
       expenseTotal: exp.reduce((sum, t) => sum + sumOccurrences(t), 0),
     };
-  }, [transactions, filterType, filterCategory, filterDateStart, filterDateEnd, filterAmountMin, filterAmountMax, sortBy, sortDir, hasDateFilter, viewMonth]);
+  }, [transactions, filterType, filterCategory, filterDateStart, filterDateEnd, filterAmountMin, filterAmountMax, sortBy, sortDir, hasDateFilter, viewMonth, yearView]);
 
   const outlookNet = Math.round(incomeTotal - expenseTotal);
-  const outlookLabel = hasDateFilter ? 'Date Range Outlook' : format(viewMonth, 'MMMM yyyy');
+  const outlookLabel = hasDateFilter ? 'Date Range Outlook' : yearView ? '12-Month Outlook' : format(viewMonth, 'MMMM yyyy');
 
   const startAdd = (type) => {
     setEditingId(null);
@@ -1007,39 +1016,54 @@ export default function TransactionsTab({
           : { display: 'flex', justifyContent: 'space-between', alignItems: 'center' }),
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button
-            onClick={() => setViewMonth((m) => subMonths(m, 1))}
-            style={{
-              background: 'transparent', border: 'none', color: 'var(--text-tertiary)',
-              fontSize: '18px', cursor: 'pointer', padding: '2px 6px', lineHeight: 1,
-              transition: 'color 150ms ease',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-tertiary)'; }}
-          >&#8249;</button>
-          <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', minWidth: isMobile ? '140px' : '160px', textAlign: 'center' }}>
-            {hasDateFilter ? outlookLabel : format(viewMonth, 'MMMM yyyy')}
+          {!yearView && (
+            <button
+              onClick={() => { setYearView(false); setViewMonth((m) => subMonths(m, 1)); }}
+              style={{
+                background: 'transparent', border: 'none', color: 'var(--text-tertiary)',
+                fontSize: '18px', cursor: 'pointer', padding: '2px 6px', lineHeight: 1,
+                transition: 'color 150ms ease',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-tertiary)'; }}
+            >&#8249;</button>
+          )}
+          <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', minWidth: isMobile ? '120px' : '160px', textAlign: 'center' }}>
+            {hasDateFilter ? outlookLabel : yearView ? '12-Month Outlook' : format(viewMonth, 'MMMM yyyy')}
           </span>
-          <button
-            onClick={() => setViewMonth((m) => addMonths(m, 1))}
-            style={{
-              background: 'transparent', border: 'none', color: 'var(--text-tertiary)',
-              fontSize: '18px', cursor: 'pointer', padding: '2px 6px', lineHeight: 1,
-              transition: 'color 150ms ease',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-tertiary)'; }}
-          >&#8250;</button>
-          {!isSameMonth(viewMonth, new Date()) && !hasDateFilter && (
+          {!yearView && (
+            <button
+              onClick={() => { setYearView(false); setViewMonth((m) => addMonths(m, 1)); }}
+              style={{
+                background: 'transparent', border: 'none', color: 'var(--text-tertiary)',
+                fontSize: '18px', cursor: 'pointer', padding: '2px 6px', lineHeight: 1,
+                transition: 'color 150ms ease',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-tertiary)'; }}
+            >&#8250;</button>
+          )}
+          {!yearView && !isSameMonth(viewMonth, new Date()) && !hasDateFilter && (
             <button
               onClick={() => setViewMonth(new Date())}
               style={{
                 background: 'transparent', border: '1px solid var(--accent-gold)',
                 color: 'var(--accent-gold)', borderRadius: '4px', padding: '2px 8px',
-                fontSize: '11px', fontWeight: 700, cursor: 'pointer', marginLeft: '4px',
+                fontSize: '11px', fontWeight: 700, cursor: 'pointer',
               }}
             >Today</button>
           )}
+          <button
+            onClick={() => setYearView((v) => !v)}
+            style={{
+              background: yearView ? 'var(--accent-gold)' : 'transparent',
+              border: yearView ? 'none' : '1px solid var(--accent-gold)',
+              color: yearView ? '#FFF' : 'var(--accent-gold)',
+              borderRadius: '4px', padding: '2px 10px',
+              fontSize: '11px', fontWeight: 700, cursor: 'pointer',
+              transition: 'all 150ms ease',
+            }}
+          >Year</button>
         </div>
         {(incomeTotal > 0 || expenseTotal > 0) && (
           <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
