@@ -2,14 +2,14 @@
   color-scheme: dark;
 
   /* ── Backgrounds ────────────────────────────── */
-  --bg-page:        #0B1120;
-  --bg-card:        #1A2332;
-  --bg-panel:       #131D2E;
-  --bg-input:       #0B1120;
-  --bg-hover:       #2A3A4E;
+  --bg-page:        #2B2B2B;
+  --bg-card:        #1E2530;
+  --bg-panel:       #1A1F28;
+  --bg-input:       #15191F;
+  --bg-hover:       #353B44;
 
   /* ── Borders ────────────────────────────────── */
-  --border-subtle:  #2A3A4E;
+  --border-subtle:  #3A3F48;
   --border-focus:   #FFFFFF;
 
   /* ── Text ───────────────────────────────────── */
