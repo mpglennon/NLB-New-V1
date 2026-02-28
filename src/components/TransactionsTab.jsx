@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { format, parseISO, addDays } from 'date-fns';
+import { format, parseISO, addDays, startOfMonth, endOfMonth, addMonths, subMonths, isSameMonth } from 'date-fns';
 import useStore from '../store/useStore';
 import { getOccurrencesInRange } from '../utils/runway';
 
@@ -267,6 +267,7 @@ export default function TransactionsTab({
   const [sortBy, setSortBy] = useState('date');
   const [sortDir, setSortDir] = useState('asc');
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [viewMonth, setViewMonth] = useState(new Date());
 
   // Filter panel state
   const [filterOpen, setFilterOpen] = useState(false);
@@ -357,11 +358,11 @@ export default function TransactionsTab({
     const inc = list.filter((t) => t.type === 'income').sort(sortFn);
     const exp = list.filter((t) => t.type === 'expense').sort(sortFn);
 
-    // Compute totals based on occurrences in the active window (default: 30 days)
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    const windowStart = hasDateFilter && filterDateStart ? new Date(filterDateStart + 'T00:00:00') : now;
-    const windowEnd = hasDateFilter && filterDateEnd ? new Date(filterDateEnd + 'T23:59:59') : addDays(now, 30);
+    // Compute totals based on occurrences in the selected month (or date filter range)
+    const monthStart = startOfMonth(viewMonth);
+    const monthEnd = endOfMonth(viewMonth);
+    const windowStart = hasDateFilter && filterDateStart ? new Date(filterDateStart + 'T00:00:00') : monthStart;
+    const windowEnd = hasDateFilter && filterDateEnd ? new Date(filterDateEnd + 'T23:59:59') : monthEnd;
     const sumOccurrences = (t) => {
       if (!t.isActive) return 0;
       const occs = getOccurrencesInRange(t, windowStart, windowEnd);
@@ -374,11 +375,10 @@ export default function TransactionsTab({
       incomeTotal: inc.reduce((sum, t) => sum + sumOccurrences(t), 0),
       expenseTotal: exp.reduce((sum, t) => sum + sumOccurrences(t), 0),
     };
-  }, [transactions, filterType, filterCategory, filterDateStart, filterDateEnd, filterAmountMin, filterAmountMax, sortBy, sortDir, hasDateFilter]);
+  }, [transactions, filterType, filterCategory, filterDateStart, filterDateEnd, filterAmountMin, filterAmountMax, sortBy, sortDir, hasDateFilter, viewMonth]);
 
-  // Outlook strip — always shown (default 30-day window)
   const outlookNet = Math.round(incomeTotal - expenseTotal);
-  const outlookLabel = hasDateFilter ? 'Date Range Outlook' : '30-Day Outlook';
+  const outlookLabel = hasDateFilter ? 'Date Range Outlook' : format(viewMonth, 'MMMM yyyy');
 
   const startAdd = (type) => {
     setEditingId(null);
@@ -999,24 +999,61 @@ export default function TransactionsTab({
       {/* Collapsible filter panel */}
       {filterPanel}
 
-      {/* Outlook strip — always visible, defaults to 30-day window */}
-      {(incomeTotal > 0 || expenseTotal > 0) && (
-        <div style={{ ...s.netStrip, ...(isMobile ? { display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' } : {}) }}>
-          <div>
-            <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: '0.08em', textTransform: 'uppercase', marginRight: '12px' }}>
-              {outlookLabel}
-            </span>
-            <span style={{ fontSize: isMobile ? '18px' : '15px', fontWeight: 700, color: outlookNet >= 0 ? 'var(--safe-green)' : 'var(--critical-red)' }}>
+      {/* Month navigation + outlook strip */}
+      <div style={{
+        ...s.netStrip,
+        ...(isMobile
+          ? { display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' }
+          : { display: 'flex', justifyContent: 'space-between', alignItems: 'center' }),
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
+            onClick={() => setViewMonth((m) => subMonths(m, 1))}
+            style={{
+              background: 'transparent', border: 'none', color: 'var(--text-tertiary)',
+              fontSize: '18px', cursor: 'pointer', padding: '2px 6px', lineHeight: 1,
+              transition: 'color 150ms ease',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-tertiary)'; }}
+          >&#8249;</button>
+          <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', minWidth: isMobile ? '140px' : '160px', textAlign: 'center' }}>
+            {hasDateFilter ? outlookLabel : format(viewMonth, 'MMMM yyyy')}
+          </span>
+          <button
+            onClick={() => setViewMonth((m) => addMonths(m, 1))}
+            style={{
+              background: 'transparent', border: 'none', color: 'var(--text-tertiary)',
+              fontSize: '18px', cursor: 'pointer', padding: '2px 6px', lineHeight: 1,
+              transition: 'color 150ms ease',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-tertiary)'; }}
+          >&#8250;</button>
+          {!isSameMonth(viewMonth, new Date()) && !hasDateFilter && (
+            <button
+              onClick={() => setViewMonth(new Date())}
+              style={{
+                background: 'transparent', border: '1px solid var(--accent-gold)',
+                color: 'var(--accent-gold)', borderRadius: '4px', padding: '2px 8px',
+                fontSize: '11px', fontWeight: 700, cursor: 'pointer', marginLeft: '4px',
+              }}
+            >Today</button>
+          )}
+        </div>
+        {(incomeTotal > 0 || expenseTotal > 0) && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <span style={{ fontSize: isMobile ? '16px' : '14px', fontWeight: 700, color: outlookNet >= 0 ? 'var(--safe-green)' : 'var(--critical-red)' }}>
               Net {outlookNet >= 0 ? '+' : '-'}${Math.abs(outlookNet).toLocaleString()}
             </span>
+            <span style={{ fontSize: isMobile ? '13px' : '12px', color: 'var(--text-tertiary)' }}>
+              <span style={{ color: 'var(--safe-green)', fontWeight: 600 }}>${Math.round(incomeTotal).toLocaleString()} in</span>
+              <span style={{ margin: '0 6px' }}>&middot;</span>
+              <span style={{ color: 'var(--accent-rose)', fontWeight: 600 }}>${Math.round(expenseTotal).toLocaleString()} out</span>
+            </span>
           </div>
-          <div style={{ fontSize: isMobile ? '14px' : '12px', color: 'var(--text-tertiary)', ...(isMobile ? {} : { marginLeft: '12px', display: 'inline' }) }}>
-            <span style={{ color: 'var(--safe-green)', fontWeight: 600 }}>${Math.round(incomeTotal).toLocaleString()} in</span>
-            <span style={{ margin: '0 6px' }}>·</span>
-            <span style={{ color: 'var(--accent-rose)', fontWeight: 600 }}>${Math.round(expenseTotal).toLocaleString()} out</span>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
 
     <div style={{
       ...s.wrapper,
