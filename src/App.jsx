@@ -249,6 +249,7 @@ function App() {
   const [editingTxnId, setEditingTxnId] = useState(null);
   const popoverRef = useRef(null);
   const chartContainerRef = useRef(null);
+  const [thresholdY, setThresholdY] = useState(null); // pixel Y from ReferenceLine viewBox
 
   // ── Check In modal state ────────────────────────────────────────────
   const [checkInOpen, setCheckInOpen] = useState(false);
@@ -810,7 +811,7 @@ function App() {
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart
                     data={chartData}
-                    margin={{ top: 8, right: 56, bottom: 8, left: 8 }}
+                    margin={{ top: 8, right: 16, bottom: 8, left: 8 }}
                   >
                     <defs>
                       <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
@@ -908,7 +909,7 @@ function App() {
                         stroke="var(--caution-amber)"
                         strokeWidth={2}
                         strokeDasharray="5 3"
-                        label={<ThresholdLabel threshold={settings.cautionThreshold} onUpdate={(v) => updateSettings({ cautionThreshold: v })} />}
+                        label={<ThresholdYCapture onY={setThresholdY} />}
                       />
                     )}
                     <Area
@@ -971,6 +972,15 @@ function App() {
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
+
+              {/* THRESHOLD PILL — HTML overlay, avoids SVG clipping */}
+              {settings.cautionThreshold > 0 && !isMobile && thresholdY !== null && (
+                <ThresholdPill
+                  threshold={settings.cautionThreshold}
+                  pixelY={thresholdY}
+                  onUpdate={(v) => updateSettings({ cautionThreshold: v })}
+                />
+              )}
 
               {/* CHART POPOVER — desktop only */}
               {pinnedDay && !isMobile && (
@@ -1454,14 +1464,20 @@ function PopoverEditForm({ txn, occurrenceDate, onCancel, onSave, onSaveThisOne,
   );
 }
 
-// ── Threshold Reference Line Label ────────────────────────────────────
+// ── Threshold Y Capture (thin SVG component — just grabs pixel position) ──
 
-function ThresholdLabel({ viewBox, threshold, onUpdate }) {
+function ThresholdYCapture({ viewBox, onY }) {
+  useEffect(() => {
+    if (viewBox) onY(viewBox.y);
+  }, [viewBox?.y]);
+  return null;
+}
+
+// ── Threshold Pill (HTML overlay — no SVG clipping) ──────────────────
+
+function ThresholdPill({ threshold, pixelY, onUpdate }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState('');
-
-  if (!viewBox) return null;
-  const { x, y, width } = viewBox;
 
   const commit = () => {
     const v = Math.round(parseFloat(draft));
@@ -1471,65 +1487,64 @@ function ThresholdLabel({ viewBox, threshold, onUpdate }) {
 
   const labelText = `$${threshold.toLocaleString()}`;
 
-  // Position pill completely off the graph area, to the right
-  const pillX = x + width + 8;
-  const pillY = y - 14;
-
   return (
-    <g>
-      <foreignObject x={pillX} y={pillY} width="140" height="28" style={{ overflow: 'visible' }}>
-        {!editing ? (
-          <div
-            onClick={() => { setDraft(String(threshold)); setEditing(true); }}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              background: 'rgba(255,167,38,0.18)',
-              border: '1px solid var(--caution-amber)',
-              borderRadius: '14px',
-              padding: '3px 10px',
-              cursor: 'pointer',
-              fontSize: '12px',
-              fontWeight: '700',
-              color: 'var(--caution-amber)',
-              whiteSpace: 'nowrap',
-              zIndex: 10,
-              position: 'relative',
-            }}
-          >
-            {labelText}
-          </div>
-        ) : (
-          <input
-            type="number"
-            autoFocus
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={commit}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') { e.preventDefault(); commit(); }
-              if (e.key === 'Escape') setEditing(false);
-            }}
-            style={{
-              width: '120px',
-              height: '26px',
-              background: 'var(--bg-panel)',
-              border: '2px solid var(--caution-amber)',
-              borderRadius: '14px',
-              color: 'var(--caution-amber)',
-              fontSize: '12px',
-              fontWeight: '700',
-              padding: '0 10px',
-              outline: 'none',
-              boxSizing: 'border-box',
-              zIndex: 10,
-              position: 'relative',
-            }}
-          />
-        )}
-      </foreignObject>
-    </g>
+    <div
+      style={{
+        position: 'absolute',
+        right: '12px',
+        top: `${pixelY - 2}px`,
+        transform: 'translateY(-50%)',
+        zIndex: 5,
+        pointerEvents: 'auto',
+      }}
+    >
+      {!editing ? (
+        <div
+          onClick={() => { setDraft(String(threshold)); setEditing(true); }}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+            background: 'rgba(255,167,38,0.18)',
+            border: '1px solid var(--caution-amber)',
+            borderRadius: '14px',
+            padding: '3px 10px',
+            cursor: 'pointer',
+            fontSize: '12px',
+            fontWeight: '700',
+            color: 'var(--caution-amber)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {labelText}
+        </div>
+      ) : (
+        <input
+          type="number"
+          autoFocus
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { e.preventDefault(); commit(); }
+            if (e.key === 'Escape') setEditing(false);
+          }}
+          style={{
+            width: '120px',
+            height: '26px',
+            background: 'var(--bg-panel)',
+            border: '2px solid var(--caution-amber)',
+            borderRadius: '14px',
+            color: 'var(--caution-amber)',
+            fontSize: '12px',
+            fontWeight: '700',
+            padding: '0 10px',
+            outline: 'none',
+            boxSizing: 'border-box',
+          }}
+        />
+      )}
+    </div>
   );
 }
 
