@@ -357,16 +357,28 @@ export default function TransactionsTab({
     const inc = list.filter((t) => t.type === 'income').sort(sortFn);
     const exp = list.filter((t) => t.type === 'expense').sort(sortFn);
 
+    // Compute totals based on occurrences in the active window (default: 30 days)
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const windowStart = hasDateFilter && filterDateStart ? new Date(filterDateStart + 'T00:00:00') : now;
+    const windowEnd = hasDateFilter && filterDateEnd ? new Date(filterDateEnd + 'T23:59:59') : addDays(now, 30);
+    const sumOccurrences = (t) => {
+      if (!t.isActive) return 0;
+      const occs = getOccurrencesInRange(t, windowStart, windowEnd);
+      return t.amount * occs.length;
+    };
+
     return {
       income: inc,
       expenses: exp,
-      incomeTotal: inc.reduce((sum, t) => sum + (t.isActive ? t.amount : 0), 0),
-      expenseTotal: exp.reduce((sum, t) => sum + (t.isActive ? t.amount : 0), 0),
+      incomeTotal: inc.reduce((sum, t) => sum + sumOccurrences(t), 0),
+      expenseTotal: exp.reduce((sum, t) => sum + sumOccurrences(t), 0),
     };
   }, [transactions, filterType, filterCategory, filterDateStart, filterDateEnd, filterAmountMin, filterAmountMax, sortBy, sortDir, hasDateFilter]);
 
-  // Outlook strip — only when date filter is active
-  const outlookNet = hasDateFilter ? Math.round(incomeTotal - expenseTotal) : 0;
+  // Outlook strip — always shown (default 30-day window)
+  const outlookNet = Math.round(incomeTotal - expenseTotal);
+  const outlookLabel = hasDateFilter ? 'Date Range Outlook' : '30-Day Outlook';
 
   const startAdd = (type) => {
     setEditingId(null);
@@ -987,12 +999,12 @@ export default function TransactionsTab({
       {/* Collapsible filter panel */}
       {filterPanel}
 
-      {/* Outlook strip — only when date range filter is active */}
-      {hasDateFilter && (incomeTotal > 0 || expenseTotal > 0) && (
+      {/* Outlook strip — always visible, defaults to 30-day window */}
+      {(incomeTotal > 0 || expenseTotal > 0) && (
         <div style={{ ...s.netStrip, ...(isMobile ? { display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' } : {}) }}>
           <div>
             <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: '0.08em', textTransform: 'uppercase', marginRight: '12px' }}>
-              Date Range Outlook
+              {outlookLabel}
             </span>
             <span style={{ fontSize: isMobile ? '18px' : '15px', fontWeight: 700, color: outlookNet >= 0 ? 'var(--safe-green)' : 'var(--critical-red)' }}>
               Net {outlookNet >= 0 ? '+' : '-'}${Math.abs(outlookNet).toLocaleString()}
