@@ -318,7 +318,6 @@ export default function TransactionsTab({
   }, [filterType, filterCategory, filterDateStart, filterDateEnd, filterAmountMin, filterAmountMax]);
 
   const { income, expenses, incomeTotal, expenseTotal } = useMemo(() => {
-    // Start with all transactions — no time-range filtering by default
     let list = [...transactions];
 
     // Apply type filter
@@ -339,27 +338,7 @@ export default function TransactionsTab({
     if (!isNaN(minAmt)) list = list.filter((t) => t.amount >= minAmt);
     if (!isNaN(maxAmt)) list = list.filter((t) => t.amount <= maxAmt);
 
-    // When date filter is active, hide items with no occurrences in range
-    if (hasDateFilter) {
-      const rangeStart = filterDateStart ? new Date(filterDateStart + 'T00:00:00') : new Date();
-      const rangeEnd = filterDateEnd ? new Date(filterDateEnd + 'T23:59:59') : addDays(rangeStart, 365);
-      list = list.filter((t) => {
-        if (!t.isActive) return true;
-        const occs = getOccurrencesInRange(t, rangeStart, rangeEnd);
-        return occs.length > 0;
-      });
-    }
-
-    // Sort
-    const dir = sortDir === 'asc' ? 1 : -1;
-    const sortFn = sortBy === 'amount'
-      ? (a, b) => (a.amount - b.amount) * dir
-      : (a, b) => ((a.startDate || '').localeCompare(b.startDate || '')) * dir;
-
-    const inc = list.filter((t) => t.type === 'income').sort(sortFn);
-    const exp = list.filter((t) => t.type === 'expense').sort(sortFn);
-
-    // Compute totals based on the active window: month, year, or date filter
+    // Determine the active time window: date filter > year > month
     const now = new Date();
     let windowStart, windowEnd;
     if (hasDateFilter && filterDateStart) {
@@ -372,8 +351,25 @@ export default function TransactionsTab({
       windowStart = startOfMonth(viewMonth);
       windowEnd = endOfMonth(viewMonth);
     }
+
+    // Filter list to only items with occurrences in the active window
+    list = list.filter((t) => {
+      if (!t.isActive) return false;
+      const occs = getOccurrencesInRange(t, windowStart, windowEnd);
+      return occs.length > 0;
+    });
+
+    // Sort
+    const dir = sortDir === 'asc' ? 1 : -1;
+    const sortFn = sortBy === 'amount'
+      ? (a, b) => (a.amount - b.amount) * dir
+      : (a, b) => ((a.startDate || '').localeCompare(b.startDate || '')) * dir;
+
+    const inc = list.filter((t) => t.type === 'income').sort(sortFn);
+    const exp = list.filter((t) => t.type === 'expense').sort(sortFn);
+
+    // Totals count all occurrences in the window
     const sumOccurrences = (t) => {
-      if (!t.isActive) return 0;
       const occs = getOccurrencesInRange(t, windowStart, windowEnd);
       return t.amount * occs.length;
     };
