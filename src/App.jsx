@@ -418,6 +418,21 @@ function App() {
     return [Math.floor(dataMin - pad), Math.ceil(dataMax + pad)];
   }, [chartData, settings.cautionThreshold]);
 
+  // Dynamic line color: build a horizontal gradient that changes color per data point
+  const lineColorStops = useMemo(() => {
+    if (!chartData.length) return [];
+    const threshold = settings.cautionThreshold || 0;
+    return chartData.map((d, i) => {
+      const pct = chartData.length > 1 ? i / (chartData.length - 1) : 0;
+      let color;
+      if (d.balance <= 0) color = 'var(--critical-red)';
+      else if (d.balance < threshold) color = 'var(--caution-amber)';
+      else color = 'var(--safe-green)';
+      return { offset: `${(pct * 100).toFixed(2)}%`, color };
+    });
+  }, [chartData, settings.cautionThreshold]);
+
+  // Fallback single color for dots/active dots
   const lineColor = getChartLineColor(runway.status);
 
   // ── Chart dot click → popover ──────────────────────────────────────
@@ -799,8 +814,13 @@ function App() {
                   >
                     <defs>
                       <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={lineColor} stopOpacity={0.25} />
+                        <stop offset="0%" stopColor={lineColor} stopOpacity={0.15} />
                         <stop offset="100%" stopColor={lineColor} stopOpacity={0.0} />
+                      </linearGradient>
+                      <linearGradient id="lineStrokeGradient" x1="0" y1="0" x2="1" y2="0">
+                        {lineColorStops.map((s, i) => (
+                          <stop key={i} offset={s.offset} stopColor={s.color} />
+                        ))}
                       </linearGradient>
                     </defs>
                     <CartesianGrid
@@ -894,7 +914,7 @@ function App() {
                     <Area
                       type="monotone"
                       dataKey="balance"
-                      stroke={lineColor}
+                      stroke="url(#lineStrokeGradient)"
                       strokeWidth={2.5}
                       fill="url(#balanceGradient)"
                       dot={isMobile ? false : (props) => {
@@ -912,12 +932,19 @@ function App() {
                           </g>
                         );
                       }}
-                      activeDot={isMobile ? { r: 5, fill: lineColor, stroke: 'var(--bg-card)', strokeWidth: 2 } : (props) => {
+                      activeDot={isMobile ? (props) => {
+                        const { cx, cy, payload } = props;
+                        const threshold = settings.cautionThreshold || 0;
+                        const dotColor = payload.balance <= 0 ? 'var(--critical-red)' : payload.balance < threshold ? 'var(--caution-amber)' : 'var(--safe-green)';
+                        return <circle cx={cx} cy={cy} r={5} fill={dotColor} stroke="var(--bg-card)" strokeWidth={2} />;
+                      } : (props) => {
                         const { cx, cy, payload } = props;
                         const hasTxns = payload.dayTxns && payload.dayTxns.length > 0;
                         const isYearly = vr.days >= 365;
                         const is90 = vr.days >= 90 && !isYearly;
                         const activeR = isYearly ? 6 : is90 ? 9 : 10;
+                        const threshold = settings.cautionThreshold || 0;
+                        const dotColor = payload.balance <= 0 ? 'var(--critical-red)' : payload.balance < threshold ? 'var(--caution-amber)' : 'var(--safe-green)';
                         return (
                           <g
                             cursor={hasTxns ? 'pointer' : 'default'}
@@ -929,13 +956,13 @@ function App() {
                             <circle cx={cx} cy={cy} r={20} fill="transparent" />
                             {hasTxns ? (
                               <>
-                                <circle cx={cx} cy={cy} r={activeR} fill="#3A3A4E" stroke={lineColor} strokeWidth={isYearly ? 1.5 : 2} />
+                                <circle cx={cx} cy={cy} r={activeR} fill="#3A3A4E" stroke={dotColor} strokeWidth={isYearly ? 1.5 : 2} />
                                 {!isYearly && (
                                   <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central" fill="rgba(255,255,255,0.45)" fontSize={is90 ? 7 : 9} fontWeight="600" style={{ pointerEvents: 'none' }}>T</text>
                                 )}
                               </>
                             ) : (
-                              <circle cx={cx} cy={cy} r={isYearly ? 3 : 5} fill={lineColor} stroke="var(--bg-card)" strokeWidth={isYearly ? 1 : 2} />
+                              <circle cx={cx} cy={cy} r={isYearly ? 3 : 5} fill={dotColor} stroke="var(--bg-card)" strokeWidth={isYearly ? 1 : 2} />
                             )}
                           </g>
                         );
@@ -1450,7 +1477,7 @@ function ThresholdLabel({ viewBox, threshold, onUpdate }) {
 
   return (
     <g>
-      <foreignObject x={pillX} y={pillY} width="100" height="28" style={{ overflow: 'visible' }}>
+      <foreignObject x={pillX} y={pillY} width="140" height="28" style={{ overflow: 'visible' }}>
         {!editing ? (
           <div
             onClick={() => { setDraft(String(threshold)); setEditing(true); }}
@@ -1485,7 +1512,7 @@ function ThresholdLabel({ viewBox, threshold, onUpdate }) {
               if (e.key === 'Escape') setEditing(false);
             }}
             style={{
-              width: '90px',
+              width: '120px',
               height: '26px',
               background: 'var(--bg-panel)',
               border: '2px solid var(--caution-amber)',
