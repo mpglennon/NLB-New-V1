@@ -711,7 +711,7 @@ export default function SettingsModal({ isOpen, onClose }) {
           >
             <span style={{
               fontSize: '18px',
-              color: 'var(--text-tertiary)',
+              color: 'var(--accent-gold)',
               animation: 'settingsBounce 1.5s ease infinite',
             }}>&#x25BE;</span>
           </div>
