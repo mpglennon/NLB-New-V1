@@ -983,44 +983,32 @@ export default function TransactionsTab({
               </button>
             ))}
           </div>
-          <button
-            style={{
-              background: activeFilterCount > 0 ? 'var(--accent-gold)' : 'transparent',
-              color: activeFilterCount > 0 ? '#FFF' : 'var(--text-tertiary)',
-              border: activeFilterCount > 0 ? 'none' : '1px solid var(--border-subtle)',
-              borderRadius: '6px',
-              padding: '6px 16px',
-              fontSize: '13px',
-              fontWeight: '600',
-              cursor: 'pointer',
-            }}
-            onClick={() => setFilterOpen(!filterOpen)}
-          >
-            Filter{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''} {filterOpen ? '▴' : '▾'}
-          </button>
         </div>
       )}
 
-      {/* Collapsible filter panel */}
-      {filterPanel}
+      {/* Collapsible filter panel — desktop only */}
+      {!isMobile && filterPanel}
 
       {/* Month navigation + outlook strip */}
       <div style={{
         ...s.netStrip,
+        display: 'flex',
         ...(isMobile
-          ? { display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center' }
-          : { display: 'flex', justifyContent: 'space-between', alignItems: 'center' }),
+          ? { flexDirection: 'column', gap: '10px', alignItems: 'center', padding: '12px 16px' }
+          : { justifyContent: 'space-between', alignItems: 'center' }),
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        {/* Row 1 on mobile: Month/Year toggle + arrows */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : '6px' }}>
           {/* Month/Year toggle */}
           <div style={{
             display: 'flex', borderRadius: '6px', overflow: 'hidden',
-            border: '1px solid var(--accent-gold)', marginRight: '8px',
+            border: '1px solid var(--accent-gold)', marginRight: isMobile ? '4px' : '8px',
           }}>
             <button
               onClick={() => setYearView(false)}
               style={{
-                padding: '4px 12px', border: 'none', fontSize: '12px', fontWeight: 700,
+                padding: isMobile ? '5px 14px' : '4px 12px', border: 'none',
+                fontSize: isMobile ? '13px' : '12px', fontWeight: 700,
                 cursor: 'pointer', transition: 'all 150ms ease',
                 background: !yearView ? 'var(--accent-gold)' : 'transparent',
                 color: !yearView ? '#FFF' : 'var(--accent-gold)',
@@ -1029,39 +1017,40 @@ export default function TransactionsTab({
             <button
               onClick={() => setYearView(true)}
               style={{
-                padding: '4px 12px', border: 'none', fontSize: '12px', fontWeight: 700,
+                padding: isMobile ? '5px 14px' : '4px 12px', border: 'none',
+                fontSize: isMobile ? '13px' : '12px', fontWeight: 700,
                 cursor: 'pointer', transition: 'all 150ms ease',
                 background: yearView ? 'var(--accent-gold)' : 'transparent',
                 color: yearView ? '#FFF' : 'var(--accent-gold)',
               }}
             >Year</button>
           </div>
-          {/* Month arrows + label (always visible, dimmed when in year view) */}
+          {/* Month arrows + label */}
           <button
             onClick={() => { setYearView(false); setViewMonth((m) => subMonths(m, 1)); }}
             style={{
               background: 'transparent', border: 'none',
               color: yearView ? 'var(--border-subtle)' : 'var(--text-tertiary)',
-              fontSize: '20px', cursor: 'pointer', padding: '2px 6px', lineHeight: 1,
+              fontSize: isMobile ? '22px' : '20px', cursor: 'pointer', padding: '2px 4px', lineHeight: 1,
               transition: 'color 150ms ease',
             }}
             onMouseEnter={(e) => { if (!yearView) e.currentTarget.style.color = 'var(--text-primary)'; }}
             onMouseLeave={(e) => { e.currentTarget.style.color = yearView ? 'var(--border-subtle)' : 'var(--text-tertiary)'; }}
           >&#8249;</button>
           <span style={{
-            fontSize: '17px', fontWeight: 700,
+            fontSize: isMobile ? '16px' : '17px', fontWeight: 700,
             color: yearView ? 'var(--text-tertiary)' : 'var(--text-primary)',
-            minWidth: isMobile ? '120px' : '150px', textAlign: 'center',
+            minWidth: isMobile ? '110px' : '150px', textAlign: 'center',
             transition: 'color 150ms ease',
           }}>
-            {hasDateFilter ? 'Filtered' : format(viewMonth, 'MMMM yyyy')}
+            {hasDateFilter ? 'Filtered' : format(viewMonth, isMobile ? 'MMM yyyy' : 'MMMM yyyy')}
           </span>
           <button
             onClick={() => { setYearView(false); setViewMonth((m) => addMonths(m, 1)); }}
             style={{
               background: 'transparent', border: 'none',
               color: yearView ? 'var(--border-subtle)' : 'var(--text-tertiary)',
-              fontSize: '20px', cursor: 'pointer', padding: '2px 6px', lineHeight: 1,
+              fontSize: isMobile ? '22px' : '20px', cursor: 'pointer', padding: '2px 4px', lineHeight: 1,
               transition: 'color 150ms ease',
             }}
             onMouseEnter={(e) => { if (!yearView) e.currentTarget.style.color = 'var(--text-primary)'; }}
@@ -1078,8 +1067,9 @@ export default function TransactionsTab({
             >Today</button>
           )}
         </div>
+        {/* Row 2 on mobile: Net + in/out totals */}
         {(incomeTotal > 0 || expenseTotal > 0) && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '14px', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '14px', flexWrap: 'wrap', justifyContent: 'center' }}>
             <span style={{ fontSize: isMobile ? '18px' : '17px', fontWeight: 700, color: outlookNet >= 0 ? 'var(--safe-green)' : 'var(--critical-red)' }}>
               Net {outlookNet >= 0 ? '+' : '-'}${Math.abs(outlookNet).toLocaleString()}
             </span>
