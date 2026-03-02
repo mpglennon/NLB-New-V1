@@ -960,7 +960,7 @@ export default function TransactionsTab({
             width: '100%',
           }}>
             {[
-              { key: 'income', label: 'Income', count: income.length, color: 'var(--safe-green)' },
+              { key: 'income', label: 'Income', count: income.length, color: 'var(--accent-cyan)' },
               { key: 'expenses', label: 'Expenses', count: expenses.length, color: 'var(--accent-rose)' },
             ].map((col) => (
               <button
@@ -1070,11 +1070,11 @@ export default function TransactionsTab({
         {/* Row 2 on mobile: Net + in/out totals */}
         {(incomeTotal > 0 || expenseTotal > 0) && (
           <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '14px', flexWrap: 'wrap', justifyContent: 'center' }}>
-            <span style={{ fontSize: isMobile ? '18px' : '17px', fontWeight: 700, color: outlookNet >= 0 ? 'var(--safe-green)' : 'var(--critical-red)' }}>
+            <span style={{ fontSize: isMobile ? '18px' : '17px', fontWeight: 700, color: outlookNet >= 0 ? 'var(--accent-cyan)' : 'var(--critical-red)' }}>
               Net {outlookNet >= 0 ? '+' : '-'}${Math.abs(outlookNet).toLocaleString()}
             </span>
             <span style={{ fontSize: isMobile ? '15px' : '14px', color: 'var(--text-tertiary)' }}>
-              <span style={{ color: 'var(--safe-green)', fontWeight: 600 }}>${Math.round(incomeTotal).toLocaleString()} in</span>
+              <span style={{ color: 'var(--accent-cyan)', fontWeight: 600 }}>${Math.round(incomeTotal).toLocaleString()} in</span>
               <span style={{ margin: '0 6px' }}>&middot;</span>
               <span style={{ color: 'var(--accent-rose)', fontWeight: 600 }}>${Math.round(expenseTotal).toLocaleString()} out</span>
             </span>
