@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 
-const MODES = { SIGN_IN: 'sign_in', SIGN_UP: 'sign_up', RESET: 'reset' };
+const MODES = { SIGN_IN: 'sign_in', RESET: 'reset' };
 
 export default function AuthScreen({ onAuth }) {
   const [mode, setMode] = useState(MODES.SIGN_IN);
@@ -29,27 +29,17 @@ export default function AuthScreen({ onAuth }) {
         return;
       }
 
-      if (mode === MODES.SIGN_UP) {
-        const { data, error } = await supabase.auth.signUp({ email, password });
-        if (error) throw error;
-        if (data.user && !data.session) {
-          setMessage('Check your email to confirm your account.');
-        } else if (data.session) {
-          onAuth(data.session);
-        }
-      } else {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        onAuth(data.session);
-      }
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      onAuth(data.session);
     } catch (err) {
       setError(err.message);
     }
     setLoading(false);
   };
 
-  const title = mode === MODES.SIGN_IN ? 'Sign In' : mode === MODES.SIGN_UP ? 'Create Account' : 'Reset Password';
-  const submitLabel = mode === MODES.SIGN_IN ? 'Sign In' : mode === MODES.SIGN_UP ? 'Create Account' : 'Send Reset Link';
+  const title = mode === MODES.SIGN_IN ? 'Sign In' : 'Reset Password';
+  const submitLabel = mode === MODES.SIGN_IN ? 'Sign In' : 'Send Reset Link';
 
   return (
     <div style={s.wrapper}>
@@ -89,7 +79,7 @@ export default function AuthScreen({ onAuth }) {
                   placeholder=""
                   required
                   minLength={6}
-                  autoComplete={mode === MODES.SIGN_UP ? 'new-password' : 'current-password'}
+                  autoComplete="current-password"
                 />
                 <button
                   type="button"
@@ -140,18 +130,13 @@ export default function AuthScreen({ onAuth }) {
         <div style={s.links}>
           {mode === MODES.SIGN_IN && (
             <>
-              <button style={s.link} onClick={() => { setMode(MODES.SIGN_UP); setError(''); setMessage(''); }}>
-                Don't have an account? <strong>Sign up</strong>
-              </button>
+              <a href="https://nlbcash.gumroad.com/l/ykrbxv" style={{ ...s.link, textDecoration: 'none', display: 'inline-block' }}>
+                Don't have an account? <strong>Get Access</strong>
+              </a>
               <button style={s.link} onClick={() => { setMode(MODES.RESET); setError(''); setMessage(''); }}>
                 Forgot password?
               </button>
             </>
-          )}
-          {mode === MODES.SIGN_UP && (
-            <button style={s.link} onClick={() => { setMode(MODES.SIGN_IN); setError(''); setMessage(''); }}>
-              Already have an account? <strong>Sign in</strong>
-            </button>
           )}
           {mode === MODES.RESET && (
             <button style={s.link} onClick={() => { setMode(MODES.SIGN_IN); setError(''); setMessage(''); }}>
