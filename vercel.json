@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/cash-flow-app", "destination": "/cash-flow-app.html" },
+    { "source": "/cash-runway-calculator", "destination": "/cash-runway-calculator.html" }
+  ]
+}
