@@ -393,7 +393,8 @@ function App() {
     }
 
     return dailyFlow.map((flow, i) => {
-      runningBalance += flow;
+      // Today (i=0) = entered balance; flows accumulate from tomorrow
+      if (i > 0) runningBalance += flow;
       const isoDate = format(addDays(today, i), 'yyyy-MM-dd');
       return {
         date: format(addDays(today, i), 'MMM d'),

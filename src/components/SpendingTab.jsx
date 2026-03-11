@@ -38,22 +38,47 @@ function groupByCategory(transactions, timeframe, viewMonth) {
     const total = sumOverTimeframe(txn, timeframe, viewMonth);
     if (total <= 0) continue;
     if (!map[txn.category]) {
-      map[txn.category] = { total: 0, subs: {} };
+      map[txn.category] = { total: 0, subs: {}, items: [] };
     }
     map[txn.category].total += total;
+    // Track individual transactions with their amounts and occurrence dates
+    let occDates = [];
+    if (viewMonth) {
+      const range = buildViewRange(timeframe, viewMonth);
+      occDates = getOccurrencesInRange(txn, range.start, range.end);
+    } else {
+      occDates = getOccurrences(txn, timeframe);
+    }
+    const label = txn.subcategory ? `${txn.subcategory}` : (txn.description || txn.category);
+    map[txn.category].items.push({
+      id: txn.id,
+      label,
+      amount: Math.round(total),
+      perOccurrence: txn.amount,
+      occurrences: occDates.length,
+      occurrenceDates: occDates.map((d) => format(d, 'yyyy-MM-dd')),
+      frequency: txn.frequency,
+    });
     if (txn.subcategory) {
       if (!map[txn.category].subs[txn.subcategory]) map[txn.category].subs[txn.subcategory] = 0;
       map[txn.category].subs[txn.subcategory] += total;
     }
   }
   return Object.entries(map)
-    .map(([category, data]) => ({
-      category,
-      amount: Math.round(data.total),
-      subcategories: Object.entries(data.subs)
-        .map(([name, amt]) => ({ name, amount: Math.round(amt) }))
-        .sort((a, b) => b.amount - a.amount),
-    }))
+    .map(([category, data]) => {
+      const items = data.items.sort((a, b) => b.amount - a.amount);
+      const totalOccurrences = items.reduce((sum, it) => sum + it.occurrences, 0);
+      return {
+        category,
+        amount: Math.round(data.total),
+        itemCount: data.items.length,
+        totalOccurrences,
+        items,
+        subcategories: Object.entries(data.subs)
+          .map(([name, amt]) => ({ name, amount: Math.round(amt) }))
+          .sort((a, b) => b.amount - a.amount),
+      };
+    })
     .sort((a, b) => b.amount - a.amount);
 }
 
@@ -91,6 +116,9 @@ export default function SpendingTab({
   const [spendingSortBy, setSpendingSortBy] = useState('amount'); // 'amount' | 'name'
   const [spendingSortDir, setSpendingSortDir] = useState('desc');
   const [addingExpense, setAddingExpense] = useState(false);
+  const [dragCategory, setDragCategory] = useState(null);
+  const [dragOverColumn, setDragOverColumn] = useState(null); // 'fixed' | 'flex'
+  const [editOccurrenceDate, setEditOccurrenceDate] = useState(null); // tracks which specific occurrence is being edited
 
   const vr = buildViewRange(timeframe, viewMonth);
   const tfLabel = vr.label;
@@ -132,7 +160,7 @@ export default function SpendingTab({
 
   // ── Click handlers ──────────────────────────────────────────────
   const handleBarClick = useCallback((category) => {
-    setEditingTxn(null);
+    setEditingTxn(null); setEditOccurrenceDate(null);
     setExpandedCategory((prev) => (prev === category ? null : category));
   }, []);
 
@@ -147,6 +175,30 @@ export default function SpendingTab({
       const subs = hierarchy[match.category] || [];
       const isCustomSub = match.subcategory && !subs.includes(match.subcategory);
       setEditingTxn(match);
+      setEditForm({
+        category: isCustom ? '__custom__' : match.category,
+        customCategory: isCustom ? match.category : '',
+        subcategory: isCustomSub ? '__custom_sub__' : (match.subcategory || ''),
+        customSubcategory: isCustomSub ? match.subcategory : '',
+        amount: String(match.amount),
+        frequency: match.frequency,
+        startDate: match.startDate,
+        endDate: match.endDate || '',
+        description: match.description || '',
+        customDayInterval: match.customDayInterval ? String(match.customDayInterval) : '',
+      });
+    }
+  }, [transactions, getCategories, hierarchy]);
+
+  const handleOccurrenceClick = useCallback((txnId, occDate) => {
+    const match = transactions.find((t) => t.id === txnId);
+    if (match) {
+      const cats = getCategories('expense');
+      const isCustom = !cats.includes(match.category);
+      const subs = hierarchy[match.category] || [];
+      const isCustomSub = match.subcategory && !subs.includes(match.subcategory);
+      setEditingTxn(match);
+      setEditOccurrenceDate(occDate);
       setEditForm({
         category: isCustom ? '__custom__' : match.category,
         customCategory: isCustom ? match.category : '',
@@ -215,33 +267,71 @@ export default function SpendingTab({
       customDayInterval,
       ...(dateChanged || freqChanged ? { excludeDates: [] } : {}),
     });
-    setEditingTxn(null);
+    setEditingTxn(null); setEditOccurrenceDate(null);
   }, [editingTxn, editForm, updateTransaction, addCustomCategory]);
 
   const handleEditDelete = useCallback(() => {
     if (!editingTxn) return;
     deleteTransaction(editingTxn.id);
     setDeleteConfirmId(null);
-    setEditingTxn(null);
+    setEditingTxn(null); setEditOccurrenceDate(null);
   }, [editingTxn, deleteTransaction]);
 
   const handleDeleteJustOne = useCallback(() => {
     if (!editingTxn) return;
     const existing = editingTxn.excludeDates || [];
-    // Find the next upcoming occurrence instead of using the series base date
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const futureEnd = addDays(today, 365);
-    const occs = getOccurrencesInRange(editingTxn, today, futureEnd);
-    const dateToExclude = occs.length > 0 ? format(occs[0], 'yyyy-MM-dd') : editingTxn.startDate;
+    // Use the specific occurrence date if editing from occurrence view, otherwise find next upcoming
+    let dateToExclude = editOccurrenceDate;
+    if (!dateToExclude) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const futureEnd = addDays(today, 365);
+      const occs = getOccurrencesInRange(editingTxn, today, futureEnd);
+      dateToExclude = occs.length > 0 ? format(occs[0], 'yyyy-MM-dd') : editingTxn.startDate;
+    }
     updateTransaction(editingTxn.id, { excludeDates: [...existing, dateToExclude] });
     setDeleteConfirmId(null);
-    setEditingTxn(null);
-  }, [editingTxn, updateTransaction]);
+    setEditingTxn(null); setEditOccurrenceDate(null);
+  }, [editingTxn, editOccurrenceDate, updateTransaction]);
+
+  // Save changes for just this one occurrence: exclude date from series + create one-time override
+  const handleSaveJustThisOne = useCallback(() => {
+    if (!editingTxn || !editOccurrenceDate) return;
+    const amount = parseFloat(editForm.amount);
+    const category = editForm.category === '__custom__'
+      ? (editForm.customCategory || '').trim()
+      : editForm.category;
+    if (!category || isNaN(amount) || amount <= 0) return;
+    const subcategory = editForm.subcategory === '__custom_sub__'
+      ? (editForm.customSubcategory || '').trim() || null
+      : editForm.subcategory || null;
+
+    // Exclude this date from the recurring series
+    const existing = editingTxn.excludeDates || [];
+    if (!existing.includes(editOccurrenceDate)) {
+      updateTransaction(editingTxn.id, { excludeDates: [...existing, editOccurrenceDate] });
+    }
+
+    // Create a one-time transaction for this date with the modified values
+    addTransaction({
+      type: 'expense',
+      category,
+      subcategory,
+      description: editForm.description || '',
+      amount,
+      frequency: 'one-time',
+      startDate: editOccurrenceDate,
+      endDate: editOccurrenceDate,
+      isActive: true,
+    });
+
+    setEditingTxn(null); setEditOccurrenceDate(null);
+  }, [editingTxn, editOccurrenceDate, editForm, updateTransaction, addTransaction]);
 
   // ── Hover tooltip helpers ────────────────────────────────────────
   const handleBarMouseEnter = useCallback((e, g) => {
-    if (g.subcategories.length === 0) return;
+    // Show tooltip if there are multiple items OR multiple occurrences of a single item
+    if (g.totalOccurrences <= 1 && g.itemCount <= 1) return;
     setTooltipPos({ x: e.clientX + 12, y: e.clientY - 10 });
     setHoveredCategory(g);
   }, []);
@@ -268,9 +358,53 @@ export default function SpendingTab({
     );
   }
 
+  // ── Drag-and-drop between Fixed/Flex ────────────────────────────
+  const handleDragStart = useCallback((e, category) => {
+    setDragCategory(category);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', category);
+  }, []);
+
+  const handleColumnDragOver = useCallback((e, columnType) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverColumn(columnType);
+  }, []);
+
+  const handleColumnDragLeave = useCallback(() => {
+    setDragOverColumn(null);
+  }, []);
+
+  const handleColumnDrop = useCallback((e, targetType) => {
+    e.preventDefault();
+    const category = dragCategory;
+    setDragCategory(null);
+    setDragOverColumn(null);
+    if (!category) return;
+    const newCls = targetType === 'fixed' ? 'non-negotiable' : 'flex';
+    if (classification[category] !== newCls) {
+      updateCategoryClassification({ ...classification, [category]: newCls });
+    }
+  }, [dragCategory, classification, updateCategoryClassification]);
+
+  const handleDragEnd = useCallback(() => {
+    setDragCategory(null);
+    setDragOverColumn(null);
+  }, []);
+
   // ── Render a column ──────────────────────────────────────────────
-  const renderColumn = (title, subtitle, groups, columnTotal, barColor) => (
-    <div style={s.column}>
+  const renderColumn = (title, subtitle, groups, columnTotal, barColor, columnType) => (
+    <div
+      style={{
+        ...s.column,
+        ...(dragOverColumn === columnType && dragCategory && classification[dragCategory] !== (columnType === 'fixed' ? 'non-negotiable' : 'flex')
+          ? { outline: `2px dashed ${barColor}`, outlineOffset: '-2px', borderRadius: '12px' }
+          : {}),
+      }}
+      onDragOver={(e) => handleColumnDragOver(e, columnType)}
+      onDragLeave={handleColumnDragLeave}
+      onDrop={(e) => handleColumnDrop(e, columnType)}
+    >
       <div style={s.columnHeader}>
         <h3 style={s.columnTitle}>{title}</h3>
         <div style={s.columnSubtitle}>{subtitle}</div>
@@ -286,15 +420,21 @@ export default function SpendingTab({
           <div key={g.category} style={s.categoryBlock}>
             {/* Category bar */}
             <div
-              style={s.barRow}
-              onClick={() => hasSubs ? handleBarClick(g.category) : handleLeafClick(g.category)}
+              style={{
+                ...s.barRow,
+                ...(dragCategory === g.category ? { opacity: 0.5 } : {}),
+              }}
+              draggable
+              onDragStart={(e) => handleDragStart(e, g.category)}
+              onDragEnd={handleDragEnd}
+              onClick={() => (hasSubs || g.totalOccurrences > 1) ? handleBarClick(g.category) : handleLeafClick(g.category)}
               onMouseEnter={(e) => !isExpanded && handleBarMouseEnter(e, g)}
               onMouseMove={hoveredCategory && !isExpanded ? handleBarMouseMove : undefined}
               onMouseLeave={handleBarMouseLeave}
             >
               <div style={s.barLabel}>
                 <span style={s.barCategory}>{g.category}</span>
-                {hasSubs && (
+                {(hasSubs || g.totalOccurrences > 1) && (
                   <span style={{ ...s.chevron, transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}>›</span>
                 )}
               </div>
@@ -304,38 +444,81 @@ export default function SpendingTab({
                     ...s.barFill,
                     width: `${pct}%`,
                     background: barColor,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
+                    paddingRight: g.totalOccurrences > 1 ? '4px' : 0,
                   }}
-                />
+                >
+                  {g.totalOccurrences > 1 && pct >= 15 && (
+                    <span style={{
+                      fontSize: '9px',
+                      fontWeight: '800',
+                      color: '#000',
+                      lineHeight: 1,
+                    }}>{g.totalOccurrences}x</span>
+                  )}
+                </div>
               </div>
+              {g.totalOccurrences > 1 && pct < 15 && (
+                <span style={{
+                  fontSize: '10px',
+                  fontWeight: '700',
+                  color: '#000',
+                  marginLeft: '3px',
+                  flexShrink: 0,
+                }}>{g.totalOccurrences}x</span>
+              )}
               <div style={s.barAmount}>
                 <span style={{ fontWeight: '700' }}>{fmt(g.amount)}</span>
                 <span style={s.barPct}>{pct}%</span>
               </div>
             </div>
 
-            {/* Expanded subcategories */}
+            {/* Expanded: subcategories or individual occurrences */}
             {isExpanded && (
               <div style={s.subList}>
-                {g.subcategories.map((sub) => {
-                  const subPct = g.amount > 0 ? Math.round((sub.amount / g.amount) * 100) : 0;
-                  return (
-                    <div
-                      key={sub.name}
-                      style={s.subRow}
-                      onClick={() => handleSubClick(g.category, sub.name)}
-                    >
-                      <span style={s.subName}>{sub.name}</span>
-                      <div style={{ ...s.barTrack, flex: 1, margin: '0 8px' }}>
-                        <div style={{ ...s.barFill, width: `${subPct}%`, background: barColor, opacity: 0.6 }} />
+                {g.subcategories.length > 0 ? (
+                  /* Subcategory rows (existing behavior) */
+                  g.subcategories.map((sub) => {
+                    const subPct = g.amount > 0 ? Math.round((sub.amount / g.amount) * 100) : 0;
+                    return (
+                      <div
+                        key={sub.name}
+                        style={s.subRow}
+                        onClick={() => handleSubClick(g.category, sub.name)}
+                      >
+                        <span style={s.subName}>{sub.name}</span>
+                        <div style={{ ...s.barTrack, flex: 1, margin: '0 8px' }}>
+                          <div style={{ ...s.barFill, width: `${subPct}%`, background: barColor, opacity: 0.6 }} />
+                        </div>
+                        <span style={s.subAmount}>{fmt(sub.amount)}</span>
                       </div>
-                      <span style={s.subAmount}>{fmt(sub.amount)}</span>
-                    </div>
-                  );
-                })}
-                {g.subcategories.length === 0 && (
-                  <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', padding: '8px 0 4px 16px', fontStyle: 'italic' }}>
-                    No subcategories yet — manage them in Settings → Expense Categories
-                  </div>
+                    );
+                  })
+                ) : (
+                  /* Individual occurrence rows for recurring items */
+                  g.items.flatMap((item) =>
+                    item.occurrenceDates.map((dateStr) => {
+                      const d = new Date(dateStr + 'T00:00:00');
+                      const dateLabel = format(d, 'MMM d');
+                      const isToday = dateStr === format(new Date(), 'yyyy-MM-dd');
+                      return (
+                        <div
+                          key={`${item.id}|${dateStr}`}
+                          style={s.subRow}
+                          onClick={() => handleOccurrenceClick(item.id, dateStr)}
+                        >
+                          <span style={{ ...s.subName, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ color: 'var(--text-tertiary)', fontSize: '11px', minWidth: '44px' }}>{dateLabel}</span>
+                            <span>{item.label}</span>
+                            {isToday && <span style={{ fontSize: '9px', color: 'var(--accent-orange)', fontWeight: '700' }}>TODAY</span>}
+                          </span>
+                          <span style={s.subAmount}>{fmt(item.perOccurrence)}</span>
+                        </div>
+                      );
+                    })
+                  )
                 )}
               </div>
             )}
@@ -359,7 +542,7 @@ export default function SpendingTab({
         <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
           <button
             onClick={() => {
-              setEditingTxn(null);
+              setEditingTxn(null); setEditOccurrenceDate(null);
               setAddingExpense(true);
               setEditForm({
                 category: '', customCategory: '', subcategory: '', customSubcategory: '',
@@ -421,6 +604,7 @@ export default function SpendingTab({
           nonNegotiable,
           totalNonNeg,
           'var(--accent-rose)',
+          'fixed',
         )}
         {renderColumn(
           'Flex',
@@ -428,14 +612,15 @@ export default function SpendingTab({
           flexSpending,
           totalFlex,
           'var(--caution-amber)',
+          'flex',
         )}
       </div>
 
-      {/* Hover tooltip */}
+      {/* Hover tooltip — shows individual expenses that make up the category total */}
       {hoveredCategory && (
         <div style={{
           position: 'fixed',
-          left: Math.min(tooltipPos.x, window.innerWidth - 220),
+          left: Math.min(tooltipPos.x, window.innerWidth - 260),
           top: tooltipPos.y,
           background: 'var(--bg-panel)',
           border: '1px solid var(--border-subtle)',
@@ -443,35 +628,66 @@ export default function SpendingTab({
           padding: '10px 14px',
           boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
           zIndex: 1500,
-          minWidth: '160px',
-          maxWidth: '240px',
+          minWidth: '180px',
+          maxWidth: '280px',
           pointerEvents: 'none',
         }}>
           <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '6px' }}>
             {hoveredCategory.category}
+            <span style={{ fontWeight: '500', color: 'var(--text-tertiary)', marginLeft: '6px', fontSize: '11px' }}>
+              {hoveredCategory.totalOccurrences > 1 ? `${hoveredCategory.totalOccurrences} occurrences` : ''}
+            </span>
           </div>
-          {hoveredCategory.subcategories.map((sub) => (
-            <div key={sub.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '2px 0' }}>
-              <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{sub.name}</span>
-              <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-primary)', marginLeft: '12px' }}>{fmt(sub.amount)}</span>
+          {hoveredCategory.subcategories.length > 0 ? (
+            /* Subcategory items — compact summary */
+            hoveredCategory.items.map((item) => (
+              <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '3px 0', gap: '8px' }}>
+                <span style={{ fontSize: '12px', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                  {item.label}
+                </span>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-primary)', flexShrink: 0 }}>
+                  {item.occurrences > 1 ? (
+                    <>{fmt(item.perOccurrence)} <span style={{ color: 'var(--text-tertiary)', fontSize: '10px' }}>×{item.occurrences}</span> = {fmt(item.amount)}</>
+                  ) : (
+                    fmt(item.amount)
+                  )}
+                </span>
+              </div>
+            ))
+          ) : (
+            /* Individual occurrences with dates */
+            hoveredCategory.items.flatMap((item) =>
+              item.occurrenceDates.map((dateStr) => (
+                <div key={`${item.id}|${dateStr}`} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2px 0', gap: '8px' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    <span style={{ color: 'var(--text-tertiary)', fontSize: '11px', marginRight: '6px' }}>
+                      {format(new Date(dateStr + 'T00:00:00'), 'MMM d')}
+                    </span>
+                    {item.label}
+                  </span>
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-primary)', flexShrink: 0 }}>{fmt(item.perOccurrence)}</span>
+                </div>
+              ))
+            )
+          )}
+          {(hoveredCategory.itemCount > 1 || hoveredCategory.totalOccurrences > 1) && (
+            <div style={{ borderTop: '1px solid var(--border-subtle)', marginTop: '6px', paddingTop: '4px', display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>Total</span>
+              <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>{fmt(hoveredCategory.amount)}</span>
             </div>
-          ))}
-          <div style={{ borderTop: '1px solid var(--border-subtle)', marginTop: '6px', paddingTop: '4px', display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>Total</span>
-            <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>{fmt(hoveredCategory.amount)}</span>
-          </div>
+          )}
         </div>
       )}
 
       {/* Inline edit card */}
       {editingTxn && (
-        <div style={s.editOverlay} onClick={() => setEditingTxn(null)}>
+        <div style={s.editOverlay} onClick={() => { setEditingTxn(null); setEditOccurrenceDate(null); }}>
           <div style={s.editCard} onClick={(e) => e.stopPropagation()}>
             <div style={s.editHeader}>
               <span style={s.editTitle}>
                 Edit {editingTxn.category}
               </span>
-              <button style={s.editClose} onClick={() => setEditingTxn(null)}>✕</button>
+              <button style={s.editClose} onClick={() => { setEditingTxn(null); setEditOccurrenceDate(null); }}>✕</button>
             </div>
             <div style={s.editField}>
               <label style={s.editLabel}>Category</label>
@@ -626,15 +842,31 @@ export default function SpendingTab({
                 </div>
               );
             })()}
+            {/* Show which occurrence is being edited */}
+            {editOccurrenceDate && editingTxn?.frequency !== 'one-time' && (
+              <div style={{ fontSize: '11px', color: 'var(--accent-orange)', fontWeight: '600', marginBottom: '8px', padding: '6px 8px', background: 'rgba(255,165,0,0.08)', borderRadius: '4px' }}>
+                Editing occurrence on {format(new Date(editOccurrenceDate + 'T00:00:00'), 'MMM d, yyyy')}
+              </div>
+            )}
             <div style={s.editActions}>
-              <button style={s.editSave} onClick={handleEditSave}>Save</button>
-              <button style={s.editCancel} onClick={() => { setEditingTxn(null); setDeleteConfirmId(null); }}>Cancel</button>
+              <button style={s.editSave} onClick={handleEditSave}>
+                {editOccurrenceDate && editingTxn?.frequency !== 'one-time' ? 'Save All' : 'Save'}
+              </button>
+              {editOccurrenceDate && editingTxn?.frequency !== 'one-time' && (
+                <button
+                  style={{ ...s.editSave, background: 'var(--accent-orange)' }}
+                  onClick={handleSaveJustThisOne}
+                >
+                  Just This One
+                </button>
+              )}
+              <button style={s.editCancel} onClick={() => { setEditingTxn(null); setEditOccurrenceDate(null); setDeleteConfirmId(null); }}>Cancel</button>
               {(() => {
                 const isRecurring = editingTxn && editingTxn.frequency !== 'one-time';
                 if (deleteConfirmId === editingTxn?.id && isRecurring) {
                   return (
                     <>
-                      <button style={{ ...s.editDelete, fontSize: '11px', color: 'var(--caution-amber)', borderColor: 'var(--caution-amber)' }} onClick={handleDeleteJustOne}>Just This One</button>
+                      <button style={{ ...s.editDelete, fontSize: '11px', color: 'var(--caution-amber)', borderColor: 'var(--caution-amber)' }} onClick={handleDeleteJustOne}>Skip This One</button>
                       <button style={{ ...s.editDelete, fontSize: '11px' }} onClick={handleEditDelete}>Delete All</button>
                     </>
                   );

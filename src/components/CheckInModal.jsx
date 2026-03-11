@@ -261,8 +261,24 @@ export default function CheckInModal({
     <>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
-          <h2 style={s.title}>Check In</h2>
-          <p style={s.subtitle}>These were due since your last check-in</p>
+          <h2 style={s.title}>Quick Reconciliation</h2>
+          <p style={{
+            fontSize: '15px',
+            color: 'var(--text-secondary)',
+            fontWeight: '600',
+            marginBottom: '6px',
+            lineHeight: '1.4',
+          }}>
+            {pastDueItems.length} expense{pastDueItems.length !== 1 ? 's' : ''} scheduled while you were away
+          </p>
+          <p style={{
+            fontSize: '13px',
+            color: 'var(--text-tertiary)',
+            marginBottom: '16px',
+            lineHeight: '1.4',
+          }}>
+            Tap each one — has it already left your account, or not yet?
+          </p>
         </div>
         <button
           type="button"

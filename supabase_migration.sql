@@ -30,7 +30,8 @@ create table public.transactions (
   category text not null,
   description text default '',
   amount numeric not null check (amount > 0),
-  frequency text not null check (frequency in ('one-time', 'weekly', 'bi-weekly', 'monthly', 'quarterly', 'annually')),
+  frequency text not null check (frequency in ('one-time', 'weekly', 'bi-weekly', 'semi-monthly', 'monthly', 'quarterly', 'annually', 'custom-days')),
+  custom_day_interval integer check (custom_day_interval is null or custom_day_interval >= 1),
   start_date date not null,
   end_date date,
   is_active boolean not null default true,
@@ -84,6 +85,44 @@ ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS subcategory text DEFAUL
 
 -- Add exclude_dates to transactions (may already exist from prior migration)
 ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS exclude_dates text[] DEFAULT '{}';
+
+-- Add custom recurring interval support
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS custom_day_interval integer;
+
+-- Ensure frequency check supports all in-app options (semi-monthly + custom-days)
+DO $$
+DECLARE
+  c_name text;
+BEGIN
+  SELECT conname INTO c_name
+  FROM pg_constraint
+  WHERE conrelid = 'public.transactions'::regclass
+    AND contype = 'c'
+    AND pg_get_constraintdef(oid) ILIKE '%frequency%';
+
+  IF c_name IS NOT NULL THEN
+    EXECUTE format('ALTER TABLE public.transactions DROP CONSTRAINT %I', c_name);
+  END IF;
+
+  ALTER TABLE public.transactions
+    ADD CONSTRAINT transactions_frequency_check
+    CHECK (frequency in ('one-time', 'weekly', 'bi-weekly', 'semi-monthly', 'monthly', 'quarterly', 'annually', 'custom-days'));
+END $$;
+
+-- Add sanity check for custom day intervals
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'transactions_custom_day_interval_check'
+      AND conrelid = 'public.transactions'::regclass
+  ) THEN
+    ALTER TABLE public.transactions
+      ADD CONSTRAINT transactions_custom_day_interval_check
+      CHECK (custom_day_interval IS NULL OR custom_day_interval >= 1);
+  END IF;
+END $$;
 
 -- Add category hierarchy and classification to settings
 ALTER TABLE public.settings ADD COLUMN IF NOT EXISTS category_hierarchy jsonb DEFAULT '{}'::jsonb;

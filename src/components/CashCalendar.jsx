@@ -408,7 +408,10 @@ export default function CashCalendar({
 
     const balances = {};
     let bal = currentBalance;
-    for (let i = 0; i < maxDays; i++) {
+    // Today = entered balance exactly (user just checked in with this number).
+    // Flows accumulate starting tomorrow so today's calendar matches the input.
+    balances[format(today, 'yyyy-MM-dd')] = Math.round(bal);
+    for (let i = 1; i < maxDays; i++) {
       bal += dailyFlow[i];
       balances[format(addDays(today, i), 'yyyy-MM-dd')] = Math.round(bal);
     }
@@ -447,7 +450,8 @@ export default function CashCalendar({
     const dailyFlow = generateDailyCashFlow(modified, maxDays);
     const balances = {};
     let bal = currentBalance;
-    for (let i = 0; i < maxDays; i++) {
+    balances[format(today, 'yyyy-MM-dd')] = Math.round(bal);
+    for (let i = 1; i < maxDays; i++) {
       bal += dailyFlow[i];
       balances[format(addDays(today, i), 'yyyy-MM-dd')] = Math.round(bal);
     }
