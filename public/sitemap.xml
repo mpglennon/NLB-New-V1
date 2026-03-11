@@ -7,6 +7,12 @@
     <priority>1.0</priority>
   </url>
   <url>
+    <loc>https://nlbcash.ca/cash-flow-app</loc>
+    <lastmod>2026-03-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
     <loc>https://nlbcash.ca/login</loc>
     <lastmod>2026-03-11</lastmod>
     <changefreq>monthly</changefreq>
