@@ -516,9 +516,9 @@ function App() {
       {/* HEADER */}
       <div style={styles.headerWrapper}>
         <header style={styles.header} className="nlb-header-inner">
-          <div
+          <h1
             className="nlb-logo-area"
-            style={{ display: 'flex', flexDirection: 'column', cursor: 'pointer' }}
+            style={{ display: 'flex', flexDirection: 'column', cursor: 'pointer', margin: 0 }}
             onClick={() => setActiveTab('Snapshot')}
             role="button"
             tabIndex={0}
@@ -549,8 +549,9 @@ function App() {
               letterSpacing: '0.12em',
               marginTop: '2px',
               paddingLeft: '2px',
+              fontWeight: 'normal',
             }}>Never Look Back</div>
-          </div>
+          </h1>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }} className="nlb-header-actions">
             {/* Sync indicator */}
             {userId && (
@@ -805,8 +806,8 @@ function App() {
                 <span style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)' }}>Cash Flow Projection</span>
                 <span style={{ fontSize: '13px', color: 'var(--text-tertiary)' }}>{tfLabel}</span>
               </div>
-              <div style={{ height: 'calc(100% - 36px)', outline: 'none', position: 'relative' }}>
-                <ResponsiveContainer width="100%" height="100%">
+              <div style={{ height: 'calc(100% - 36px)', minHeight: '1px', outline: 'none', position: 'relative' }}>
+                <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                   <AreaChart
                     data={chartData}
                     margin={{ top: 8, right: 16, bottom: 8, left: 8 }}

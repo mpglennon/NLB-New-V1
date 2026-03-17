@@ -1,7 +1,16 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
-const MODES = { SIGN_IN: 'sign_in', RESET: 'reset' };
+const MODES = {
+  SIGN_IN: 'sign_in',
+  SIGN_UP: 'sign_up',
+  RESET: 'reset',
+};
+
+const GUMROAD_URL = 'https://nlbcash.gumroad.com/l/ykrbxv';
+const SUPPORT_EMAIL = 'support@nlbcash.ca';
+const SUPPORT_MAILTO = `mailto:${SUPPORT_EMAIL}?subject=NLBCash%20Support`;
+const SETUP_QUERY_VALUES = new Set(['setup', 'sign_up', 'signup', 'activate']);
 
 export default function AuthScreen({ onAuth }) {
   const [mode, setMode] = useState(MODES.SIGN_IN);
@@ -11,6 +20,23 @@ export default function AuthScreen({ onAuth }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const modeParam = (params.get('mode') || '').toLowerCase();
+    const setupFlag = (params.get('setup') || '').toLowerCase();
+
+    if (SETUP_QUERY_VALUES.has(modeParam) || ['1', 'true', 'yes'].includes(setupFlag)) {
+      setMode(MODES.SIGN_UP);
+    }
+  }, []);
+
+  const switchMode = (nextMode) => {
+    setMode(nextMode);
+    setError('');
+    setMessage('');
+    setPassword('');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -29,34 +55,64 @@ export default function AuthScreen({ onAuth }) {
         return;
       }
 
+      if (mode === MODES.SIGN_UP) {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: window.location.origin,
+          },
+        });
+        if (error) throw error;
+
+        if (data.session) {
+          onAuth(data.session);
+          return;
+        }
+
+        setMessage('Account setup started. Check your email to confirm your account, then sign in.');
+        switchMode(MODES.SIGN_IN);
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
       onAuth(data.session);
     } catch (err) {
-      setError(err.message);
+      setError(err.message || 'Something went wrong.');
     }
+
     setLoading(false);
   };
 
-  const title = mode === MODES.SIGN_IN ? 'Sign In' : 'Reset Password';
-  const submitLabel = mode === MODES.SIGN_IN ? 'Sign In' : 'Send Reset Link';
+  const isSignIn = mode === MODES.SIGN_IN;
+  const isSignUp = mode === MODES.SIGN_UP;
+  const isReset = mode === MODES.RESET;
+
+  const title = isSignIn ? 'Sign In' : isSignUp ? 'Set Up Your Account' : 'Reset Password';
+  const submitLabel = isSignIn ? 'Sign In' : isSignUp ? 'Create Password' : 'Send Reset Link';
+  const helperText = isSignUp
+    ? 'Already purchased NLBCash? Use the same email you used at checkout to create your password and enter the app.'
+    : null;
 
   return (
     <div style={s.wrapper}>
       <div style={s.card}>
-        {/* Logo */}
         <div style={s.logoRow}>
           <div style={s.logoBadge}>NLB</div>
           <span style={s.logoText}>Cash</span>
         </div>
         <p style={s.tagline}>Never Look Back</p>
 
-        <h2 style={s.title}>{title}</h2>
+        <h1 style={s.title}>{title}</h1>
+        {helperText && <p style={s.helper}>{helperText}</p>}
 
         <form onSubmit={handleSubmit} style={s.form}>
           <div style={s.field}>
-            <label style={s.label}>Email</label>
+            <label htmlFor="auth-email" style={s.label}>Email</label>
             <input
+              id="auth-email"
               type="email"
               style={s.input}
               value={email}
@@ -67,38 +123,27 @@ export default function AuthScreen({ onAuth }) {
             />
           </div>
 
-          {mode !== MODES.RESET && (
+          {!isReset && (
             <div style={s.field}>
-              <label style={s.label}>Password</label>
+              <label htmlFor="auth-password" style={s.label}>Password</label>
               <div style={{ position: 'relative' }}>
                 <input
+                  id="auth-password"
                   type={showPassword ? 'text' : 'password'}
                   style={{ ...s.input, paddingRight: '44px' }}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder=""
+                  placeholder={isSignUp ? 'Create a password' : ''}
                   required
                   minLength={6}
-                  autoComplete="current-password"
+                  autoComplete={isSignUp ? 'new-password' : 'current-password'}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: 'absolute',
-                    right: '8px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--text-tertiary)',
-                    cursor: 'pointer',
-                    padding: '4px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
+                  style={s.eyeButton}
                   tabIndex={-1}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                   title={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? (
@@ -126,22 +171,47 @@ export default function AuthScreen({ onAuth }) {
           </button>
         </form>
 
-        {/* Mode toggles */}
         <div style={s.links}>
-          {mode === MODES.SIGN_IN && (
+          {isSignIn && (
             <>
-              <a href="https://nlbcash.gumroad.com/l/ykrbxv" style={{ ...s.link, textDecoration: 'none', display: 'inline-block' }}>
-                Don't have an account? <strong>Get Access</strong>
-              </a>
-              <button style={s.link} onClick={() => { setMode(MODES.RESET); setError(''); setMessage(''); }}>
+              <button style={s.primaryLink} onClick={() => switchMode(MODES.SIGN_UP)}>
+                Already purchased? <strong>Set up your account</strong>
+              </button>
+              <button style={s.link} onClick={() => switchMode(MODES.RESET)}>
                 Forgot password?
               </button>
+              <a href={SUPPORT_MAILTO} style={{ ...s.link, textDecoration: 'none', display: 'inline-block' }}>
+                Need help? <strong>Contact support</strong>
+              </a>
+              <a href={GUMROAD_URL} style={{ ...s.link, textDecoration: 'none', display: 'inline-block' }}>
+                Haven't purchased yet? <strong>Get Access</strong>
+              </a>
             </>
           )}
-          {mode === MODES.RESET && (
-            <button style={s.link} onClick={() => { setMode(MODES.SIGN_IN); setError(''); setMessage(''); }}>
-              Back to sign in
-            </button>
+
+          {isSignUp && (
+            <>
+              <button style={s.link} onClick={() => switchMode(MODES.SIGN_IN)}>
+                Already have a password? Sign in
+              </button>
+              <a href={SUPPORT_MAILTO} style={{ ...s.link, textDecoration: 'none', display: 'inline-block' }}>
+                Need help? <strong>Contact support</strong>
+              </a>
+              <a href={GUMROAD_URL} style={{ ...s.link, textDecoration: 'none', display: 'inline-block' }}>
+                Need to purchase first? <strong>Get Access</strong>
+              </a>
+            </>
+          )}
+
+          {isReset && (
+            <>
+              <button style={s.link} onClick={() => switchMode(MODES.SIGN_IN)}>
+                Back to sign in
+              </button>
+              <a href={SUPPORT_MAILTO} style={{ ...s.link, textDecoration: 'none', display: 'inline-block' }}>
+                Need help? <strong>Contact support</strong>
+              </a>
+            </>
           )}
         </div>
 
@@ -207,7 +277,14 @@ const s = {
     fontWeight: '700',
     color: 'var(--text-primary)',
     textAlign: 'center',
-    marginBottom: '24px',
+    marginBottom: '12px',
+  },
+  helper: {
+    textAlign: 'center',
+    fontSize: '12px',
+    lineHeight: 1.5,
+    color: 'var(--text-secondary)',
+    marginBottom: '18px',
   },
   form: {
     display: 'flex',
@@ -236,6 +313,20 @@ const s = {
     outline: 'none',
     boxSizing: 'border-box',
     transition: 'border-color 150ms ease',
+  },
+  eyeButton: {
+    position: 'absolute',
+    right: '8px',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    background: 'transparent',
+    border: 'none',
+    color: 'var(--text-tertiary)',
+    cursor: 'pointer',
+    padding: '4px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   submit: {
     width: '100%',
@@ -282,6 +373,14 @@ const s = {
     border: 'none',
     color: 'var(--text-tertiary)',
     fontSize: '13px',
+    cursor: 'pointer',
+    padding: '4px',
+  },
+  primaryLink: {
+    background: 'none',
+    border: 'none',
+    color: 'var(--text-primary)',
+    fontSize: '14px',
     cursor: 'pointer',
     padding: '4px',
   },
